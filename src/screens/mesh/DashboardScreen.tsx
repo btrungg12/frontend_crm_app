@@ -25,7 +25,9 @@ export function DashboardScreen({ t, lang, nav }: Props) {
     <MeshScreen>
       <MeshHeader>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
-          <Avatar name="Trung" size={44} />
+          <Pressable onPress={() => nav("settings")}>
+            <Avatar name="Trung" size={44} />
+          </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 }}>
               {lang === "vi" ? "T03 10 Th 5" : "TUE 10 May"}
