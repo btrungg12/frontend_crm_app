@@ -1,0 +1,33 @@
+export const mesh = {
+  green50: "#EAF3EE",
+  green100: "#D2E5DA",
+  green300: "#6FAA8B",
+  green500: "#1F7048",
+  green600: "#155737",
+  green700: "#0F4329",
+  green800: "#0A3220",
+  bg: "#F5F7F4",
+  bgCard: "#FFFFFF",
+  bgSubtle: "#F0F3EE",
+  ink900: "#0E1A14",
+  ink700: "#2A3530",
+  ink500: "#5C6862",
+  ink400: "#8A958F",
+  ink300: "#B8C0BA",
+  ink200: "#DCE2DD",
+  line: "#E6EAE6",
+  pink: "#D9577A",
+  orange: "#E07543",
+  blue: "#3B7BD9",
+  radiusMd: 12,
+  radiusLg: 16,
+  radiusXl: 20,
+  radius2xl: 24,
+  shadow: {
+    shadowColor: "#0F4329",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3
+  }
+};

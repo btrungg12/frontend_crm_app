@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Mesh",
+    "slug": "relationship-manager-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0F7C4F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}

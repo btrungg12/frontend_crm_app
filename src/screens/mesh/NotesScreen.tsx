@@ -1,0 +1,127 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+
+import { Avatar, BottomNav, HeaderCircleBtn, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { contactById, Lang, notes } from "../../mesh/meshData";
+import { mesh } from "../../mesh/meshTheme";
+
+type Props = {
+  t: TFn;
+  lang: Lang;
+  nav: NavFn;
+};
+
+export function NotesScreen({ t, lang, nav }: Props) {
+  const [filter, setFilter] = useState("all");
+  const filters = [
+    { id: "all", label: t("fAll") },
+    { id: "rem", label: t("fReminder") },
+    { id: "np", label: t("fNoPerson") },
+    { id: "rec", label: t("fRecent") }
+  ];
+
+  const grouped = useMemo(() => {
+    return notes.reduce<Record<string, typeof notes>>((acc, note) => {
+      if (filter === "rem" && !note.reminder) return acc;
+      if (filter === "np" && note.contact) return acc;
+      acc[note.section] = acc[note.section] || [];
+      acc[note.section].push(note);
+      return acc;
+    }, {});
+  }, [filter]);
+
+  const sectionLabel = {
+    today: t("section_today"),
+    yesterday: t("section_yesterday"),
+    thisweek: t("section_thisweek")
+  } as Record<string, string>;
+
+  return (
+    <MeshScreen>
+      <MeshHeader>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 8 }}>
+          <View>
+            <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900", letterSpacing: -0.4 }}>{t("notes")}</Text>
+            <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 20, marginTop: 6 }}>{t("notesSub")}</Text>
+          </View>
+          <HeaderCircleBtn icon="search" onPress={() => nav("search")} />
+        </View>
+        <Pressable
+          onPress={() => nav("search")}
+          style={{ marginTop: 18, borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, height: 48, flexDirection: "row", alignItems: "center", gap: 10 }}
+        >
+          <Ionicons name="search" size={18} color={mesh.ink400} />
+          <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("searchNote")}</Text>
+        </Pressable>
+      </MeshHeader>
+
+      <MeshScroll bottom={112}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 14 }}>
+          {filters.map((item) => (
+            <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)}>
+              {item.label}
+            </MeshChip>
+          ))}
+          <MeshChip style={{ backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: mesh.line }}>
+            <Ionicons name="options-outline" size={14} color={mesh.ink700} />
+          </MeshChip>
+        </View>
+
+        {Object.entries(grouped).map(([section, items]) => (
+          <View key={section} style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
+            <SectionLabel style={{ paddingHorizontal: 4, paddingBottom: 6 }}>{sectionLabel[section]}</SectionLabel>
+            {items.map((note, index) => {
+              const contact = contactById(note.contact);
+              const preview = lang === "vi" ? note.preview : note.contentEn.split("\n")[0] || note.preview;
+              return (
+                <Pressable
+                  key={note.id}
+                  onPress={() => nav("noteDetail", { id: note.id })}
+                  style={{ flexDirection: "row", gap: 14, alignItems: "flex-start", paddingHorizontal: 4, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderBottomColor: mesh.line }}
+                >
+                  {contact ? (
+                    <Avatar name={contact.name} size={44} />
+                  ) : (
+                    <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: note.kind === "reminder" ? "rgba(31,112,72,0.10)" : mesh.bgSubtle }}>
+                      <Ionicons name={note.kind === "reminder" ? "notifications" : "document-text-outline"} size={20} color={mesh.green700} />
+                    </View>
+                  )}
+
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact ? contact.name : note.title}</Text>
+                    {contact ? <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "600", marginTop: 1 }}>{note.title}</Text> : null}
+                    <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 18, marginTop: 4 }}>
+                      {preview}
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
+                      <Ionicons name="time-outline" size={12} color={mesh.green700} />
+                      <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "800" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ alignItems: "center", gap: 6 }}>
+                    {note.hasNew ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.green600 }} /> : null}
+                    <Ionicons name="bookmark-outline" size={18} color={note.bookmark ? mesh.green700 : mesh.ink300} />
+                    <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+      </MeshScroll>
+
+      <BottomNav
+        active="notes"
+        t={t}
+        onTab={(id) => {
+          if (id === "home") nav("dashboard");
+          else if (id === "contacts") nav("contacts");
+          else if (id === "fab") nav("createNote");
+          else if (id === "status") nav("status");
+        }}
+      />
+    </MeshScreen>
+  );
+}
