@@ -134,14 +134,14 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
         </View>
       </MeshHeader>
 
-      <MeshScroll style={{ paddingHorizontal: 16, marginTop: -34 }} bottom={100}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
+      <MeshScroll style={{ paddingHorizontal: 16, marginTop: -48, position: "relative", zIndex: 2, elevation: 2 }} bottom={100}>
+        <View style={{ flexDirection: "row", gap: 8, paddingTop: 14 }}>
           {[
             { icon: "document-text-outline", label: t("notes"), value: contact.noteCount, color: mesh.green700 },
             { icon: "notifications-outline", label: t("reminders"), value: contact.reminderCount, color: mesh.orange },
             { icon: "calendar-outline", label: t("specialDays"), value: contact.specialCount, color: mesh.pink }
           ].map((item) => (
-            <MeshCard key={item.label} style={{ flex: 1, padding: 12, alignItems: "center" }}>
+            <MeshCard key={item.label} style={{ flex: 1, padding: 12, alignItems: "center", position: "relative", zIndex: 3, elevation: 4 }}>
               <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: `${item.color}20`, marginBottom: 6 }}>
                 <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={16} color={item.color} />
               </View>
