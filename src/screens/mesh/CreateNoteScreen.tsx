@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Avatar, HeaderCircleBtn, MeshHeader, MeshScreen, MeshScroll, NavFn, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { contactById, contacts, Lang } from "../../mesh/meshData";
@@ -110,7 +110,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false }: Props) {
       </View>
 
       <ContactPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={(id) => setPerson(id)} t={t} />
-      <ReminderPicker open={reminderOpen} onClose={() => setReminderOpen(false)} onPick={setReminder} />
+      <ReminderPicker open={reminderOpen} onClose={() => setReminderOpen(false)} onPick={setReminder} t={t} lang={lang} />
     </MeshScreen>
   );
 }
@@ -154,28 +154,149 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
   );
 }
 
-function ReminderPicker({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (value: string) => void }) {
-  const values = ["18:00, Today", "09:00, Tomorrow", "19:00, This weekend"];
+function ReminderPicker({
+  open,
+  onClose,
+  onPick,
+  t,
+  lang
+}: {
+  open: boolean;
+  onClose: () => void;
+  onPick: (value: string) => void;
+  t: TFn;
+  lang: Lang;
+}) {
+  const [preset, setPreset] = useState("today");
+  const [time, setTime] = useState("18:00");
+  const [day, setDay] = useState(20);
+  const isVi = lang === "vi";
+  const presets = [
+    { id: "today", label: isVi ? "Hôm nay" : "Today" },
+    { id: "tomorrow", label: isVi ? "Ngày mai" : "Tomorrow" },
+    { id: "weekend", label: isVi ? "Cuối tuần này" : "This weekend" },
+    { id: "nextweek", label: isVi ? "Tuần sau" : "Next week" },
+    { id: "custom", label: isVi ? "Tùy chọn" : "Custom" }
+  ];
+  const slots = [
+    { id: "morning", label: isVi ? "Buổi sáng" : "Morning", value: "09:00" },
+    { id: "afternoon", label: isVi ? "Buổi chiều" : "Afternoon", value: "14:00" },
+    { id: "evening", label: isVi ? "Buổi tối" : "Evening", value: "18:00" }
+  ];
+  const days = Array.from({ length: 14 }, (_, index) => 17 + index);
+  const weekDays = isVi ? ["CN", "T2", "T3", "T4", "T5", "T6", "T7"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dateLabel = isVi ? `T${(day % 7) + 1}, ${String(day).padStart(2, "0")}/05` : `${weekDays[day % 7]}, ${String(day).padStart(2, "0")}/05`;
+
+  const save = () => {
+    onPick(`${time}, ${dateLabel}`);
+    onClose();
+  };
+
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
-        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20 }}>
+        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 18 }} />
-          {values.map((value) => (
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 18 }}>
+            <View style={{ width: 36 }} />
+            <Text style={{ flex: 1, textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "900" }}>
+              {isVi ? "Khi nào nhắc bạn?" : "When should we remind you?"}
+            </Text>
             <Pressable
-              key={value}
-              onPress={() => {
-                onPick(value);
-                onClose();
-              }}
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderColor: mesh.line }}
+              onPress={onClose}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}
             >
-              <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
-              <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{value}</Text>
+              <Ionicons name="close" size={18} color={mesh.ink700} />
             </Pressable>
-          ))}
+          </View>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+            {presets.map((item) => {
+              const active = preset === item.id;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setPreset(item.id)}
+                  style={{
+                    borderRadius: 999,
+                    borderWidth: active ? 1.5 : 1,
+                    borderColor: active ? mesh.green700 : mesh.line,
+                    backgroundColor: active ? "rgba(31,112,72,0.08)" : "#FFFFFF",
+                    paddingHorizontal: 14,
+                    paddingVertical: 8
+                  }}
+                >
+                  <Text style={{ color: active ? mesh.green800 : mesh.ink700, fontSize: 13, fontWeight: "700" }}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SheetLabel>{isVi ? "Chọn ngày" : "Pick date"}</SheetLabel>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }} style={{ marginBottom: 18 }}>
+            {days.map((item) => {
+              const active = item === day;
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setDay(item)}
+                  style={{
+                    width: 48,
+                    borderRadius: 12,
+                    borderWidth: active ? 0 : 1,
+                    borderColor: mesh.line,
+                    backgroundColor: active ? mesh.green700 : "#FFFFFF",
+                    paddingVertical: 8,
+                    alignItems: "center"
+                  }}
+                >
+                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink500, fontSize: 10, fontWeight: "700", opacity: 0.85 }}>{weekDays[item % 7]}</Text>
+                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink900, fontSize: 16, fontWeight: "900", marginTop: 2 }}>{item}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <SheetLabel>{isVi ? "Chọn giờ" : "Pick time"}</SheetLabel>
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
+            {slots.map((item) => {
+              const active = time === item.value;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setTime(item.value)}
+                  style={{
+                    flex: 1,
+                    borderRadius: 14,
+                    borderWidth: active ? 1.5 : 1,
+                    borderColor: active ? mesh.green700 : mesh.line,
+                    backgroundColor: active ? "rgba(31,112,72,0.06)" : "#FFFFFF",
+                    paddingVertical: 12,
+                    paddingHorizontal: 8,
+                    alignItems: "center"
+                  }}
+                >
+                  <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{item.label}</Text>
+                  <Text style={{ color: mesh.green800, fontSize: 16, fontWeight: "900", marginTop: 2 }}>{item.value}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, minHeight: 52 }}>
+            <Ionicons name="time-outline" size={18} color={mesh.ink500} />
+            <TextInput value={time} onChangeText={setTime} style={{ flex: 1, color: mesh.ink900, fontSize: 16, fontWeight: "600" }} />
+          </View>
+
+          <Pressable onPress={save} style={{ borderRadius: mesh.radiusLg, backgroundColor: mesh.green800, paddingVertical: 15, alignItems: "center" }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{t("save")}</Text>
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
   );
+}
+
+function SheetLabel({ children }: { children: string }) {
+  return <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "900", marginBottom: 8 }}>{children}</Text>;
 }
