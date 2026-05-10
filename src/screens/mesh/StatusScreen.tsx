@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
+import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn, TipCard } from "../../mesh/MeshComponents";
 import { Lang, statuses } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -23,19 +24,12 @@ const statusIconMap = {
 export function StatusScreen({ t, nav }: Props) {
   return (
     <MeshScreen>
-      <MeshHeader>
-        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingTop: 8 }}>
-          <View>
-            <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900", letterSpacing: -0.4 }}>{t("status")}</Text>
-            <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 20, marginTop: 6 }}>{t("statusSub")}</Text>
-          </View>
-          <HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />
-        </View>
-        <View style={{ marginTop: 18, height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+      <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
+        <View style={{ height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
           <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("searchStatus")}</Text>
         </View>
-      </MeshHeader>
+      </MeshHeroHeader>
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={112}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>

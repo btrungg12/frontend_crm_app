@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
 
+import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { contactById, contacts, Lang, statuses, statusById, timelineFor } from "../../mesh/meshData";
@@ -29,17 +30,13 @@ export function ContactsScreen({ t, lang, nav }: Props) {
 
   return (
     <MeshScreen>
-      <MeshHeader>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingTop: 4 }}>
-          <Avatar name="Trung Nguyen" size={48} ring />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "900", letterSpacing: -0.4 }}>{t("contacts")}</Text>
-            <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 2 }}>{t("contactsCount", { n: contacts.length })}</Text>
-          </View>
-          <HeaderCircleBtn icon="add" onPress={() => nav("createContact")} />
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 18 }}>
+      <MeshHeroHeader
+        left={<Avatar name="Trung Nguyen" size={48} ring />}
+        right={<HeaderCircleBtn icon="add" onPress={() => nav("createContact")} />}
+        title={t("contacts")}
+        subtitle={t("contactsCount", { n: contacts.length })}
+      >
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable onPress={() => nav("search")} style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
             <Text numberOfLines={1} style={{ flex: 1, color: mesh.ink400, fontSize: 14 }}>{t("searchContactPh")}</Text>
@@ -49,7 +46,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
             <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800" }}>{t("filter")}</Text>
           </Pressable>
         </View>
-      </MeshHeader>
+      </MeshHeroHeader>
 
       <MeshScroll bottom={112}>
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
@@ -60,28 +57,30 @@ export function ContactsScreen({ t, lang, nav }: Props) {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 16 }}>
-          {Object.keys(grouped).sort().map((key) => (
-            <View key={key}>
-              <Text style={{ color: mesh.ink500, fontSize: 14, fontWeight: "900", paddingHorizontal: 4, paddingTop: 12, paddingBottom: 6 }}>{key}</Text>
-              {grouped[key].map((contact, index) => (
-                <Pressable
-                  key={contact.id}
-                  onPress={() => nav("contactDetail", { id: contact.id })}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingVertical: 12, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: mesh.line }}
-                >
-                  <Avatar name={contact.name} size={44} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
-                    <View style={{ marginTop: 4 }}>
-                      <StatusChip statusId={contact.status} />
+        <View style={{ paddingHorizontal: 16, paddingTop: 6 }}>
+          <MeshCard style={{ borderRadius: 28, paddingHorizontal: 12, paddingVertical: 8 }}>
+            {Object.keys(grouped).sort().map((key) => (
+              <View key={key}>
+                <Text style={{ color: mesh.ink500, fontSize: 14, fontWeight: "900", paddingHorizontal: 4, paddingTop: 12, paddingBottom: 6 }}>{key}</Text>
+                {grouped[key].map((contact, index) => (
+                  <Pressable
+                    key={contact.id}
+                    onPress={() => nav("contactDetail", { id: contact.id })}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingVertical: 12, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: mesh.line }}
+                  >
+                    <Avatar name={contact.name} size={44} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
+                      <View style={{ marginTop: 4 }}>
+                        <StatusChip statusId={contact.status} />
+                      </View>
                     </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
-                </Pressable>
-              ))}
-            </View>
-          ))}
+                    <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+          </MeshCard>
         </View>
       </MeshScroll>
 
