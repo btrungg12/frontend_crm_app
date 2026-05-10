@@ -218,29 +218,27 @@ export function BottomNav({
 }) {
   const insets = useSafeAreaInsets();
   const tabs: Array<{ id: string; label?: string; icon?: keyof typeof Ionicons.glyphMap; activeIcon?: keyof typeof Ionicons.glyphMap }> = [
-    { id: "home", label: "Trang chủ", icon: "home-outline", activeIcon: "home" },
+    { id: "home", label: t("tabHome"), icon: "home-outline", activeIcon: "home" },
     { id: "contacts", label: t("tabContacts"), icon: "people-outline", activeIcon: "people" },
     { id: "fab" },
-    { id: "notes", label: t("tabNotes"), icon: "calendar-outline", activeIcon: "calendar" },
-    { id: "status", label: "Status type", icon: "bookmark-outline", activeIcon: "bookmark" }
+    { id: "notes", label: t("tabNotes"), icon: "document-text-outline", activeIcon: "document-text" },
+    { id: "status", label: t("tabStatus"), icon: "pricetag-outline", activeIcon: "pricetag" }
   ];
 
   return (
     <View
       style={{
         position: "absolute",
-        left: 22,
-        right: 22,
-        bottom: insets.bottom + 14,
-        height: 86,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        minHeight: insets.bottom + 76,
+        paddingBottom: insets.bottom + 8,
+        paddingTop: 8,
         paddingHorizontal: 12,
-        backgroundColor: "#FFFFFF",
-        borderRadius: 32,
-        shadowColor: "#0F4329",
-        shadowOpacity: 0.11,
-        shadowRadius: 22,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 10,
+        backgroundColor: "rgba(255,255,255,0.96)",
+        borderTopWidth: 1,
+        borderColor: mesh.line,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-around"
@@ -253,21 +251,21 @@ export function BottomNav({
               key="fab"
               onPress={() => onTab("fab")}
               style={{
-                width: 74,
-                height: 74,
-                borderRadius: 37,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#00964B",
-                transform: [{ translateY: -18 }],
+                backgroundColor: mesh.green600,
+                transform: [{ translateY: -12 }],
                 shadowColor: mesh.green700,
                 shadowOpacity: 0.3,
-                shadowRadius: 20,
-                shadowOffset: { width: 0, height: 10 },
-                elevation: 12
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 8 },
+                elevation: 8
               }}
             >
-              <Ionicons name="add" size={36} color="#FFFFFF" />
+              <Ionicons name="add" size={28} color="#FFFFFF" />
             </Pressable>
           ) : (
             <View key="fab" style={{ width: 56 }} />
@@ -276,9 +274,9 @@ export function BottomNav({
 
         const isActive = active === tab.id;
         return (
-          <Pressable key={tab.id} onPress={() => onTab(tab.id)} style={{ flex: 1, alignItems: "center", gap: 5, paddingVertical: 6 }}>
-            <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={28} color={isActive ? "#00964B" : "#68707A"} />
-            <Text style={{ color: isActive ? "#00964B" : "#68707A", fontSize: 13, fontWeight: isActive ? "900" : "700" }}>
+          <Pressable key={tab.id} onPress={() => onTab(tab.id)} style={{ flex: 1, alignItems: "center", gap: 3, paddingVertical: 6 }}>
+            <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
+            <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: 11, fontWeight: isActive ? "800" : "600" }}>
               {tab.label}
             </Text>
           </Pressable>
