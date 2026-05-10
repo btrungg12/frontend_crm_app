@@ -57,30 +57,28 @@ export function ContactsScreen({ t, lang, nav }: Props) {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 16, paddingTop: 6 }}>
-          <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 12, paddingVertical: 8 }}>
-            {Object.keys(grouped).sort().map((key) => (
-              <View key={key}>
-                <Text style={{ color: mesh.ink500, fontSize: 14, fontWeight: "900", paddingHorizontal: 4, paddingTop: 12, paddingBottom: 6 }}>{key}</Text>
-                {grouped[key].map((contact, index) => (
-                  <Pressable
-                    key={contact.id}
-                    onPress={() => nav("contactDetail", { id: contact.id })}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingVertical: 12, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
-                  >
-                    <Avatar name={contact.name} size={44} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
-                      <View style={{ marginTop: 4 }}>
-                        <StatusChip statusId={contact.status} />
-                      </View>
+        <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+          {Object.keys(grouped).sort().map((key) => (
+            <View key={key}>
+              <Text style={{ color: "#7A837E", fontSize: 13, fontWeight: "800", marginTop: 18, marginBottom: 8 }}>{key}</Text>
+              {grouped[key].map((contact, index) => (
+                <Pressable
+                  key={contact.id}
+                  onPress={() => nav("contactDetail", { id: contact.id })}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
+                >
+                  <Avatar name={contact.name} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
+                    <View style={{ marginTop: 3 }}>
+                      <StatusChip statusId={contact.status} />
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
-                  </Pressable>
-                ))}
-              </View>
-            ))}
-          </MeshCard>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                </Pressable>
+              ))}
+            </View>
+          ))}
         </View>
       </MeshScroll>
 

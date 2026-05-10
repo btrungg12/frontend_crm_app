@@ -33,29 +33,29 @@ export function StatusScreen({ t, nav }: Props) {
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={112}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
-        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 14 }}>
+        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
           {statuses.map((status, index) => (
             <Pressable
               key={status.id}
               onPress={() => nav("createStatus", { id: status.id })}
-              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, borderBottomWidth: index < statuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < statuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
             >
-              <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
+              <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{status.name}</Text>
-                <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{status.desc}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{status.name}</Text>
+                <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{status.desc}</Text>
               </View>
-              <Text style={{ color: status.color, fontSize: 17, fontWeight: "900" }}>{status.count}</Text>
+              <Text style={{ color: status.color, fontSize: 18, fontWeight: "900" }}>{status.count}</Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
           ))}
         </MeshCard>
 
-        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, marginTop: 18, padding: 14, flexDirection: "row", gap: 12 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
-            <Ionicons name="bulb-outline" size={18} color={mesh.green600} />
+        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 20, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, marginTop: 18, padding: 14, flexDirection: "row", gap: 12 }}>
+          <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
+            <Ionicons name="bulb-outline" size={16} color={mesh.green600} />
           </View>
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>
             <Text style={{ color: mesh.green700, fontWeight: "900" }}>{t("aboutStatus")}</Text>

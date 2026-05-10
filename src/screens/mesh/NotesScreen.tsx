@@ -74,24 +74,24 @@ export function NotesScreen({ t, lang, nav }: Props) {
                   onPress={() => nav("noteDetail", { id: note.id })}
                   style={{ marginBottom: 10 }}
                 >
-                  <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, flexDirection: "row", gap: 14, alignItems: "flex-start", padding: 14 }}>
+                  <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 20, borderWidth: 1, borderColor: "rgba(6,69,50,0.05)", elevation: 0, shadowOpacity: 0.02, flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 14, paddingVertical: 12 }}>
                     {contact ? (
-                      <Avatar name={contact.name} size={44} />
+                      <Avatar name={contact.name} size={40} />
                     ) : (
-                      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: note.kind === "reminder" ? "rgba(31,112,72,0.10)" : mesh.bgSubtle }}>
-                        <Ionicons name={note.kind === "reminder" ? "notifications" : "document-text-outline"} size={20} color={mesh.green700} />
+                      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: note.kind === "reminder" ? "rgba(31,112,72,0.10)" : mesh.bgSubtle }}>
+                        <Ionicons name={note.kind === "reminder" ? "notifications" : "document-text-outline"} size={18} color={mesh.green700} />
                       </View>
                     )}
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact ? contact.name : note.title}</Text>
+                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact ? contact.name : note.title}</Text>
                       {contact ? <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "600", marginTop: 1 }}>{note.title}</Text> : null}
-                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 18, marginTop: 4 }}>
+                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 3 }}>
                         {preview}
                       </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
                         <Ionicons name="time-outline" size={12} color={mesh.green700} />
-                        <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "800" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
+                        <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
                       </View>
                     </View>
 

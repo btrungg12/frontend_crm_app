@@ -193,7 +193,7 @@ export function MeshChip({
         style
       ]}
     >
-      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 12, fontWeight: "700" }}>{children}</Text>
+      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 12, fontWeight: active ? "700" : "600" }}>{children}</Text>
     </Pressable>
   );
 }
@@ -209,14 +209,14 @@ export function StatusChip({ statusId, size = "sm" }: { statusId?: string; lang?
         flexDirection: "row",
         alignItems: "center",
         gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: size === "sm" ? 3 : 4,
+        paddingHorizontal: 0,
+        paddingVertical: size === "sm" ? 1 : 2,
         borderRadius: 999,
-        backgroundColor: mesh.bgSubtle
+        backgroundColor: "transparent"
       }}
     >
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: status.color }} />
-      <Text style={{ color: mesh.ink700, fontSize: size === "sm" ? 11 : 12, fontWeight: "700" }}>{status.name}</Text>
+      <Text style={{ color: mesh.ink700, fontSize: size === "sm" ? 11 : 12, fontWeight: "600" }}>{status.name}</Text>
     </View>
   );
 }

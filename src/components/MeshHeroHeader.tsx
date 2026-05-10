@@ -85,7 +85,7 @@ export function MeshHeroHeader({ children, left, right, style, subtitle, title }
 const styles = StyleSheet.create({
   root: {
     overflow: "hidden",
-    paddingBottom: 20,
+    paddingBottom: 16,
     paddingHorizontal: 20
   },
   gradient: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   topRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 14
+    gap: 12
   },
   left: {
     flexShrink: 0
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#004B3A",
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: "800",
     letterSpacing: -0.3
   },
@@ -119,6 +119,6 @@ const styles = StyleSheet.create({
     marginTop: 3
   },
   children: {
-    marginTop: 14
+    marginTop: 12
   }
 });
