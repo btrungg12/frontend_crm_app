@@ -62,7 +62,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         colors={["#043326", "#07583D", "#08764A", "#F7FAF7"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ minHeight: insets.top + 220, paddingHorizontal: 20, paddingTop: insets.top + 14, overflow: "hidden" }}
+        style={{ minHeight: insets.top + 180, paddingHorizontal: 20, paddingTop: insets.top + 14, overflow: "hidden" }}
       >
         <LeafDecor />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -77,27 +77,26 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 34, maxWidth: 300 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 34, fontWeight: "900", letterSpacing: -0.8 }}>
+        <View style={{ marginTop: 28, maxWidth: 300 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900", letterSpacing: -0.8 }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
         </View>
       </LinearGradient>
 
       <ScrollView
-        style={{ flex: 1, marginTop: 0, backgroundColor: "transparent" }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 120 }}
+        style={{ flex: 1, marginTop: -42, backgroundColor: "transparent" }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 150 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View
           style={{
-            marginTop: -58,
             backgroundColor: "#FFFFFF",
-            borderRadius: 28,
-            paddingHorizontal: 18,
-            paddingTop: 22,
-            paddingBottom: 20,
+            borderRadius: 26,
+            paddingHorizontal: 16,
+            paddingTop: 18,
+            paddingBottom: 18,
             borderWidth: 1,
             borderColor: "rgba(6,69,50,0.06)",
             shadowColor: "#064532",
@@ -173,9 +172,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         </View>
       </ScrollView>
 
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 10, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
-        <Pressable onPress={save} style={{ borderRadius: 26, overflow: "hidden", ...mesh.shadow }}>
-          <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
+        <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
+          <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <Ionicons name="save-outline" size={20} color="#FFFFFF" />
             <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800" }}>{edit ? t("save") : t("saveNote")}</Text>
           </LinearGradient>
@@ -198,7 +197,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
 function FieldLabel({ children, error = false, first = false }: { children: ReactNode; error?: boolean; first?: boolean }) {
   return (
-    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "800", letterSpacing: 0.9, marginBottom: 8, marginTop: first ? 0 : 18 }}>
+    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "800", letterSpacing: 0.9, marginBottom: 7, marginTop: first ? 0 : 16 }}>
       {children}
     </Text>
   );
@@ -244,7 +243,7 @@ function ChoiceCard({
         borderWidth: 1,
         flexDirection: "row",
         gap: 12,
-        minHeight: 68,
+        minHeight: 64,
         paddingHorizontal: 12,
         paddingVertical: 10,
         shadowColor: "#064532",
@@ -292,7 +291,7 @@ function InputCard({
         borderWidth: 1,
         flexDirection: "row",
         gap: 12,
-        minHeight: multiline ? 138 : 58,
+        minHeight: multiline ? 132 : 58,
         paddingBottom: 20,
         paddingHorizontal: 14,
         paddingTop: multiline ? 14 : 10
