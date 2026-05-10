@@ -7,7 +7,7 @@ type Props = PropsWithChildren<{
   style?: ViewStyle;
 }>;
 
-export function AppBackground({ children, showLeaf = true, style }: Props) {
+export function AppBackground({ children, showLeaf = false, style }: Props) {
   return (
     <View style={[styles.root, style]}>
       <LinearGradient

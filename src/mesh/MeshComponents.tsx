@@ -12,7 +12,7 @@ export type TFn = (key: string, vars?: Record<string, string | number>) => strin
 
 export function MeshScreen({
   children,
-  showLeaf = true,
+  showLeaf = false,
   style
 }: PropsWithChildren<{ showLeaf?: boolean; style?: ViewStyle }>) {
   return (
