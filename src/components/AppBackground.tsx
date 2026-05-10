@@ -20,10 +20,18 @@ export function AppBackground({ children, showLeaf = true, style }: Props) {
 
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(0,72,58,0.36)", "rgba(255,255,255,0)"]}
+        colors={["rgba(0,58,48,0.78)", "rgba(0,96,70,0.42)", "rgba(255,255,255,0)"]}
         start={{ x: 1, y: 0 }}
-        end={{ x: 0.15, y: 0.9 }}
+        end={{ x: 0.12, y: 0.88 }}
         style={styles.topGlow}
+      />
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(0,80,64,0.38)", "rgba(255,255,255,0)"]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.35, y: 0.86 }}
+        style={styles.headerWash}
       />
 
       {showLeaf ? <LeafDecor /> : null}
@@ -54,11 +62,19 @@ const styles = StyleSheet.create({
   },
   topGlow: {
     position: "absolute",
-    top: -120,
-    right: -130,
-    width: 450,
-    height: 380,
-    borderBottomLeftRadius: 280
+    top: -150,
+    right: -135,
+    width: 560,
+    height: 430,
+    borderBottomLeftRadius: 320
+  },
+  headerWash: {
+    position: "absolute",
+    top: -44,
+    left: -40,
+    width: 520,
+    height: 285,
+    borderBottomRightRadius: 260
   },
   leafGroup: {
     position: "absolute",
