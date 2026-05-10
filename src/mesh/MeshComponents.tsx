@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { PropsWithChildren } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
+import { PropsWithChildren, useRef } from "react";
+import { Animated, Modal, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBackground } from "../components/AppBackground";
@@ -222,6 +222,45 @@ export function StatusChip({ statusId, size = "sm" }: { statusId?: string; lang?
   );
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function ScalePressable({
+  activeScale = 0.94,
+  children,
+  onPress,
+  style
+}: PropsWithChildren<{
+  activeScale?: number;
+  onPress?: () => void;
+  style?: ViewStyle;
+}>) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () => {
+    Animated.spring(scale, {
+      toValue: activeScale,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 180
+    }).start();
+  };
+
+  const pressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 160
+    }).start();
+  };
+
+  return (
+    <AnimatedPressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={[style, { transform: [{ scale }] }]}>
+      {children}
+    </AnimatedPressable>
+  );
+}
+
 export function BottomNav({
   active,
   onTab,
@@ -272,8 +311,9 @@ export function BottomNav({
       {tabs.map((tab) => {
         if (tab.id === "fab") {
           return withFab ? (
-            <Pressable
+            <ScalePressable
               key="fab"
+              activeScale={0.9}
               onPress={() => {
                 triggerHaptic();
                 onTab("fab");
@@ -294,7 +334,7 @@ export function BottomNav({
               }}
             >
               <Ionicons name="add" size={28} color="#FFFFFF" />
-            </Pressable>
+            </ScalePressable>
           ) : (
             <View key="fab" style={{ width: 56 }} />
           );
@@ -302,8 +342,9 @@ export function BottomNav({
 
         const isActive = active === tab.id;
         return (
-          <Pressable
+          <ScalePressable
             key={tab.id}
+            activeScale={0.94}
             onPress={() => {
               triggerHaptic();
               onTab(tab.id);
@@ -322,7 +363,7 @@ export function BottomNav({
             <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: 11, fontWeight: isActive ? "800" : "600" }}>
               {tab.label}
             </Text>
-          </Pressable>
+          </ScalePressable>
         );
       })}
     </View>
