@@ -53,12 +53,12 @@ const styles = StyleSheet.create({
   },
   whiteSpotlight: {
     position: "absolute",
-    left: -80,
-    top: 150,
-    width: 520,
-    height: 190,
-    borderRadius: 260,
-    backgroundColor: "rgba(255,255,255,0.82)"
+    left: -120,
+    top: 145,
+    width: 620,
+    height: 230,
+    borderRadius: 320,
+    backgroundColor: "rgba(255,255,255,0.55)"
   },
   bottomFade: {
     position: "absolute",
