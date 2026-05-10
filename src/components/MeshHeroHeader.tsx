@@ -15,7 +15,7 @@ export function MeshHeroHeader({ children, left, right, style, subtitle, title }
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 22 }, style]}>
+    <View style={[styles.root, { paddingTop: insets.top + 14 }, style]}>
       <MeshGradientView
         pointerEvents="none"
         style={styles.gradient}
@@ -85,7 +85,7 @@ export function MeshHeroHeader({ children, left, right, style, subtitle, title }
 const styles = StyleSheet.create({
   root: {
     overflow: "hidden",
-    paddingBottom: 26,
+    paddingBottom: 20,
     paddingHorizontal: 20
   },
   gradient: {
@@ -108,17 +108,17 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#004B3A",
-    fontSize: 30,
-    fontWeight: "900",
-    letterSpacing: -0.5
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: -0.3
   },
   subtitle: {
-    color: "#5F6763",
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 4
+    color: "#6B726E",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 3
   },
   children: {
-    marginTop: 18
+    marginTop: 14
   }
 });
