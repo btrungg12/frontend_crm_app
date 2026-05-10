@@ -26,9 +26,11 @@ export function AppBackground({ children, showLeaf = false, style }: Props) {
         style={styles.topGlow}
       />
 
+      <View pointerEvents="none" style={styles.greetingSpotlight} />
+
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(255,255,255,0)", "rgba(215,235,221,0.62)", "rgba(255,255,255,0)"]}
+        colors={["rgba(255,255,255,0)", "rgba(225,240,230,0.28)", "rgba(255,255,255,0)"]}
         start={{ x: 0.05, y: 0 }}
         end={{ x: 0.75, y: 1 }}
         style={styles.headerWash}
@@ -62,18 +64,27 @@ const styles = StyleSheet.create({
   },
   topGlow: {
     position: "absolute",
-    top: -130,
+    top: -190,
     right: -120,
-    width: 560,
-    height: 420,
-    borderBottomLeftRadius: 320
+    width: 620,
+    height: 390,
+    borderBottomLeftRadius: 340
+  },
+  greetingSpotlight: {
+    position: "absolute",
+    top: 150,
+    left: -80,
+    width: 470,
+    height: 190,
+    borderRadius: 240,
+    backgroundColor: "rgba(255,255,255,0.86)"
   },
   headerWash: {
     position: "absolute",
-    top: 95,
-    left: -130,
+    top: 220,
+    left: -120,
     width: 620,
-    height: 360,
+    height: 300,
     borderRadius: 320
   },
   leafGroup: {
