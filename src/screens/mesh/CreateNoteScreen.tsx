@@ -62,28 +62,28 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         colors={["#063C2C", "#075F3D", "#0A7A4B"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ minHeight: insets.top + 262, paddingHorizontal: 24, paddingTop: insets.top + 18, overflow: "hidden" }}
+        style={{ minHeight: insets.top + 190, paddingHorizontal: 20, paddingTop: insets.top + 14, overflow: "hidden" }}
       >
         <LeafDecor />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => nav(edit ? "noteDetail" : "dashboard")}
-            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...mesh.shadow }}
+            style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...mesh.shadow }}
           >
-            <Ionicons name="chevron-back" size={28} color={mesh.green700} />
+            <Ionicons name="chevron-back" size={24} color={mesh.green700} />
           </Pressable>
-          <Text style={{ position: "absolute", left: 76, right: 76, textAlign: "center", color: "#FFFFFF", fontSize: 28, fontWeight: "900" }}>
+          <Text style={{ position: "absolute", left: 70, right: 70, textAlign: "center", color: "#FFFFFF", fontSize: 24, fontWeight: "800" }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
           <Pressable onPress={clear} hitSlop={10}>
-            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{t("clear")}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{t("clear")}</Text>
           </Pressable>
         </View>
       </LinearGradient>
 
       <ScrollView
-        style={{ flex: 1, marginTop: -34, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: "#FFFFFF" }}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 118 }}
+        style={{ flex: 1, marginTop: -24, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: "#FFFFFF" }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 22, paddingBottom: insets.bottom + 110 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -146,17 +146,17 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           }
         />
 
-        <View style={{ marginTop: 24, borderRadius: 22, backgroundColor: "rgba(31,112,72,0.08)", padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
+        <View style={{ marginTop: 18, borderRadius: 18, backgroundColor: "rgba(31,112,72,0.08)", padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <IconBox icon="bulb-outline" />
-          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 15, lineHeight: 23 }}>{t("noteHint").replace("\n", " ")}</Text>
+          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
       </ScrollView>
 
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.98)", paddingHorizontal: 24, paddingTop: 14, paddingBottom: insets.bottom + 14, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.08)" }}>
-        <Pressable onPress={save} style={{ borderRadius: 32, overflow: "hidden", ...mesh.shadow }}>
-          <LinearGradient colors={[mesh.green700, "#008A55", mesh.green800]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 62, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            <Ionicons name="save-outline" size={22} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>{edit ? t("save") : t("saveNote")}</Text>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.98)", paddingHorizontal: 20, paddingTop: 10, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.08)" }}>
+        <Pressable onPress={save} style={{ borderRadius: 27, overflow: "hidden", ...mesh.shadow }}>
+          <LinearGradient colors={[mesh.green700, "#008A55", mesh.green800]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 54, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800" }}>{edit ? t("save") : t("saveNote")}</Text>
           </LinearGradient>
         </Pressable>
       </View>
@@ -177,7 +177,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
 function FieldLabel({ children, error = false }: { children: ReactNode; error?: boolean }) {
   return (
-    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 14, fontWeight: "900", letterSpacing: 0.7, marginBottom: 10, marginTop: 24 }}>
+    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "800", letterSpacing: 0.9, marginBottom: 8, marginTop: 18 }}>
       {children}
     </Text>
   );
@@ -189,8 +189,8 @@ function ErrorText({ children }: { children: string }) {
 
 function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
   return (
-    <View style={{ width: 54, height: 54, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
-      <Ionicons name={icon} size={27} color={mesh.green700} />
+    <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
+      <Ionicons name={icon} size={22} color={mesh.green700} />
     </View>
   );
 }
@@ -219,26 +219,26 @@ function ChoiceCard({
         alignItems: "center",
         backgroundColor: "#FFFFFF",
         borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.06)",
-        borderRadius: 24,
+        borderRadius: 20,
         borderWidth: 1,
         flexDirection: "row",
-        gap: 16,
-        minHeight: 92,
-        paddingHorizontal: 18,
-        paddingVertical: 16,
+        gap: 12,
+        minHeight: 72,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         shadowColor: "#064532",
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
-        elevation: 3
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 1
       }}
     >
       {left || <IconBox icon={icon} />}
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "900" }}>{title}</Text>
-        {subtitle ? <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 22, marginTop: 4 }}>{subtitle}</Text> : null}
+        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{title}</Text>
+        {subtitle ? <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 2 }}>{subtitle}</Text> : null}
       </View>
-      {trailing || <Ionicons name="chevron-forward" size={24} color={mesh.ink400} />}
+      {trailing || <Ionicons name="chevron-forward" size={20} color={mesh.ink400} />}
     </Pressable>
   );
 }
@@ -267,14 +267,14 @@ function InputCard({
       style={{
         alignItems: multiline ? "flex-start" : "center",
         borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
-        borderRadius: 24,
+        borderRadius: 20,
         borderWidth: 1,
         flexDirection: "row",
-        gap: 14,
-        minHeight: multiline ? 190 : 76,
-        paddingBottom: 26,
-        paddingHorizontal: 16,
-        paddingTop: multiline ? 18 : 14
+        gap: 12,
+        minHeight: multiline ? 150 : 62,
+        paddingBottom: 20,
+        paddingHorizontal: 14,
+        paddingTop: multiline ? 14 : 10
       }}
     >
       <IconBox icon={icon} />
@@ -289,23 +289,23 @@ function InputCard({
         style={{
           color: mesh.ink900,
           flex: 1,
-          fontSize: 16,
-          lineHeight: multiline ? 24 : undefined,
-          minHeight: multiline ? 124 : 38,
+          fontSize: 14,
+          lineHeight: multiline ? 21 : undefined,
+          minHeight: multiline ? 92 : 32,
           padding: 0
         }}
       />
-      <Text style={{ bottom: 14, color: mesh.ink500, fontSize: 13, position: "absolute", right: 18 }}>{counter}</Text>
+      <Text style={{ bottom: 10, color: mesh.ink500, fontSize: 12, position: "absolute", right: 14 }}>{counter}</Text>
     </View>
   );
 }
 
 function LeafDecor() {
   return (
-    <View pointerEvents="none" style={{ bottom: -16, height: 190, opacity: 0.32, position: "absolute", right: -34, width: 230 }}>
-      <View style={{ backgroundColor: "#B9E3CB", borderBottomLeftRadius: 22, borderBottomRightRadius: 96, borderTopLeftRadius: 96, borderTopRightRadius: 22, height: 130, position: "absolute", right: 70, top: 24, transform: [{ rotate: "43deg" }], width: 76 }} />
-      <View style={{ backgroundColor: "#D9F0E0", borderBottomLeftRadius: 18, borderBottomRightRadius: 80, borderTopLeftRadius: 80, borderTopRightRadius: 18, height: 112, position: "absolute", right: 134, top: 78, transform: [{ rotate: "78deg" }], width: 62 }} />
-      <View style={{ backgroundColor: "#8FCDA7", borderBottomLeftRadius: 18, borderBottomRightRadius: 86, borderTopLeftRadius: 86, borderTopRightRadius: 18, height: 118, position: "absolute", right: 20, top: 96, transform: [{ rotate: "112deg" }], width: 64 }} />
+    <View pointerEvents="none" style={{ bottom: -28, height: 160, opacity: 0.18, position: "absolute", right: -44, width: 200 }}>
+      <View style={{ backgroundColor: "#B9E3CB", borderBottomLeftRadius: 22, borderBottomRightRadius: 96, borderTopLeftRadius: 96, borderTopRightRadius: 22, height: 110, position: "absolute", right: 62, top: 24, transform: [{ rotate: "43deg" }], width: 64 }} />
+      <View style={{ backgroundColor: "#D9F0E0", borderBottomLeftRadius: 18, borderBottomRightRadius: 80, borderTopLeftRadius: 80, borderTopRightRadius: 18, height: 94, position: "absolute", right: 118, top: 72, transform: [{ rotate: "78deg" }], width: 54 }} />
+      <View style={{ backgroundColor: "#8FCDA7", borderBottomLeftRadius: 18, borderBottomRightRadius: 86, borderTopLeftRadius: 86, borderTopRightRadius: 18, height: 98, position: "absolute", right: 18, top: 88, transform: [{ rotate: "112deg" }], width: 56 }} />
     </View>
   );
 }
