@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
+import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { contacts, Lang, statusById, upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -23,7 +24,9 @@ export function DashboardScreen({ t, lang, nav }: Props) {
 
   return (
     <MeshScreen>
-      <MeshHeader variant="transparent" style={{ paddingBottom: 48 }}>
+      <DashboardMeshBackground />
+
+      <MeshHeader variant="transparent" style={{ paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
             <Avatar name="Trung" size={44} ring />
@@ -39,7 +42,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           </View>
         </View>
 
-        <View style={{ marginTop: 52 }}>
+        <View style={{ marginTop: 46 }}>
           <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "900", letterSpacing: -0.4 }}>
             {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
