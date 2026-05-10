@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { PropsWithChildren } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -233,6 +234,9 @@ export function BottomNav({
   withFab?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const triggerHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  };
   const tabs: Array<{ id: string; label?: string; icon?: keyof typeof Ionicons.glyphMap; activeIcon?: keyof typeof Ionicons.glyphMap }> = [
     { id: "home", label: t("tabHome"), icon: "home-outline", activeIcon: "home" },
     { id: "contacts", label: t("tabContacts"), icon: "people-outline", activeIcon: "people" },
@@ -270,7 +274,10 @@ export function BottomNav({
           return withFab ? (
             <Pressable
               key="fab"
-              onPress={() => onTab("fab")}
+              onPress={() => {
+                triggerHaptic();
+                onTab("fab");
+              }}
               style={{
                 width: 60,
                 height: 60,
@@ -297,7 +304,10 @@ export function BottomNav({
         return (
           <Pressable
             key={tab.id}
-            onPress={() => onTab(tab.id)}
+            onPress={() => {
+              triggerHaptic();
+              onTab(tab.id);
+            }}
             style={{
               flex: 1,
               alignItems: "center",
