@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { useRef } from "react";
+import { Animated, Pressable, Text, View } from "react-native";
 
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
-import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { contacts, Lang, statusById, upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -21,10 +22,29 @@ const iconMap = {
 
 export function DashboardScreen({ t, lang, nav }: Props) {
   const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const heroOpacity = scrollY.interpolate({
+    inputRange: [0, 80, 160],
+    outputRange: [1, 0.65, 0],
+    extrapolate: "clamp"
+  });
+  const heroTranslateY = scrollY.interpolate({
+    inputRange: [0, 160],
+    outputRange: [0, -40],
+    extrapolate: "clamp"
+  });
 
   return (
     <MeshScreen>
-      <DashboardMeshBackground />
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          opacity: heroOpacity,
+          transform: [{ translateY: heroTranslateY }]
+        }}
+      >
+        <DashboardMeshBackground />
+      </Animated.View>
 
       <MeshHeader variant="transparent" style={{ paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
@@ -50,7 +70,16 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         </View>
       </MeshHeader>
 
-      <MeshScroll style={{ marginTop: 0 }} bottom={112}>
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 112 }}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+      >
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>
@@ -133,7 +162,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Pressable>
           </View>
         </View>
-      </MeshScroll>
+      </Animated.ScrollView>
 
       <BottomNav
         active="home"
