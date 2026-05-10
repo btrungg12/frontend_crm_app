@@ -284,10 +284,12 @@ function InputCard({
   placeholder: string;
   value: string;
 }) {
+  const isEmptyMultiline = multiline && value.length === 0;
+
   return (
     <View
       style={{
-        alignItems: multiline ? "flex-start" : "center",
+        alignItems: multiline && !isEmptyMultiline ? "flex-start" : "center",
         borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.08)",
         borderRadius: 18,
         borderWidth: 1,
@@ -296,7 +298,7 @@ function InputCard({
         minHeight: multiline ? 132 : 58,
         paddingBottom: 20,
         paddingHorizontal: 14,
-        paddingTop: multiline ? 14 : 10
+        paddingTop: multiline && !isEmptyMultiline ? 14 : 10
       }}
     >
       <IconBox icon={icon} />
@@ -307,13 +309,13 @@ function InputCard({
         placeholderTextColor={mesh.ink400}
         maxLength={maxLength}
         multiline={multiline}
-        textAlignVertical={multiline ? "top" : "center"}
+        textAlignVertical={multiline && !isEmptyMultiline ? "top" : "center"}
         style={{
           color: mesh.ink900,
           flex: 1,
           fontSize: 14,
           lineHeight: multiline ? 21 : undefined,
-          minHeight: multiline ? 92 : 30,
+          minHeight: multiline && !isEmptyMultiline ? 92 : 30,
           padding: 0
         }}
       />
