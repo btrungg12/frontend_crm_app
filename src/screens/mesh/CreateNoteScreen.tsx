@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { ReactNode, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Avatar, HeaderCircleBtn, MeshHeader, MeshScreen, MeshScroll, NavFn, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
+import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { contactById, contacts, Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -11,112 +13,301 @@ type Props = {
   lang: Lang;
   nav: NavFn;
   edit?: boolean;
+  initialPerson?: string;
 };
 
-export function CreateNoteScreen({ t, lang, nav, edit = false }: Props) {
+const titleLimit = 100;
+const contentLimit = 1000;
+
+export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: Props) {
+  const insets = useSafeAreaInsets();
+  const isVi = lang === "vi";
   const [title, setTitle] = useState(edit ? "Gọi điện hỏi thăm công việc" : "");
   const [content, setContent] = useState(
     edit
       ? "Hôm nay nên gọi hỏi thăm tình hình công việc mới của An, xem có cần hỗ trợ gì không.\n\nAn đang phụ trách dự án mới ở công ty."
       : ""
   );
-  const [person, setPerson] = useState<string | null>(edit ? "c1" : null);
+  const [person, setPerson] = useState<string | null>(edit ? "c1" : initialPerson || null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminder, setReminder] = useState<string | null>(null);
+  const [personError, setPersonError] = useState(false);
+  const [contentError, setContentError] = useState(false);
   const contact = contactById(person);
 
+  const clear = () => {
+    setTitle("");
+    setContent("");
+    setPerson(null);
+    setReminder(null);
+    setPersonError(false);
+    setContentError(false);
+  };
+
+  const save = () => {
+    const missingPerson = !person;
+    const missingContent = content.trim().length === 0;
+    setPersonError(missingPerson);
+    setContentError(missingContent);
+
+    if (missingPerson || missingContent) return;
+
+    nav(edit ? "noteDetail" : "notes");
+  };
+
   return (
-    <MeshScreen>
-      <MeshHeader style={{ paddingBottom: 30 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 4 }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "noteDetail" : "dashboard")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: mesh.ink900, fontSize: 17, fontWeight: "900" }}>
+    <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <LinearGradient
+        colors={["#063C2C", "#075F3D", "#0A7A4B"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ minHeight: insets.top + 262, paddingHorizontal: 24, paddingTop: insets.top + 18, overflow: "hidden" }}
+      >
+        <LeafDecor />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Pressable
+            onPress={() => nav(edit ? "noteDetail" : "dashboard")}
+            style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...mesh.shadow }}
+          >
+            <Ionicons name="chevron-back" size={28} color={mesh.green700} />
+          </Pressable>
+          <Text style={{ position: "absolute", left: 76, right: 76, textAlign: "center", color: "#FFFFFF", fontSize: 28, fontWeight: "900" }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.95)", fontSize: 14, fontWeight: "800" }}>{t("clear")}</Text>
+          <Pressable onPress={clear} hitSlop={10}>
+            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>{t("clear")}</Text>
+          </Pressable>
         </View>
-      </MeshHeader>
+      </LinearGradient>
 
-      <MeshScroll style={{ backgroundColor: "#FFFFFF", marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 18 }} bottom={120}>
-        <FieldLabel>{t("person")}</FieldLabel>
-        <Pressable
+      <ScrollView
+        style={{ flex: 1, marginTop: -34, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: "#FFFFFF" }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 118 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <FieldLabel error={personError}>{t("person").toUpperCase()}</FieldLabel>
+        <ChoiceCard
+          icon="person-outline"
+          title={contact ? contact.name : t("pickPerson")}
+          subtitle={contact ? undefined : t("attachToPerson")}
           onPress={() => setPickerOpen(true)}
-          style={{ padding: 14, borderRadius: 14, borderWidth: contact ? 1 : 1.5, borderStyle: contact ? "solid" : "dashed", borderColor: contact ? mesh.line : mesh.green300, backgroundColor: contact ? "#FFFFFF" : "rgba(31,112,72,0.03)", flexDirection: "row", alignItems: "center", gap: 12 }}
-        >
-          {contact ? (
-            <Avatar name={contact.name} size={40} />
-          ) : (
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(31,112,72,0.08)", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="person-outline" size={20} color={mesh.green700} />
-            </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: contact ? mesh.ink900 : mesh.ink700, fontSize: 15, fontWeight: "900" }}>{contact ? contact.name : t("pickPerson")}</Text>
-            <View style={{ marginTop: 3 }}>{contact ? <StatusChip statusId={contact.status} /> : <Text style={{ color: mesh.ink500, fontSize: 13 }}>{t("attachToPerson")}</Text>}</View>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={mesh.ink400} />
-        </Pressable>
+          error={personError}
+          left={contact ? <Avatar name={contact.name} size={48} /> : undefined}
+          trailing={contact ? <StatusChip statusId={contact.status} /> : undefined}
+        />
+        {personError ? <ErrorText>{isVi ? "Vui lòng chọn người." : "Please choose a person."}</ErrorText> : null}
 
         <FieldLabel>
-          {t("noteTitle")} <Text style={{ color: mesh.ink400, fontWeight: "600" }}>{t("optional")}</Text>
+          {t("noteTitle").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
         </FieldLabel>
-        <View style={{ borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 24 }}>
-          <TextInput value={title} onChangeText={setTitle} placeholder={t("enterTitle")} placeholderTextColor={mesh.ink400} style={{ color: mesh.ink900, fontSize: 15 }} />
-          <Text style={{ position: "absolute", right: 12, bottom: 6, color: mesh.ink400, fontSize: 11 }}>{title.length}/100</Text>
-        </View>
+        <InputCard
+          icon="document-text-outline"
+          value={title}
+          onChangeText={setTitle}
+          placeholder={t("enterTitle")}
+          maxLength={titleLimit}
+          counter={`${title.length}/${titleLimit}`}
+        />
 
         <FieldLabel>
-          {t("noteContent")} <Text style={{ color: mesh.pink }}>*</Text>
+          {t("noteContent").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
         </FieldLabel>
-        <View style={{ borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 24, minHeight: 144 }}>
-          <TextInput value={content} onChangeText={setContent} placeholder={t("whatToWrite")} placeholderTextColor={mesh.ink400} multiline textAlignVertical="top" style={{ minHeight: 96, color: mesh.ink900, fontSize: 15, lineHeight: 23 }} />
-          <Text style={{ position: "absolute", right: 12, bottom: 6, color: mesh.ink400, fontSize: 11 }}>{content.length}/1000</Text>
-        </View>
+        <InputCard
+          icon="create-outline"
+          value={content}
+          onChangeText={(value) => {
+            setContent(value);
+            if (value.trim()) setContentError(false);
+          }}
+          placeholder={t("whatToWrite")}
+          maxLength={contentLimit}
+          counter={`${content.length}/${contentLimit}`}
+          multiline
+          error={contentError}
+        />
+        {contentError ? <ErrorText>{isVi ? "Nội dung là bắt buộc." : "Content is required."}</ErrorText> : null}
 
         <FieldLabel>
-          {t("reminder")} <Text style={{ color: mesh.ink400, fontWeight: "600" }}>{t("optional")}</Text>
+          {t("reminder").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
         </FieldLabel>
-        <Pressable
+        <ChoiceCard
+          icon="notifications-outline"
+          title={reminder || t("addReminder")}
+          subtitle={reminder ? t("once") : t("reminderHint")}
           onPress={() => setReminderOpen(true)}
-          style={{ padding: 14, borderRadius: 14, borderWidth: reminder ? 1 : 1.5, borderStyle: reminder ? "solid" : "dashed", borderColor: reminder ? mesh.line : mesh.green300, backgroundColor: reminder ? "#FFFFFF" : "rgba(31,112,72,0.03)", flexDirection: "row", alignItems: "center", gap: 12 }}
-        >
-          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "rgba(31,112,72,0.08)", alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="notifications-outline" size={20} color={mesh.green700} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{reminder || t("addReminder")}</Text>
-            <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{t("reminderHint")}</Text>
-          </View>
-          {reminder ? (
-            <Pressable onPress={() => setReminder(null)}>
-              <Text style={{ color: mesh.pink, fontWeight: "900", fontSize: 13 }}>{t("clear")}</Text>
-            </Pressable>
-          ) : (
-            <Ionicons name="chevron-forward" size={18} color={mesh.ink400} />
-          )}
-        </Pressable>
+          trailing={
+            reminder ? (
+              <Pressable onPress={() => setReminder(null)} hitSlop={8}>
+                <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "900" }}>{t("clear")}</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
 
-        <View style={{ marginTop: 22 }}>
-          <TipCard>{t("noteHint")}</TipCard>
+        <View style={{ marginTop: 24, borderRadius: 22, backgroundColor: "rgba(31,112,72,0.08)", padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <IconBox icon="bulb-outline" />
+          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 15, lineHeight: 23 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
-      </MeshScroll>
+      </ScrollView>
 
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.96)", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28, borderTopWidth: 1, borderColor: mesh.line }}>
-        <Pressable onPress={() => nav(edit ? "noteDetail" : "notes")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: mesh.green700, borderRadius: 24, paddingVertical: 16 }}>
-          <Ionicons name="save-outline" size={18} color="#FFFFFF" />
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "900" }}>{edit ? t("save") : t("saveNote")}</Text>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.98)", paddingHorizontal: 24, paddingTop: 14, paddingBottom: insets.bottom + 14, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.08)" }}>
+        <Pressable onPress={save} style={{ borderRadius: 32, overflow: "hidden", ...mesh.shadow }}>
+          <LinearGradient colors={[mesh.green700, "#008A55", mesh.green800]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 62, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <Ionicons name="save-outline" size={22} color="#FFFFFF" />
+            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>{edit ? t("save") : t("saveNote")}</Text>
+          </LinearGradient>
         </Pressable>
       </View>
 
-      <ContactPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={(id) => setPerson(id)} t={t} />
+      <ContactPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={(id) => {
+          setPerson(id);
+          setPersonError(false);
+        }}
+        t={t}
+      />
       <ReminderPicker open={reminderOpen} onClose={() => setReminderOpen(false)} onPick={setReminder} t={t} lang={lang} />
     </MeshScreen>
   );
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "900", marginTop: 20, marginBottom: 8 }}>{children}</Text>;
+function FieldLabel({ children, error = false }: { children: ReactNode; error?: boolean }) {
+  return (
+    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 14, fontWeight: "900", letterSpacing: 0.7, marginBottom: 10, marginTop: 24 }}>
+      {children}
+    </Text>
+  );
+}
+
+function ErrorText({ children }: { children: string }) {
+  return <Text style={{ color: mesh.pink, fontSize: 12, fontWeight: "700", marginTop: 8 }}>{children}</Text>;
+}
+
+function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={{ width: 54, height: 54, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
+      <Ionicons name={icon} size={27} color={mesh.green700} />
+    </View>
+  );
+}
+
+function ChoiceCard({
+  error = false,
+  icon,
+  left,
+  onPress,
+  subtitle,
+  title,
+  trailing
+}: {
+  error?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  left?: ReactNode;
+  onPress: () => void;
+  subtitle?: string;
+  title: string;
+  trailing?: ReactNode;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.06)",
+        borderRadius: 24,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 16,
+        minHeight: 92,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+        shadowColor: "#064532",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 18,
+        elevation: 3
+      }}
+    >
+      {left || <IconBox icon={icon} />}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "900" }}>{title}</Text>
+        {subtitle ? <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 22, marginTop: 4 }}>{subtitle}</Text> : null}
+      </View>
+      {trailing || <Ionicons name="chevron-forward" size={24} color={mesh.ink400} />}
+    </Pressable>
+  );
+}
+
+function InputCard({
+  counter,
+  error = false,
+  icon,
+  maxLength,
+  multiline = false,
+  onChangeText,
+  placeholder,
+  value
+}: {
+  counter: string;
+  error?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  maxLength: number;
+  multiline?: boolean;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  value: string;
+}) {
+  return (
+    <View
+      style={{
+        alignItems: multiline ? "flex-start" : "center",
+        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
+        borderRadius: 24,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 14,
+        minHeight: multiline ? 190 : 76,
+        paddingBottom: 26,
+        paddingHorizontal: 16,
+        paddingTop: multiline ? 18 : 14
+      }}
+    >
+      <IconBox icon={icon} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={mesh.ink400}
+        maxLength={maxLength}
+        multiline={multiline}
+        textAlignVertical={multiline ? "top" : "center"}
+        style={{
+          color: mesh.ink900,
+          flex: 1,
+          fontSize: 16,
+          lineHeight: multiline ? 24 : undefined,
+          minHeight: multiline ? 124 : 38,
+          padding: 0
+        }}
+      />
+      <Text style={{ bottom: 14, color: mesh.ink500, fontSize: 13, position: "absolute", right: 18 }}>{counter}</Text>
+    </View>
+  );
+}
+
+function LeafDecor() {
+  return (
+    <View pointerEvents="none" style={{ bottom: -16, height: 190, opacity: 0.32, position: "absolute", right: -34, width: 230 }}>
+      <View style={{ backgroundColor: "#B9E3CB", borderBottomLeftRadius: 22, borderBottomRightRadius: 96, borderTopLeftRadius: 96, borderTopRightRadius: 22, height: 130, position: "absolute", right: 70, top: 24, transform: [{ rotate: "43deg" }], width: 76 }} />
+      <View style={{ backgroundColor: "#D9F0E0", borderBottomLeftRadius: 18, borderBottomRightRadius: 80, borderTopLeftRadius: 80, borderTopRightRadius: 18, height: 112, position: "absolute", right: 134, top: 78, transform: [{ rotate: "78deg" }], width: 62 }} />
+      <View style={{ backgroundColor: "#8FCDA7", borderBottomLeftRadius: 18, borderBottomRightRadius: 86, borderTopLeftRadius: 86, borderTopRightRadius: 18, height: 118, position: "absolute", right: 20, top: 96, transform: [{ rotate: "112deg" }], width: 64 }} />
+    </View>
+  );
 }
 
 function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: () => void; onPick: (id: string) => void; t: TFn }) {

@@ -113,7 +113,7 @@ export function AppShell() {
     case "noteDetailB":
       return <NoteDetailScreen {...common} noteId={(route.props?.id as string) || (route.props?.noteId as string) || "n1"} variant="B" />;
     case "createNote":
-      return <CreateNoteScreen {...common} />;
+      return <CreateNoteScreen {...common} initialPerson={route.props?.person as string | undefined} />;
     case "editNote":
       return <CreateNoteScreen {...common} edit />;
     case "search":
