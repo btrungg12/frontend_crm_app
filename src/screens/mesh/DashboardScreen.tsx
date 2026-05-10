@@ -22,8 +22,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
 
   return (
-    <MeshScreen>
-      <MeshHeader variant="transparent" style={{ paddingBottom: 72 }}>
+    <MeshScreen showLeaf>
+      <MeshHeader variant="transparent" style={{ paddingBottom: 48 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
             <Avatar name="Trung" size={44} ring />
@@ -39,7 +39,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           </View>
         </View>
 
-        <View style={{ marginTop: 64 }}>
+        <View style={{ marginTop: 52 }}>
           <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "900", letterSpacing: -0.4 }}>
             {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
@@ -47,8 +47,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         </View>
       </MeshHeader>
 
-      <MeshScroll style={{ marginTop: -12 }} bottom={112}>
-        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+      <MeshScroll style={{ marginTop: 0 }} bottom={112}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>
               {t("upcoming")} <Text style={{ color: mesh.ink500 }}>(4)</Text>

@@ -28,9 +28,9 @@ export function AppBackground({ children, showLeaf = false, style }: Props) {
 
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(215,235,221,0.8)", "rgba(255,255,255,0)"]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.35, y: 0.86 }}
+        colors={["rgba(255,255,255,0)", "rgba(215,235,221,0.62)", "rgba(255,255,255,0)"]}
+        start={{ x: 0.05, y: 0 }}
+        end={{ x: 0.75, y: 1 }}
         style={styles.headerWash}
       />
 
@@ -70,19 +70,19 @@ const styles = StyleSheet.create({
   },
   headerWash: {
     position: "absolute",
-    top: 72,
-    left: -80,
-    width: 520,
-    height: 260,
-    borderBottomRightRadius: 260
+    top: 95,
+    left: -130,
+    width: 620,
+    height: 360,
+    borderRadius: 320
   },
   leafGroup: {
     position: "absolute",
-    top: 92,
-    right: -28,
-    width: 190,
-    height: 190,
-    opacity: 0.28
+    top: 132,
+    right: -34,
+    width: 230,
+    height: 230,
+    opacity: 0.32
   },
   leaf: {
     position: "absolute",
@@ -93,24 +93,24 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 90
   },
   leafOne: {
-    width: 74,
-    height: 128,
-    right: 36,
+    width: 64,
+    height: 110,
+    right: 42,
     top: 0,
     transform: [{ rotate: "34deg" }]
   },
   leafTwo: {
-    width: 64,
-    height: 108,
-    right: 90,
-    top: 50,
+    width: 54,
+    height: 92,
+    right: 102,
+    top: 58,
     transform: [{ rotate: "74deg" }]
   },
   leafThree: {
-    width: 56,
-    height: 94,
-    right: 28,
-    top: 74,
+    width: 48,
+    height: 82,
+    right: 34,
+    top: 86,
     transform: [{ rotate: "112deg" }]
   }
 });
