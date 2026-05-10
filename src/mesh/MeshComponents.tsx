@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { PropsWithChildren } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, View, ViewStyle } from "react-native";
+import { Modal, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBackground } from "../components/AppBackground";
@@ -165,7 +165,7 @@ export function MeshCard({ children, style }: PropsWithChildren<{ style?: ViewSt
   );
 }
 
-export function SectionLabel({ children, style }: PropsWithChildren<{ style?: ViewStyle }>) {
+export function SectionLabel({ children, style }: PropsWithChildren<{ style?: TextStyle }>) {
   return <Text style={[{ color: mesh.ink500, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 }, style]}>{children}</Text>;
 }
 
