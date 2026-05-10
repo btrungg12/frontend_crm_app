@@ -6,35 +6,46 @@ export function DashboardMeshBackground() {
     <View pointerEvents="none" style={styles.wrapper}>
       <MeshGradientView
         style={styles.mesh}
-        columns={3}
-        rows={3}
+        columns={4}
+        rows={4}
         colors={[
           "#003A30",
-          "#005C48",
-          "#0D6B54",
-          "#EAF5EE",
+          "#004737",
+          "#00624D",
+          "#0C6B54",
+          "#CFE8DA",
+          "#DCEFE4",
+          "#6FB493",
+          "#18765A",
           "#FFFFFF",
-          "#B8DCC8",
           "#FFFFFF",
-          "#F7FBF7",
+          "#F3FAF5",
+          "#CFE8DA",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
           "#FFFFFF"
         ]}
         points={[
           [0, 0],
-          [0.55, 0],
+          [0.35, 0],
+          [0.7, 0],
           [1, 0],
-          [0, 0.48],
-          [0.48, 0.52],
-          [1, 0.45],
+          [0, 0.25],
+          [0.35, 0.32],
+          [0.7, 0.28],
+          [1, 0.32],
+          [0, 0.55],
+          [0.38, 0.55],
+          [0.72, 0.58],
+          [1, 0.6],
           [0, 1],
-          [0.55, 1],
+          [0.35, 1],
+          [0.7, 1],
           [1, 1]
         ]}
         smoothsColors
       />
-
-      <View style={styles.whiteSpotlight} />
-      <View style={styles.bottomFade} />
     </View>
   );
 }
@@ -45,27 +56,10 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 360,
+    height: 390,
     overflow: "hidden"
   },
   mesh: {
     ...StyleSheet.absoluteFillObject
-  },
-  whiteSpotlight: {
-    position: "absolute",
-    left: -120,
-    top: 145,
-    width: 620,
-    height: 230,
-    borderRadius: 320,
-    backgroundColor: "rgba(255,255,255,0.55)"
-  },
-  bottomFade: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 90,
-    backgroundColor: "rgba(255,255,255,0.42)"
   }
 });
