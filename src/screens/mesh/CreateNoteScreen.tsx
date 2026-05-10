@@ -85,13 +85,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       </LinearGradient>
 
       <ScrollView
-        style={{ flex: 1, marginTop: -58, backgroundColor: "transparent" }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 110 }}
+        style={{ flex: 1, marginTop: 0, backgroundColor: "transparent" }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 120 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View
           style={{
+            marginTop: -58,
             backgroundColor: "#FFFFFF",
             borderRadius: 28,
             paddingHorizontal: 18,
