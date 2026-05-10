@@ -48,7 +48,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         </View>
       </MeshHeroHeader>
 
-      <MeshScroll bottom={112}>
+      <MeshScroll bottom={150}>
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
           {filters.map((item) => (
             <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)} style={{ backgroundColor: filter === item.id ? mesh.green700 : "#FFFFFF", borderColor: filter === item.id ? mesh.green700 : "rgba(6,69,50,0.12)" }}>

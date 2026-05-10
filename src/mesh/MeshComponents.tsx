@@ -245,16 +245,21 @@ export function BottomNav({
     <View
       style={{
         position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        minHeight: insets.bottom + 76,
-        paddingBottom: insets.bottom + 8,
-        paddingTop: 8,
+        left: 20,
+        right: 20,
+        bottom: insets.bottom + 12,
+        minHeight: 78,
+        paddingVertical: 8,
         paddingHorizontal: 12,
         backgroundColor: "rgba(255,255,255,0.96)",
-        borderTopWidth: 1,
-        borderColor: mesh.line,
+        borderRadius: 34,
+        borderWidth: 1,
+        borderColor: "rgba(6,69,50,0.08)",
+        shadowColor: "#064532",
+        shadowOpacity: 0.1,
+        shadowRadius: 22,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 8,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-around"
@@ -267,18 +272,18 @@ export function BottomNav({
               key="fab"
               onPress={() => onTab("fab")}
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
+                width: 60,
+                height: 60,
+                borderRadius: 30,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: mesh.green600,
-                transform: [{ translateY: -12 }],
+                backgroundColor: mesh.green700,
+                transform: [{ translateY: -16 }],
                 shadowColor: mesh.green700,
-                shadowOpacity: 0.3,
+                shadowOpacity: 0.24,
                 shadowRadius: 18,
                 shadowOffset: { width: 0, height: 8 },
-                elevation: 8
+                elevation: 10
               }}
             >
               <Ionicons name="add" size={28} color="#FFFFFF" />
@@ -290,7 +295,19 @@ export function BottomNav({
 
         const isActive = active === tab.id;
         return (
-          <Pressable key={tab.id} onPress={() => onTab(tab.id)} style={{ flex: 1, alignItems: "center", gap: 3, paddingVertical: 6 }}>
+          <Pressable
+            key={tab.id}
+            onPress={() => onTab(tab.id)}
+            style={{
+              flex: 1,
+              alignItems: "center",
+              gap: 3,
+              paddingHorizontal: 8,
+              paddingVertical: 6,
+              borderRadius: 18,
+              backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent"
+            }}
+          >
             <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
             <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: 11, fontWeight: isActive ? "800" : "600" }}>
               {tab.label}

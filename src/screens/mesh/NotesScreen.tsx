@@ -50,7 +50,7 @@ export function NotesScreen({ t, lang, nav }: Props) {
         </Pressable>
       </MeshHeroHeader>
 
-      <MeshScroll bottom={112}>
+      <MeshScroll bottom={150}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 14 }}>
           {filters.map((item) => (
             <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)}>

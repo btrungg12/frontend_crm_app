@@ -31,7 +31,7 @@ export function StatusScreen({ t, nav }: Props) {
         </View>
       </MeshHeroHeader>
 
-      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={112}>
+      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={150}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
         <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
           {statuses.map((status, index) => (

@@ -72,7 +72,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
 
       <Animated.ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 112 }}
+        contentContainerStyle={{ paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         bounces={false}
