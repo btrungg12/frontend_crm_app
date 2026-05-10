@@ -84,28 +84,29 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         </View>
       </LinearGradient>
 
-      <ScrollView
-        style={{ flex: 1, backgroundColor: "transparent" }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 150 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <View
+        style={{
+          flex: 1,
+          marginHorizontal: 20,
+          marginTop: -42,
+          marginBottom: insets.bottom + 88,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 26,
+          borderWidth: 1,
+          borderColor: "rgba(6,69,50,0.06)",
+          shadowColor: "#064532",
+          shadowOpacity: 0.05,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 2,
+          overflow: "hidden"
+        }}
       >
-        <View style={{ marginTop: -42, paddingTop: 42 }}>
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: 26,
-            paddingHorizontal: 16,
-            paddingTop: 18,
-            paddingBottom: 18,
-            borderWidth: 1,
-            borderColor: "rgba(6,69,50,0.06)",
-            shadowColor: "#064532",
-            shadowOpacity: 0.05,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 2
-          }}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 36 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
         <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
         <ChoiceCard
@@ -170,9 +171,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           <IconBox icon="bulb-outline" />
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
-        </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
         <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
