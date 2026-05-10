@@ -22,7 +22,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
 
   return (
-    <MeshScreen showLeaf>
+    <MeshScreen>
       <MeshHeader variant="transparent" style={{ paddingBottom: 48 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
