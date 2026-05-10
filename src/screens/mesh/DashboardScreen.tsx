@@ -23,31 +23,31 @@ export function DashboardScreen({ t, lang, nav }: Props) {
 
   return (
     <MeshScreen>
-      <MeshHeader>
+      <MeshHeader variant="transparent" style={{ paddingBottom: 36 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
-            <Avatar name="Trung" size={44} />
+            <Avatar name="Trung" size={44} ring />
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 }}>
+            <Text style={{ color: mesh.green800, fontWeight: "800", fontSize: 13, letterSpacing: 0.5 }}>
               {lang === "vi" ? "T03 10 Th 5" : "TUE 10 May"}
             </Text>
             <Pressable onPress={() => nav("notifications")} style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
-              <View style={{ position: "absolute", right: -2, top: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF6B6B", borderWidth: 1.5, borderColor: mesh.green600 }} />
+              <Ionicons name="notifications-outline" size={22} color={mesh.green800} />
+              <View style={{ position: "absolute", right: -2, top: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: "#28C56E", borderWidth: 1.5, borderColor: "#F8FCF7" }} />
             </Pressable>
           </View>
         </View>
 
-        <View style={{ marginTop: 22 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "900", letterSpacing: -0.4 }}>
+        <View style={{ marginTop: 34 }}>
+          <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "900", letterSpacing: -0.4 }}>
             {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 20, marginTop: 8 }}>{t("greetingSub")}</Text>
+          <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 8 }}>{t("greetingSub")}</Text>
         </View>
       </MeshHeader>
 
-      <MeshScroll style={{ marginTop: -8 }} bottom={112}>
+      <MeshScroll style={{ marginTop: -10 }} bottom={112}>
         <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
             <SectionLabel>

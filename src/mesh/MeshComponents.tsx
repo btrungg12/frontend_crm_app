@@ -3,14 +3,23 @@ import { PropsWithChildren } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppBackground } from "../components/AppBackground";
 import { avatarTint, Contact, Lang, statusById } from "./meshData";
 import { mesh } from "./meshTheme";
 
 export type NavFn = (name: string, props?: Record<string, unknown>) => void;
 export type TFn = (key: string, vars?: Record<string, string | number>) => string;
 
-export function MeshScreen({ children, style }: PropsWithChildren<{ style?: ViewStyle }>) {
-  return <View style={[{ flex: 1, backgroundColor: mesh.bg, overflow: "hidden" }, style]}>{children}</View>;
+export function MeshScreen({
+  children,
+  showLeaf = true,
+  style
+}: PropsWithChildren<{ showLeaf?: boolean; style?: ViewStyle }>) {
+  return (
+    <AppBackground showLeaf={showLeaf} style={style}>
+      {children}
+    </AppBackground>
+  );
 }
 
 export function MeshScroll({ children, bottom = 100, style }: PropsWithChildren<{ bottom?: number; style?: ViewStyle }>) {
@@ -80,15 +89,20 @@ function LeafMark() {
   );
 }
 
-export function MeshHeader({ children, style }: PropsWithChildren<{ style?: ViewStyle }>) {
+export function MeshHeader({
+  children,
+  style,
+  variant = "solid"
+}: PropsWithChildren<{ style?: ViewStyle; variant?: "solid" | "transparent" }>) {
   const insets = useSafeAreaInsets();
+  const transparent = variant === "transparent";
   return (
     <View
       style={[
         {
           position: "relative",
           overflow: "hidden",
-          backgroundColor: mesh.green500,
+          backgroundColor: transparent ? "transparent" : mesh.green500,
           paddingTop: insets.top + 14,
           paddingHorizontal: 20,
           paddingBottom: 28
@@ -96,7 +110,7 @@ export function MeshHeader({ children, style }: PropsWithChildren<{ style?: View
         style
       ]}
     >
-      <LeafMark />
+      {transparent ? null : <LeafMark />}
       <View style={{ position: "relative", zIndex: 1 }}>{children}</View>
     </View>
   );
