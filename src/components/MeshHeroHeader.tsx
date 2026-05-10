@@ -105,13 +105,13 @@ const styles = StyleSheet.create({
     minWidth: 0
   },
   title: {
-    color: "#FFFFFF",
+    color: "#064532",
     fontSize: 28,
     fontWeight: "900",
     letterSpacing: -0.4
   },
   subtitle: {
-    color: "rgba(255,255,255,0.86)",
+    color: "#5F6763",
     fontSize: 14,
     lineHeight: 20,
     marginTop: 4
