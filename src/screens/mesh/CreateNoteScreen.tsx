@@ -85,11 +85,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       </LinearGradient>
 
       <ScrollView
-        style={{ flex: 1, marginTop: -42, backgroundColor: "transparent" }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 0, paddingBottom: insets.bottom + 150 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ marginTop: -42, paddingTop: 42 }}>
         <View
           style={{
             backgroundColor: "#FFFFFF",
@@ -168,6 +169,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         <View style={{ marginTop: 18, borderRadius: 18, backgroundColor: "rgba(31,112,72,0.08)", padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <IconBox icon="bulb-outline" />
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
+        </View>
         </View>
         </View>
       </ScrollView>
