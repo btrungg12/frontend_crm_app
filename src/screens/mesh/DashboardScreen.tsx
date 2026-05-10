@@ -22,67 +22,67 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
 
   return (
-    <MeshScreen>
-      <MeshHeader>
+    <MeshScreen style={{ backgroundColor: "#F8FBF7" }}>
+      <MeshHeader style={{ paddingBottom: 36 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
-            <Avatar name="Trung" size={44} />
+            <Avatar name="Trung" size={50} ring />
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800", fontSize: 13, letterSpacing: 0.5 }}>
+            <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800", fontSize: 15, letterSpacing: 0.4 }}>
               {lang === "vi" ? "T03 10 Th 5" : "TUE 10 May"}
             </Text>
             <Pressable onPress={() => nav("notifications")} style={{ position: "relative" }}>
-              <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
-              <View style={{ position: "absolute", right: -2, top: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF6B6B", borderWidth: 1.5, borderColor: mesh.green600 }} />
+              <Ionicons name="notifications-outline" size={27} color="#FFFFFF" />
+              <View style={{ position: "absolute", right: 1, top: 0, width: 9, height: 9, borderRadius: 5, backgroundColor: "#FF6B6B", borderWidth: 1.5, borderColor: mesh.green600 }} />
             </Pressable>
           </View>
         </View>
 
-        <View style={{ marginTop: 22 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "900", letterSpacing: -0.4 }}>
+        <View style={{ marginTop: 36 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 34, fontWeight: "900" }}>
             {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 20, marginTop: 8 }}>{t("greetingSub")}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
         </View>
       </MeshHeader>
 
-      <MeshScroll style={{ marginTop: -8 }} bottom={112}>
-        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+      <MeshScroll style={{ marginTop: -10 }} bottom={112}>
+        <View style={{ paddingHorizontal: 18, paddingTop: 22 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
-            <SectionLabel>
+            <SectionLabel style={{ color: mesh.green800, fontSize: 14, letterSpacing: 1.3 }}>
               {t("upcoming")} <Text style={{ color: mesh.green600 }}>(4)</Text>
             </SectionLabel>
             <Pressable onPress={() => nav("allUpcoming")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{t("viewAll")}</Text>
-              <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
+              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("viewAll")}</Text>
+              <Ionicons name="chevron-forward" size={18} color={mesh.green700} />
             </Pressable>
           </View>
 
-          <MeshCard style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
+          <MeshCard style={{ borderRadius: 28, paddingHorizontal: 8, paddingVertical: 8 }}>
             {upcoming.map((item, index) => {
               const isReminder = item.kind === "reminder";
               return (
                 <View key={item.id}>
                   <Pressable
                     onPress={() => (isReminder ? nav("noteDetail", { id: "n1" }) : undefined)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, paddingVertical: 14 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 10, paddingVertical: 16 }}
                   >
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name={iconMap[item.icon as keyof typeof iconMap] || "ellipse-outline"} size={20} color={mesh.green700} />
+                    <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name={iconMap[item.icon as keyof typeof iconMap] || "ellipse-outline"} size={24} color={mesh.green700} />
                     </View>
-                    <Text style={{ width: 56, color: mesh.green700, fontSize: 16, fontWeight: "900" }}>{item.time}</Text>
+                    <Text style={{ width: 62, color: mesh.green700, fontSize: 19, fontWeight: "900" }}>{item.time}</Text>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 16, fontWeight: "800" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
-                      <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 3 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: mesh.bgSubtle }}>
-                      <Ionicons name={isReminder ? "time-outline" : "calendar-outline"} size={11} color={mesh.green700} />
-                      <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "800" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: mesh.bgSubtle }}>
+                      <Ionicons name={isReminder ? "time-outline" : "calendar-outline"} size={12} color={mesh.green700} />
+                      <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "800" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                    <Ionicons name="chevron-forward" size={20} color={mesh.ink400} />
                   </Pressable>
                   {index < upcoming.length - 1 ? <View style={{ height: 1, backgroundColor: mesh.line, marginHorizontal: 10 }} /> : null}
                 </View>
@@ -101,11 +101,11 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </View>
           </View>
 
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 14, paddingBottom: 14 }}>
-            <SectionLabel>{t("recentContacts")}</SectionLabel>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 16, paddingBottom: 14 }}>
+            <SectionLabel style={{ color: mesh.green800, fontSize: 14, letterSpacing: 1.3 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{t("viewAll")}</Text>
-              <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
+              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("viewAll")}</Text>
+              <Ionicons name="chevron-forward" size={18} color={mesh.green700} />
             </Pressable>
           </View>
 
