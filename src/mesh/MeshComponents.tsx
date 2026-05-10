@@ -167,7 +167,7 @@ export function MeshCard({ children, style }: PropsWithChildren<{ style?: ViewSt
 }
 
 export function SectionLabel({ children, style }: PropsWithChildren<{ style?: TextStyle }>) {
-  return <Text style={[{ color: mesh.ink500, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 }, style]}>{children}</Text>;
+  return <Text style={[{ color: mesh.ink500, fontSize: 12, fontWeight: "700", letterSpacing: 1 }, style]}>{children}</Text>;
 }
 
 export function MeshChip({
@@ -194,7 +194,7 @@ export function MeshChip({
         style
       ]}
     >
-      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 12, fontWeight: active ? "700" : "600" }}>{children}</Text>
+      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 12, fontWeight: active ? "700" : "500" }}>{children}</Text>
     </Pressable>
   );
 }
@@ -217,7 +217,7 @@ export function StatusChip({ statusId, size = "sm" }: { statusId?: string; lang?
       }}
     >
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: status.color }} />
-      <Text style={{ color: mesh.ink700, fontSize: size === "sm" ? 11 : 12, fontWeight: "600" }}>{status.name}</Text>
+      <Text style={{ color: mesh.ink700, fontSize: size === "sm" ? 11 : 12, fontWeight: "500" }}>{status.name}</Text>
     </View>
   );
 }
@@ -360,7 +360,7 @@ export function BottomNav({
             }}
           >
             <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
-            <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: 11, fontWeight: isActive ? "800" : "600" }}>
+            <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: 11, fontWeight: isActive ? "700" : "500" }}>
               {tab.label}
             </Text>
           </ScalePressable>
@@ -453,11 +453,11 @@ export function ConfirmDialog({
           <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(217,87,122,0.12)", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
             <Ionicons name="trash-outline" size={24} color={mesh.pink} />
           </View>
-          <Text style={{ color: mesh.ink900, fontWeight: "800", fontSize: 18, marginBottom: 6 }}>{title}</Text>
+          <Text style={{ color: mesh.ink900, fontWeight: "700", fontSize: 18, marginBottom: 6 }}>{title}</Text>
           <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20 }}>{desc}</Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable onPress={onClose} style={{ flex: 1, borderRadius: mesh.radiusMd, borderWidth: 1.5, borderColor: mesh.green700, paddingVertical: 13, alignItems: "center" }}>
-              <Text style={{ color: mesh.green700, fontWeight: "800" }}>{cancelLabel}</Text>
+              <Text style={{ color: mesh.green700, fontWeight: "700" }}>{cancelLabel}</Text>
             </Pressable>
             <Pressable
               onPress={() => {
@@ -466,7 +466,7 @@ export function ConfirmDialog({
               }}
               style={{ flex: 1, borderRadius: mesh.radiusMd, backgroundColor: mesh.pink, paddingVertical: 13, alignItems: "center" }}
             >
-              <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>{confirmLabel}</Text>
+              <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>{confirmLabel}</Text>
             </Pressable>
           </View>
         </Pressable>

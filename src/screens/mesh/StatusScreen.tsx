@@ -44,10 +44,10 @@ export function StatusScreen({ t, nav }: Props) {
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{status.name}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{status.name}</Text>
                 <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{status.desc}</Text>
               </View>
-              <Text style={{ color: status.color, fontSize: 18, fontWeight: "900" }}>{status.count}</Text>
+              <Text style={{ color: status.color, fontSize: 18, fontWeight: "700" }}>{status.count}</Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
           ))}
@@ -58,7 +58,7 @@ export function StatusScreen({ t, nav }: Props) {
             <Ionicons name="bulb-outline" size={16} color={mesh.green600} />
           </View>
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>
-            <Text style={{ color: mesh.green700, fontWeight: "900" }}>{t("aboutStatus")}</Text>
+            <Text style={{ color: mesh.green700, fontWeight: "700" }}>{t("aboutStatus")}</Text>
             {"\n"}
             {t("aboutStatusDesc")}
           </Text>
@@ -91,9 +91,9 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       <MeshHeader style={{ paddingBottom: 30 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("status")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{existing ? t("editStatus") : t("createStatus")}</Text>
+          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{existing ? t("editStatus") : t("createStatus")}</Text>
           <Pressable onPress={() => nav("status")} style={{ borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Text style={{ color: mesh.green700, fontWeight: "900", fontSize: 13 }}>{t("save")}</Text>
+            <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
           </Pressable>
         </View>
         <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 19, marginTop: 14, textAlign: "center", alignSelf: "center", maxWidth: 280 }}>{t("statusFormSub")}</Text>
@@ -128,12 +128,12 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         <Text style={{ color: mesh.ink500, fontSize: 12, marginBottom: 12 }}>{t("statusPreviewDesc")}</Text>
         <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, borderRadius: 999, backgroundColor: `${color}20`, paddingHorizontal: 12, paddingVertical: 8 }}>
           <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
-          <Text style={{ color, fontWeight: "900", fontSize: 13 }}>{name || t("statusName")}</Text>
+          <Text style={{ color, fontWeight: "800", fontSize: 13 }}>{name || t("statusName")}</Text>
         </View>
 
         <View style={{ marginTop: 22 }}>
           <TipCard>
-            <Text style={{ color: mesh.green700, fontWeight: "900" }}>{t("tip")}</Text>
+            <Text style={{ color: mesh.green700, fontWeight: "800" }}>{t("tip")}</Text>
             {"\n"}
             {t("statusTip")}
           </TipCard>
@@ -142,7 +142,7 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         {existing ? (
           <Pressable onPress={() => setConfirm(true)} style={{ marginTop: 20, borderRadius: 14, borderWidth: 1, borderColor: `${mesh.pink}55`, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
             <Ionicons name="trash-outline" size={16} color={mesh.pink} />
-            <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "900" }}>{t("deleteStatus")}</Text>
+            <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "800" }}>{t("deleteStatus")}</Text>
           </Pressable>
         ) : null}
       </MeshScroll>
@@ -153,5 +153,5 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "900", marginTop: 20, marginBottom: 8 }}>{children}</Text>;
+  return <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "800", marginTop: 20, marginBottom: 8 }}>{children}</Text>;
 }

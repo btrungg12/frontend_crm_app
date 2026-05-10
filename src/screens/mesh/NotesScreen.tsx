@@ -84,14 +84,14 @@ export function NotesScreen({ t, lang, nav }: Props) {
                     )}
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact ? contact.name : note.title}</Text>
-                      {contact ? <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "600", marginTop: 1 }}>{note.title}</Text> : null}
+                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact ? contact.name : note.title}</Text>
+                      {contact ? <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "500", marginTop: 1 }}>{note.title}</Text> : null}
                       <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 3 }}>
                         {preview}
                       </Text>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
                         <Ionicons name="time-outline" size={12} color={mesh.green700} />
-                        <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
+                        <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
                       </View>
                     </View>
 

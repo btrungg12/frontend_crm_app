@@ -19,11 +19,11 @@ export function SectionHeader({ title, action }: Props) {
         justifyContent: "space-between"
       }}
     >
-      <Text style={{ color: colors.ink500, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 }}>
+      <Text style={{ color: colors.ink500, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>
         {title}
       </Text>
       {action ? (
-        <Text numberOfLines={1} style={{ color: colors.primaryDark, fontSize: 12, fontWeight: "800", marginLeft: spacing.md }}>
+        <Text numberOfLines={1} style={{ color: colors.primaryDark, fontSize: 12, fontWeight: "700", marginLeft: spacing.md }}>
           {action}
         </Text>
       ) : null}

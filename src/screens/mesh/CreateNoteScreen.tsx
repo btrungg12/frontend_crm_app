@@ -73,12 +73,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
             <Ionicons name="chevron-back" size={24} color={mesh.green700} />
           </Pressable>
           <Pressable onPress={clear} hitSlop={10}>
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("clear")}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>{t("clear")}</Text>
           </Pressable>
         </View>
 
         <View style={{ marginTop: 28, maxWidth: 300 }}>
-          <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "900", letterSpacing: -0.8 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 32, fontWeight: "800", letterSpacing: -0.8 }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
         </View>
@@ -161,7 +161,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           trailing={
             reminder ? (
               <Pressable onPress={() => setReminder(null)} hitSlop={8}>
-                <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "900" }}>{t("clear")}</Text>
+                <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "800" }}>{t("clear")}</Text>
               </Pressable>
             ) : undefined
           }
@@ -178,7 +178,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
           <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <Ionicons name="save-outline" size={20} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800" }}>{edit ? t("save") : t("saveNote")}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{edit ? t("save") : t("saveNote")}</Text>
           </LinearGradient>
         </Pressable>
       </View>
@@ -199,7 +199,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
 function FieldLabel({ children, error = false, first = false }: { children: ReactNode; error?: boolean; first?: boolean }) {
   return (
-    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "800", letterSpacing: 0.9, marginBottom: 7, marginTop: first ? 0 : 16 }}>
+    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "700", letterSpacing: 0.9, marginBottom: 7, marginTop: first ? 0 : 16 }}>
       {children}
     </Text>
   );
@@ -257,7 +257,7 @@ function ChoiceCard({
     >
       {left || <IconBox icon={icon} />}
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{title}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{title}</Text>
         {subtitle ? <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 2 }}>{subtitle}</Text> : null}
       </View>
       {trailing || <Ionicons name="chevron-forward" size={20} color={mesh.ink400} />}
@@ -340,7 +340,7 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
         <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 14 }} />
-          <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "900", marginBottom: 16 }}>{t("pickPerson")}</Text>
+          <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 16 }}>{t("pickPerson")}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: mesh.bgSubtle, borderRadius: 12, paddingHorizontal: 12, height: 42, marginBottom: 12 }}>
             <Ionicons name="search" size={16} color={mesh.ink400} />
             <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("search")}</Text>
@@ -356,7 +356,7 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
             >
               <Avatar name={contact.name} size={40} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
                 <View style={{ marginTop: 3 }}>
                   <StatusChip statusId={contact.status} />
                 </View>
@@ -414,7 +414,7 @@ function ReminderPicker({
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 18 }} />
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 18 }}>
             <View style={{ width: 36 }} />
-            <Text style={{ flex: 1, textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "900" }}>
+            <Text style={{ flex: 1, textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800" }}>
               {isVi ? "Khi nào nhắc bạn?" : "When should we remind you?"}
             </Text>
             <Pressable
@@ -466,7 +466,7 @@ function ReminderPicker({
                   }}
                 >
                   <Text style={{ color: active ? "#FFFFFF" : mesh.ink500, fontSize: 10, fontWeight: "700", opacity: 0.85 }}>{weekDays[item % 7]}</Text>
-                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink900, fontSize: 16, fontWeight: "900", marginTop: 2 }}>{item}</Text>
+                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink900, fontSize: 16, fontWeight: "800", marginTop: 2 }}>{item}</Text>
                 </Pressable>
               );
             })}
@@ -492,7 +492,7 @@ function ReminderPicker({
                   }}
                 >
                   <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{item.label}</Text>
-                  <Text style={{ color: mesh.green800, fontSize: 16, fontWeight: "900", marginTop: 2 }}>{item.value}</Text>
+                  <Text style={{ color: mesh.green800, fontSize: 16, fontWeight: "800", marginTop: 2 }}>{item.value}</Text>
                 </Pressable>
               );
             })}
@@ -500,11 +500,11 @@ function ReminderPicker({
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, minHeight: 52 }}>
             <Ionicons name="time-outline" size={18} color={mesh.ink500} />
-            <TextInput value={time} onChangeText={setTime} style={{ flex: 1, color: mesh.ink900, fontSize: 16, fontWeight: "600" }} />
+            <TextInput value={time} onChangeText={setTime} style={{ flex: 1, color: mesh.ink900, fontSize: 16, fontWeight: "500" }} />
           </View>
 
           <Pressable onPress={save} style={{ borderRadius: mesh.radiusLg, backgroundColor: mesh.green800, paddingVertical: 15, alignItems: "center" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{t("save")}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -513,5 +513,5 @@ function ReminderPicker({
 }
 
 function SheetLabel({ children }: { children: string }) {
-  return <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "900", marginBottom: 8 }}>{children}</Text>;
+  return <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginBottom: 8 }}>{children}</Text>;
 }

@@ -43,7 +43,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
           </Pressable>
           <Pressable style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
             <Ionicons name="options-outline" size={16} color={mesh.ink700} />
-            <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800" }}>{t("filter")}</Text>
+            <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{t("filter")}</Text>
           </Pressable>
         </View>
       </MeshHeroHeader>
@@ -60,7 +60,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
           {Object.keys(grouped).sort().map((key) => (
             <View key={key}>
-              <Text style={{ color: "#7A837E", fontSize: 13, fontWeight: "800", marginTop: 18, marginBottom: 8 }}>{key}</Text>
+              <Text style={{ color: "#7A837E", fontSize: 13, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
               {grouped[key].map((contact, index) => (
                 <Pressable
                   key={contact.id}
@@ -69,7 +69,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
                 >
                   <Avatar name={contact.name} size={40} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
+                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
                     <View style={{ marginTop: 3 }}>
                       <StatusChip statusId={contact.status} />
                     </View>
@@ -113,13 +113,13 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
       <MeshHeader style={{ paddingBottom: 60 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "900" }}>{t("contactProfile")}</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "800" }}>{t("contactProfile")}</Text>
           <HeaderCircleBtn icon="ellipsis-horizontal" />
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingTop: 18 }}>
           <Avatar name={contact.name} size={72} ring />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: -0.4 }}>{contact.name}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "800", letterSpacing: -0.4 }}>{contact.name}</Text>
             <View style={{ marginTop: 6 }}>
               <StatusChip statusId={contact.status} />
             </View>
@@ -142,7 +142,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
               <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: `${item.color}20`, marginBottom: 6 }}>
                 <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={16} color={item.color} />
               </View>
-              <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "900" }}>{item.value}</Text>
+              <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "800" }}>{item.value}</Text>
               <Text style={{ color: mesh.ink500, fontSize: 11 }}>{item.label}</Text>
             </MeshCard>
           ))}
@@ -162,7 +162,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
         </MeshCard>
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 20, paddingBottom: 12 }}>
-          <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "900" }}>{t("timeline")}</Text>
+          <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "800" }}>{t("timeline")}</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
           {tabs.map((item) => (
@@ -182,10 +182,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
                 </View>
                 <MeshCard style={{ padding: 14 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={{ color, fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>{item.label.toUpperCase()}</Text>
+                    <Text style={{ color, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>{item.label.toUpperCase()}</Text>
                     <Text style={{ color: mesh.ink500, fontSize: 11 }}>{item.date}</Text>
                   </View>
-                  <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "800", marginTop: 4 }}>{item.title}</Text>
+                  <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700", marginTop: 4 }}>{item.title}</Text>
                   <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 20, marginTop: 4 }}>{item.desc}</Text>
                 </MeshCard>
               </View>
@@ -205,7 +205,7 @@ function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ioni
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: mesh.ink500, fontSize: 12 }}>{label}</Text>
-        <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "800", marginTop: 2 }}>{value}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700", marginTop: 2 }}>{value}</Text>
       </View>
     </View>
   );
@@ -224,9 +224,9 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       <MeshHeader style={{ paddingBottom: 50 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{edit ? t("editContact") : t("createContact")}</Text>
+          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{edit ? t("editContact") : t("createContact")}</Text>
           <Pressable onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} style={{ borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Text style={{ color: mesh.green700, fontWeight: "900", fontSize: 13 }}>{t("save")}</Text>
+            <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
           </Pressable>
         </View>
         <View style={{ alignItems: "center", paddingTop: 14 }}>
@@ -236,7 +236,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               <Ionicons name="camera-outline" size={14} color="#FFFFFF" />
             </View>
           </View>
-          <Text style={{ color: "#FFFFFF", marginTop: 8, fontSize: 12, fontWeight: "800" }}>{t("addAvatar")}</Text>
+          <Text style={{ color: "#FFFFFF", marginTop: 8, fontSize: 12, fontWeight: "700" }}>{t("addAvatar")}</Text>
         </View>
       </MeshHeader>
 
@@ -247,7 +247,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
           <FormRow icon="mail-outline" label="Email" value={email} onChangeText={setEmail} placeholder={t("enterEmail")} last />
         </FormSection>
 
-        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "900", marginTop: 20, marginBottom: 10 }}>{t("relationshipInfo")}</Text>
+        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{t("relationshipInfo")}</Text>
         <MeshCard style={{ paddingHorizontal: 14 }}>
           <Pressable onPress={() => setStatusOpen(true)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderColor: mesh.line }}>
             <Ionicons name="people-outline" size={18} color={mesh.ink500} />
@@ -259,18 +259,18 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             <Ionicons name="link-outline" size={18} color={mesh.ink500} />
             <Text style={{ flex: 1, color: mesh.ink900, fontSize: 15 }}>{t("source")}</Text>
             <View style={{ borderRadius: 999, backgroundColor: mesh.bgSubtle, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "800" }}>Work</Text>
+              <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "700" }}>Work</Text>
             </View>
           </View>
         </MeshCard>
 
-        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "900", marginTop: 20, marginBottom: 10 }}>{t("specialDays")}</Text>
+        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{t("specialDays")}</Text>
         <MeshCard style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="calendar-outline" size={18} color={mesh.green700} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "900" }}>{t("addSpecialDay")}</Text>
+            <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("addSpecialDay")}</Text>
             <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{t("addSpecialHint")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
@@ -295,7 +295,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <>
-      <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "900", marginTop: 20, marginBottom: 10 }}>{title}</Text>
+      <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{title}</Text>
       <MeshCard style={{ paddingHorizontal: 14 }}>{children}</MeshCard>
     </>
   );
@@ -305,7 +305,7 @@ function FormRow({ icon, label, value, onChangeText, placeholder, last = false }
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: last ? 0 : 1, borderColor: mesh.line }}>
       <Ionicons name={icon} size={18} color={mesh.ink500} />
-      <Text style={{ width: 96, color: mesh.ink900, fontSize: 14, fontWeight: "800" }}>{label}</Text>
+      <Text style={{ width: 96, color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>{label}</Text>
       <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={mesh.ink400} style={{ flex: 1, color: mesh.ink900, fontSize: 14, textAlign: "right" }} />
     </View>
   );
@@ -317,7 +317,7 @@ function StatusPicker({ open, value, onClose, onPick, t }: { open: boolean; valu
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
         <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 14 }} />
-          <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "900", marginBottom: 16 }}>{t("chooseStatus")}</Text>
+          <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 16 }}>{t("chooseStatus")}</Text>
           {statuses.map((status) => (
             <Pressable
               key={status.id}
@@ -329,7 +329,7 @@ function StatusPicker({ open, value, onClose, onPick, t }: { open: boolean; valu
             >
               <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: status.color }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{status.name}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{status.name}</Text>
                 <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{status.desc}</Text>
               </View>
               {value === status.id ? <Ionicons name="checkmark" size={18} color={mesh.green700} /> : null}
@@ -348,7 +348,7 @@ export function ContactsEmptyScreen({ t, nav }: Props) {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <Avatar name="Trung" size={48} ring />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "900" }}>{t("contacts")}</Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "800" }}>{t("contacts")}</Text>
             <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 2 }}>{t("contactsCount", { n: 0 })}</Text>
           </View>
           <HeaderCircleBtn icon="add" onPress={() => nav("createContact")} />
@@ -358,11 +358,11 @@ export function ContactsEmptyScreen({ t, nav }: Props) {
         <View style={{ width: 110, height: 110, borderRadius: 55, backgroundColor: "rgba(31,112,72,0.08)", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
           <Ionicons name="person-outline" size={48} color={mesh.green700} />
         </View>
-        <Text style={{ color: mesh.ink900, fontSize: 22, fontWeight: "900", marginBottom: 10 }}>{t("noContactsTitle")}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 22, fontWeight: "800", marginBottom: 10 }}>{t("noContactsTitle")}</Text>
         <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, textAlign: "center" }}>{t("noContactsDesc")}</Text>
         <Pressable onPress={() => nav("createContact")} style={{ marginTop: 24, borderRadius: mesh.radiusMd, paddingHorizontal: 22, paddingVertical: 13, backgroundColor: mesh.green700, flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{t("addFirstContact")}</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("addFirstContact")}</Text>
         </Pressable>
       </View>
       <BottomNav active="contacts" t={t} onTab={(id) => {

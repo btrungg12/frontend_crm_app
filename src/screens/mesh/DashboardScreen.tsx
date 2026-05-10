@@ -52,7 +52,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             <Avatar name="Trung" size={44} ring />
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 15, letterSpacing: 0.3 }}>
+            <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 15, letterSpacing: 0.3 }}>
               {lang === "vi" ? "T03 10 Th 5" : "TUE 10 May"}
             </Text>
             <Pressable onPress={() => nav("notifications")} style={{ position: "relative" }}>
@@ -63,7 +63,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         </View>
 
         <View style={{ marginTop: 46 }}>
-          <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "900", letterSpacing: -0.4 }}>
+          <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "800", letterSpacing: -0.4 }}>
             {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
           <Text style={{ color: mesh.ink500, fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
@@ -86,7 +86,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
               {t("upcoming")} <Text style={{ color: mesh.ink500 }}>(4)</Text>
             </SectionLabel>
             <Pressable onPress={() => nav("allUpcoming")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{t("viewAll")}</Text>
+              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
               <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
             </Pressable>
           </View>
@@ -103,16 +103,16 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
                       <Ionicons name={iconMap[item.icon as keyof typeof iconMap] || "ellipse-outline"} size={20} color={mesh.green700} />
                     </View>
-                    <Text style={{ width: 56, color: mesh.green700, fontSize: 16, fontWeight: "900" }}>{item.time}</Text>
+                    <Text style={{ width: 56, color: mesh.green700, fontSize: 16, fontWeight: "700" }}>{item.time}</Text>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
                       <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: mesh.bgSubtle }}>
                       <Ionicons name={isReminder ? "time-outline" : "calendar-outline"} size={11} color={mesh.green700} />
-                      <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "800" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                      <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                   </Pressable>
@@ -125,18 +125,18 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 14, paddingBottom: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.green600 }} />
-              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "600" }}>{t("reminderLegend")}</Text>
+              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "500" }}>{t("reminderLegend")}</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.ink300 }} />
-              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "600" }}>{t("specialDayLegend")}</Text>
+              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "500" }}>{t("specialDayLegend")}</Text>
             </View>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 14, paddingBottom: 14 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{t("viewAll")}</Text>
+              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
               <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
             </Pressable>
           </View>
