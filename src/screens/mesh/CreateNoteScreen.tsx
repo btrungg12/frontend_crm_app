@@ -62,9 +62,29 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         colors={["#043326", "#07583D", "#08764A", "#F7FAF7"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ minHeight: insets.top + 180, paddingHorizontal: 20, paddingTop: insets.top + 14, overflow: "hidden" }}
+        style={{
+          height: insets.top + 250,
+          left: 0,
+          overflow: "hidden",
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          position: "absolute",
+          right: 0,
+          top: 0
+        }}
       >
         <LeafDecor />
+      </LinearGradient>
+
+      <View
+        style={{
+          height: insets.top + 180,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          position: "relative",
+          zIndex: 2
+        }}
+      >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => nav(edit ? "noteDetail" : "dashboard")}
@@ -82,31 +102,29 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
             {edit ? t("editNote") : t("newNote")}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
 
-      <View
-        style={{
-          flex: 1,
-          marginHorizontal: 20,
-          marginTop: -42,
-          marginBottom: insets.bottom + 88,
-          backgroundColor: "#FFFFFF",
-          borderRadius: 26,
-          borderWidth: 1,
-          borderColor: "rgba(6,69,50,0.06)",
-          shadowColor: "#064532",
-          shadowOpacity: 0.05,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: 2,
-          overflow: "hidden"
-        }}
+      <ScrollView
+        style={{ flex: 1, zIndex: 3 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 0 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 36 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 26,
+            borderWidth: 1,
+            borderColor: "rgba(6,69,50,0.06)",
+            shadowColor: "#064532",
+            shadowOpacity: 0.05,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 2,
+            paddingBottom: 18,
+            paddingHorizontal: 16,
+            paddingTop: 18
+          }}
         >
         <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
         <ChoiceCard
@@ -171,8 +189,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           <IconBox icon="bulb-outline" />
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
-        </ScrollView>
-      </View>
+        </View>
+      </ScrollView>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
         <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
