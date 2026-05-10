@@ -25,20 +25,20 @@ export function StatusScreen({ t, nav }: Props) {
   return (
     <MeshScreen>
       <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
-        <View style={{ height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+        <View style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
-          <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("searchStatus")}</Text>
+          <Text style={{ color: "#8A928D", fontSize: 14 }}>{t("searchStatus")}</Text>
         </View>
       </MeshHeroHeader>
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={112}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
-        <MeshCard style={{ paddingHorizontal: 14 }}>
+        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 14 }}>
           {statuses.map((status, index) => (
             <Pressable
               key={status.id}
               onPress={() => nav("createStatus", { id: status.id })}
-              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, borderBottomWidth: index < statuses.length - 1 ? 1 : 0, borderColor: mesh.line }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, borderBottomWidth: index < statuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
             >
               <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />
@@ -53,13 +53,16 @@ export function StatusScreen({ t, nav }: Props) {
           ))}
         </MeshCard>
 
-        <View style={{ marginTop: 18 }}>
-          <TipCard>
+        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, marginTop: 18, padding: 14, flexDirection: "row", gap: 12 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
+            <Ionicons name="bulb-outline" size={18} color={mesh.green600} />
+          </View>
+          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>
             <Text style={{ color: mesh.green700, fontWeight: "900" }}>{t("aboutStatus")}</Text>
             {"\n"}
             {t("aboutStatusDesc")}
-          </TipCard>
-        </View>
+          </Text>
+        </MeshCard>
       </MeshScroll>
 
       <BottomNav

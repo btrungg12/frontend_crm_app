@@ -181,8 +181,10 @@ export function MeshChip({
       style={[
         {
           borderRadius: 999,
-          backgroundColor: active ? mesh.green700 : mesh.bgSubtle,
-          paddingHorizontal: 12,
+          backgroundColor: active ? mesh.green700 : "#FFFFFF",
+          borderWidth: 1,
+          borderColor: active ? mesh.green700 : "rgba(6,69,50,0.12)",
+          paddingHorizontal: 14,
           paddingVertical: 8,
           flexDirection: "row",
           alignItems: "center",
@@ -191,7 +193,7 @@ export function MeshChip({
         style
       ]}
     >
-      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 13, fontWeight: "700" }}>{children}</Text>
+      <Text style={{ color: active ? "#FFFFFF" : mesh.ink700, fontSize: 12, fontWeight: "700" }}>{children}</Text>
     </Pressable>
   );
 }

@@ -91,7 +91,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Pressable>
           </View>
 
-          <MeshCard style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
+          <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
             {upcoming.map((item, index) => {
               const isReminder = item.kind === "reminder";
               return (
@@ -116,7 +116,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                   </Pressable>
-                  {index < upcoming.length - 1 ? <View style={{ height: 1, backgroundColor: mesh.line, marginHorizontal: 10 }} /> : null}
+                  {index < upcoming.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 10 }} /> : null}
                 </View>
               );
             })}

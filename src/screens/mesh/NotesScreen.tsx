@@ -43,10 +43,10 @@ export function NotesScreen({ t, lang, nav }: Props) {
       <MeshHeroHeader title={t("notes")} subtitle={t("notesSub")} right={<HeaderCircleBtn icon="search" onPress={() => nav("search")} />}>
         <Pressable
           onPress={() => nav("search")}
-          style={{ borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, height: 48, flexDirection: "row", alignItems: "center", gap: 10 }}
+          style={{ borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", paddingHorizontal: 16, height: 44, flexDirection: "row", alignItems: "center", gap: 10 }}
         >
           <Ionicons name="search" size={18} color={mesh.ink400} />
-          <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("searchNote")}</Text>
+          <Text style={{ color: "#8A928D", fontSize: 14 }}>{t("searchNote")}</Text>
         </Pressable>
       </MeshHeroHeader>
 
@@ -57,7 +57,7 @@ export function NotesScreen({ t, lang, nav }: Props) {
               {item.label}
             </MeshChip>
           ))}
-          <MeshChip style={{ backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: mesh.line }}>
+          <MeshChip style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.12)" }}>
             <Ionicons name="options-outline" size={14} color={mesh.ink700} />
           </MeshChip>
         </View>
@@ -74,7 +74,7 @@ export function NotesScreen({ t, lang, nav }: Props) {
                   onPress={() => nav("noteDetail", { id: note.id })}
                   style={{ marginBottom: 10 }}
                 >
-                  <MeshCard style={{ borderRadius: 24, flexDirection: "row", gap: 14, alignItems: "flex-start", padding: 14 }}>
+                  <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, flexDirection: "row", gap: 14, alignItems: "flex-start", padding: 14 }}>
                     {contact ? (
                       <Avatar name={contact.name} size={44} />
                     ) : (

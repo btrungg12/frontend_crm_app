@@ -37,11 +37,11 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         subtitle={t("contactsCount", { n: contacts.length })}
       >
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable onPress={() => nav("search")} style={{ flex: 1, height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+          <Pressable onPress={() => nav("search")} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
-            <Text numberOfLines={1} style={{ flex: 1, color: mesh.ink400, fontSize: 14 }}>{t("searchContactPh")}</Text>
+            <Text numberOfLines={1} style={{ flex: 1, color: "#8A928D", fontSize: 14 }}>{t("searchContactPh")}</Text>
           </Pressable>
-          <Pressable style={{ height: 48, borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
+          <Pressable style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
             <Ionicons name="options-outline" size={16} color={mesh.ink700} />
             <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800" }}>{t("filter")}</Text>
           </Pressable>
@@ -51,14 +51,14 @@ export function ContactsScreen({ t, lang, nav }: Props) {
       <MeshScroll bottom={112}>
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
           {filters.map((item) => (
-            <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)} style={{ backgroundColor: filter === item.id ? mesh.green700 : "#FFFFFF", borderWidth: 1, borderColor: filter === item.id ? mesh.green700 : mesh.line }}>
+            <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)} style={{ backgroundColor: filter === item.id ? mesh.green700 : "#FFFFFF", borderColor: filter === item.id ? mesh.green700 : "rgba(6,69,50,0.12)" }}>
               {item.label}
             </MeshChip>
           ))}
         </View>
 
         <View style={{ paddingHorizontal: 16, paddingTop: 6 }}>
-          <MeshCard style={{ borderRadius: 28, paddingHorizontal: 12, paddingVertical: 8 }}>
+          <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 12, paddingVertical: 8 }}>
             {Object.keys(grouped).sort().map((key) => (
               <View key={key}>
                 <Text style={{ color: mesh.ink500, fontSize: 14, fontWeight: "900", paddingHorizontal: 4, paddingTop: 12, paddingBottom: 6 }}>{key}</Text>
@@ -66,7 +66,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
                   <Pressable
                     key={contact.id}
                     onPress={() => nav("contactDetail", { id: contact.id })}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingVertical: 12, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: mesh.line }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 4, paddingVertical: 12, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
                   >
                     <Avatar name={contact.name} size={44} />
                     <View style={{ flex: 1 }}>
