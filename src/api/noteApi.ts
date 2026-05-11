@@ -33,6 +33,10 @@ export async function getNotes(params: NoteQuery = {}) {
   });
 }
 
+export async function getNoteById(noteId: string) {
+  return await apiRequest(`/notes/${noteId}`);
+}
+
 export async function createNote(payload: Record<string, unknown>) {
   return await apiRequest("/notes", {
     body: payload,

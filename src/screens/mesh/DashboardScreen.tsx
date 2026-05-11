@@ -4,10 +4,12 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 
 import { getDashboard } from "../../api/dashboardApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
+import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
+import { getToken } from "../../storage/tokenStorage";
 
 type Props = {
   t: TFn;
@@ -22,35 +24,78 @@ const iconMap = {
   bag: "bag-handle-outline"
 } as const;
 
+function asRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function unwrapData(value: unknown) {
+  const root = asRecord(value);
+  return asRecord(root?.data) ?? root;
+}
+
+function readUserName(value: unknown) {
+  const profile = unwrapData(value);
+  const candidate = profile?.name ?? profile?.fullName ?? profile?.displayName ?? profile?.username;
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : "User";
+}
+
+function formatCurrentDate(lang: Lang) {
+  const locale = lang === "vi" ? "vi-VN" : "en-US";
+  const date = new Date();
+  const weekday = date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
+  const month = date.toLocaleDateString(locale, { month: "short" });
+  return `${weekday} ${date.getDate()} ${month}`;
+}
+
 export function DashboardScreen({ t, lang, nav }: Props) {
   const [recent, setRecent] = useState<Contact[]>([]);
   const [upcomingItems, setUpcomingItems] = useState<Upcoming[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userName, setUserName] = useState("User");
 
   useEffect(() => {
     let active = true;
 
-    getDashboard()
-      .then((response) => {
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        setError("");
+        const token = await getToken();
+
+        if (!token) {
+          if (!active) return;
+          setRecent([]);
+          setUpcomingItems([]);
+          setUserName("User");
+          setError("Please log in to view dashboard data.");
+          return;
+        }
+
+        const [dashboardResponse, profileResponse] = await Promise.all([
+          getDashboard(),
+          getProfile().catch(() => null)
+        ]);
+
         if (!active) return;
 
-        const recentContacts = extractArray(response, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-        const upcomingList = extractArray(response, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
+        const recentContacts = extractArray(dashboardResponse, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
+        const upcomingList = extractArray(dashboardResponse, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
 
+        setUserName(readUserName(profileResponse));
         setRecent(recentContacts.slice(0, 4));
         setUpcomingItems(upcomingList.slice(0, 4));
-        setError("");
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!active) return;
         setRecent([]);
         setUpcomingItems([]);
         setError(err instanceof Error && err.message ? err.message : "Cannot load dashboard.");
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    }
+
+    loadDashboard();
 
     return () => {
       active = false;
@@ -64,11 +109,11 @@ export function DashboardScreen({ t, lang, nav }: Props) {
       <MeshHeader variant="transparent" style={{ paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
-            <Avatar name="Trung" size={44} ring />
+            <Avatar name={userName} size={44} ring />
           </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 15, letterSpacing: 0.3 }}>
-              {lang === "vi" ? "T03 10 Th 5" : "TUE 10 May"}
+              {formatCurrentDate(lang)}
             </Text>
             <Pressable onPress={() => nav("notifications")} style={{ position: "relative" }}>
               <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
@@ -79,7 +124,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
 
         <View style={{ marginTop: 46 }}>
           <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "800", letterSpacing: -0.4 }}>
-            {t("greeting")}, Trung <Text style={{ fontSize: 28 }}>👋</Text>
+            {t("greeting")}, {userName} <Text style={{ fontSize: 28 }}>👋</Text>
           </Text>
           <Text style={{ color: mesh.ink500, fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
         </View>
@@ -117,7 +162,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
               return (
                 <View key={item.id}>
                   <Pressable
-                    onPress={() => (isReminder ? nav("noteDetail", { id: "n1" }) : undefined)}
+                    onPress={() => (isReminder ? nav("noteDetail", { id: item.id }) : undefined)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, paddingVertical: 14 }}
                   >
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>

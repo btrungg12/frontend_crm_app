@@ -4,9 +4,10 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 
 import { getDashboard } from "../../api/dashboardApi";
 import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../../api/notificationApi";
-import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
+import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
+import { getProfile } from "../../api/userApi";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, contacts, Lang, notes, statusById, upcoming } from "../../mesh/meshData";
+import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -118,6 +119,37 @@ function SystemStateCard({ error = false, loading = false, message }: { error?: 
   );
 }
 
+function unwrapData(value: unknown) {
+  const root = asRecord(value);
+  return asRecord(root?.data) ?? root;
+}
+
+function profileName(value: unknown) {
+  const profile = unwrapData(value);
+  const candidate = profile?.name ?? profile?.fullName ?? profile?.displayName ?? profile?.username;
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : "";
+}
+
+function profileEmail(value: unknown) {
+  const profile = unwrapData(value);
+  const candidate = profile?.email ?? profile?.emailOrPhone ?? profile?.phone;
+  return typeof candidate === "string" && candidate.trim() ? candidate.trim() : "";
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function dashboardStats(value: unknown) {
+  const root = unwrapData(value);
+  const stats = asRecord(root?.stats) ?? root;
+  return {
+    contacts: numberValue(stats?.contactsCount ?? stats?.contactCount ?? stats?.contacts),
+    notes: numberValue(stats?.notesCount ?? stats?.noteCount ?? stats?.notes),
+    streak: numberValue(stats?.streakDays ?? stats?.streak)
+  };
+}
+
 export function NotificationsScreen({ t, lang, nav }: Props) {
   const [items, setItems] = useState<ApiNotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,6 +246,36 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
 
 export function AllUpcomingScreen({ t, lang, nav }: Props) {
   const filters = [t("filterAll"), t("filterReminder"), t("filterSpecial")];
+  const [items, setItems] = useState<Upcoming[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUpcoming() {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await getDashboard();
+        const normalized = extractArray(response, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
+        if (!active) return;
+        setItems(normalized);
+      } catch (err) {
+        if (!active) return;
+        setItems([]);
+        setError(errorMessage(err, "Cannot load upcoming items from API."));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadUpcoming();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <MeshScreen>
@@ -231,9 +293,13 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
             </MeshChip>
           ))}
         </View>
+        {loading ? <SystemStateCard loading message="Loading upcoming items from API..." /> : null}
+        {!loading && error ? <SystemStateCard error message={error} /> : null}
+        {!loading && !error && items.length === 0 ? <SystemStateCard message="No upcoming items from API." /> : null}
+        {!loading && !error && items.length > 0 ? (
         <MeshCard style={{ paddingHorizontal: 14 }}>
-          {upcoming.map((item, index) => (
-            <Pressable key={item.id} onPress={() => item.kind === "reminder" && nav("noteDetail")} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: index < upcoming.length - 1 ? 1 : 0, borderColor: mesh.line }}>
+          {items.map((item, index) => (
+            <Pressable key={item.id} onPress={() => item.kind === "reminder" && nav("noteDetail", { id: item.id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={item.kind === "reminder" ? "notifications-outline" : "calendar-outline"} size={18} color={item.kind === "reminder" ? mesh.green700 : mesh.pink} />
               </View>
@@ -248,6 +314,7 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
             </Pressable>
           ))}
         </MeshCard>
+        ) : null}
       </MeshScroll>
     </MeshScreen>
   );
