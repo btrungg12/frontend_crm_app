@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode, useState } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { submitCreateNote } from "../../api/noteApi";
+import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { contactById, contacts, Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -34,6 +36,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
   const [reminder, setReminder] = useState<string | null>(null);
   const [personError, setPersonError] = useState(false);
   const [contentError, setContentError] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
   const contact = contactById(person);
 
   const clear = () => {
@@ -43,17 +47,37 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
     setReminder(null);
     setPersonError(false);
     setContentError(false);
+    setSaveError("");
   };
 
-  const save = () => {
+  const save = async () => {
     const missingPerson = !person;
     const missingContent = content.trim().length === 0;
     setPersonError(missingPerson);
     setContentError(missingContent);
+    setSaveError("");
 
     if (missingPerson || missingContent) return;
 
-    nav(edit ? "noteDetail" : "notes");
+    try {
+      setSaving(true);
+      const token = await getToken();
+
+      if (token && !edit) {
+        await submitCreateNote({
+          contactId: person,
+          content: content.trim(),
+          interactionDate: new Date().toISOString(),
+          title: title.trim() || undefined
+        });
+      }
+
+      nav(edit ? "noteDetail" : "notes");
+    } catch (err) {
+      setSaveError(err instanceof Error && err.message ? err.message : "Could not save note.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -195,14 +219,15 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           <IconBox icon="bulb-outline" />
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
+        {saveError ? <ErrorText>{saveError}</ErrorText> : null}
         </ScrollView>
       </View>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 4, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
-        <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
+        <Pressable disabled={saving} onPress={save} style={{ borderRadius: 25, opacity: saving ? 0.75 : 1, overflow: "hidden", ...mesh.shadow }}>
           <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            <Ionicons name="save-outline" size={20} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{edit ? t("save") : t("saveNote")}</Text>
+            {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="save-outline" size={20} color="#FFFFFF" />}
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>{saving ? "Saving..." : edit ? t("save") : t("saveNote")}</Text>
           </LinearGradient>
         </Pressable>
       </View>

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
+import { login as loginRequest, register as registerRequest } from "../../api/authApi";
 import { HeaderCircleBtn, MeshScroll, NavFn, TFn } from "../../mesh/MeshComponents";
 import { Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -64,6 +65,10 @@ function tx(t: TFn, key: string) {
   return value === key ? copy[key] || key : value;
 }
 
+function messageFromError(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function AuthShell({ children, showBack, onBack, scroll = true, dark = false }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean }) {
   return (
     <View style={{ flex: 1, backgroundColor: dark ? mesh.green700 : mesh.green50 }}>
@@ -96,10 +101,10 @@ function Logo({ size = 56, color = mesh.green600 }: { size?: number; color?: str
   );
 }
 
-function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+function PrimaryButton({ disabled, label, loading, onPress }: { disabled?: boolean; label: string; loading?: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={{ borderRadius: mesh.radiusXl, backgroundColor: mesh.green700, paddingVertical: 15, alignItems: "center", width: "100%" }}>
-      <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{label}</Text>
+    <Pressable disabled={disabled || loading} onPress={onPress} style={{ borderRadius: mesh.radiusXl, backgroundColor: mesh.green700, opacity: disabled || loading ? 0.72 : 1, paddingVertical: 15, alignItems: "center", width: "100%" }}>
+      {loading ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{label}</Text>}
     </Pressable>
   );
 }
@@ -113,11 +118,11 @@ function SecondaryButton({ label, onPress, icon }: { label: string; onPress?: ()
   );
 }
 
-function MeshInput({ icon, placeholder, value, error, secure }: { icon: keyof typeof Ionicons.glyphMap; placeholder: string; value?: string; error?: boolean; secure?: boolean }) {
+function MeshInput({ error, icon, onChangeText, placeholder, secure, value }: { error?: boolean; icon: keyof typeof Ionicons.glyphMap; onChangeText?: (value: string) => void; placeholder: string; secure?: boolean; value?: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1.5, borderColor: error ? mesh.pink : mesh.line, borderRadius: mesh.radiusLg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, minHeight: 52 }}>
       <Ionicons name={icon} size={18} color={error ? mesh.pink : mesh.ink400} />
-      <TextInput value={value} placeholder={placeholder} placeholderTextColor={mesh.ink400} secureTextEntry={secure} style={{ flex: 1, color: mesh.ink900, fontSize: 15 }} />
+      <TextInput autoCapitalize="none" onChangeText={onChangeText} value={value} placeholder={placeholder} placeholderTextColor={mesh.ink400} secureTextEntry={secure} style={{ flex: 1, color: mesh.ink900, fontSize: 15 }} />
     </View>
   );
 }
@@ -152,16 +157,34 @@ export function WelcomeScreen({ t, nav }: Props) {
 }
 
 export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean }) {
+  const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState(error ? tx(t, "incorrectLogin") : "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleLogin = async () => {
+    try {
+      setSubmitting(true);
+      setFormError("");
+      await loginRequest(emailOrPhone.trim(), password);
+      nav("dashboard");
+    } catch (err) {
+      setFormError(messageFromError(err, tx(t, "incorrectLogin")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell showBack onBack={() => nav("welcome")}>
       <AuthTitle t={t} title="login" sub="loginWelcome" />
       <View style={{ gap: 12, marginBottom: 12 }}>
-        <MeshInput icon="person-outline" placeholder={tx(t, "emailOrPhone")} value={error ? "an.nguyen@gmail.com" : ""} />
-        <MeshInput icon="lock-closed-outline" secure placeholder={tx(t, "password")} value={error ? "••••••••••••" : ""} error={error} />
+        <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} />
+        <MeshInput icon="lock-closed-outline" secure onChangeText={setPassword} placeholder={tx(t, "password")} value={password} error={Boolean(formError)} />
       </View>
-      {error ? <ErrorText text={tx(t, "incorrectLogin")} /> : null}
+      {formError ? <ErrorText text={formError} /> : null}
       <Pressable onPress={() => nav("forgot")} style={{ alignSelf: "flex-end", marginBottom: 16 }}><Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{tx(t, "forgotPassword")}</Text></Pressable>
-      <PrimaryButton label={tx(t, "login")} onPress={() => nav("loading")} />
+      <PrimaryButton disabled={!emailOrPhone.trim() || !password} label={tx(t, "login")} loading={submitting} onPress={handleLogin} />
       <Divider t={t} />
       <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" onPress={() => nav("loading")} />
       <InlineLink text={tx(t, "noAccount")} link={tx(t, "signup")} onPress={() => nav("register")} />
@@ -170,16 +193,47 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
 }
 
 export function RegisterScreen({ t, nav, error = false }: Props & { error?: boolean }) {
+  const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState(error ? tx(t, "emailExists") : "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      setFormError("Password confirmation does not match.");
+      return;
+    }
+
+    const trimmed = emailOrPhone.trim();
+    const identityPayload = trimmed.includes("@") ? { email: trimmed } : { phone: trimmed };
+
+    try {
+      setSubmitting(true);
+      setFormError("");
+      await registerRequest({
+        emailOrPhone: trimmed,
+        password,
+        ...identityPayload
+      });
+      nav("verifyEmail");
+    } catch (err) {
+      setFormError(messageFromError(err, tx(t, "emailExists")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell showBack onBack={() => nav("welcome")}>
       <AuthTitle t={t} title="createAccount" sub="registerWelcome" />
       <View style={{ gap: 12, marginBottom: 12 }}>
-        <MeshInput icon="person-outline" placeholder={tx(t, "emailOrPhone")} value={error ? "an.nguyen@gmail.com" : ""} error={error} />
-        <MeshInput icon="lock-closed-outline" secure placeholder={tx(t, "password")} value={error ? "••••••••••••" : ""} />
-        <MeshInput icon="lock-closed-outline" secure placeholder={tx(t, "confirmPassword")} value={error ? "••••••••••••" : ""} />
+        <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} error={Boolean(formError)} />
+        <MeshInput icon="lock-closed-outline" secure onChangeText={setPassword} placeholder={tx(t, "password")} value={password} />
+        <MeshInput icon="lock-closed-outline" secure onChangeText={setConfirmPassword} placeholder={tx(t, "confirmPassword")} value={confirmPassword} />
       </View>
-      {error ? <ErrorText text={tx(t, "emailExists")} /> : null}
-      <PrimaryButton label={tx(t, "createAccount")} onPress={() => nav("verifyEmail")} />
+      {formError ? <ErrorText text={formError} /> : null}
+      <PrimaryButton disabled={!emailOrPhone.trim() || !password || !confirmPassword} label={tx(t, "createAccount")} loading={submitting} onPress={handleRegister} />
       <Divider t={t} />
       <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" />
       <InlineLink text={tx(t, "haveAccount")} link={tx(t, "login")} onPress={() => nav("login")} />
