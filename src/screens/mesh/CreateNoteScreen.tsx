@@ -8,7 +8,7 @@ import { getContacts } from "../../api/contactApi";
 import { submitCreateNote } from "../../api/noteApi";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
-import { contactById, contacts, Lang } from "../../mesh/meshData";
+import { contactById, Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -447,11 +447,17 @@ function normalizePickerContact(value: unknown): PickerContact | null {
 
 function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: () => void; onPick: (contact: PickerContact) => void; t: TFn }) {
   const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
 
     let active = true;
+
+    setLoading(true);
+    setError("");
+    setApiContacts([]);
 
     getContacts()
       .then((response) => {
@@ -459,23 +465,19 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
         const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
         setApiContacts(normalized);
       })
-      .catch(() => {
-        if (active) setApiContacts([]);
+      .catch((err) => {
+        if (!active) return;
+        setApiContacts([]);
+        setError(err instanceof Error && err.message ? err.message : "Cannot load contacts from API.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
       active = false;
     };
   }, [open]);
-
-  const pickerContacts: PickerContact[] =
-    apiContacts.length > 0
-      ? apiContacts
-      : contacts.slice(0, 6).map((contact) => ({
-          id: contact.id,
-          name: contact.name,
-          status: contact.status
-        }));
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
@@ -487,7 +489,10 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
             <Ionicons name="search" size={16} color={mesh.ink400} />
             <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("search")}</Text>
           </View>
-          {pickerContacts.map((contact) => (
+          {loading ? <PickerState loading message="Loading contacts from API..." /> : null}
+          {!loading && error ? <PickerState error message={error} /> : null}
+          {!loading && !error && apiContacts.length === 0 ? <PickerState message="No contacts from API." /> : null}
+          {!loading && !error ? apiContacts.map((contact) => (
             <Pressable
               key={contact.id}
               onPress={() => {
@@ -504,10 +509,19 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
                 </View>
               </View>
             </Pressable>
-          ))}
+          )) : null}
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+function PickerState({ error = false, loading = false, message }: { error?: boolean; loading?: boolean; message: string }) {
+  return (
+    <View style={{ alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 20 }}>
+      {loading ? <ActivityIndicator color={mesh.green700} /> : null}
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{message}</Text>
+    </View>
   );
 }
 

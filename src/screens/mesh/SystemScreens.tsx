@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ReactNode, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
+import { getDashboard } from "../../api/dashboardApi";
+import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../../api/notificationApi";
+import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contacts, Lang, notes, notifications, statusById, upcoming } from "../../mesh/meshData";
+import { Contact, contacts, Lang, notes, statusById, upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -12,12 +15,161 @@ type Props = {
   nav: NavFn;
 };
 
+type ApiNotificationItem = {
+  body: string;
+  bodyEn: string;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  id: string;
+  section: "today" | "earlier";
+  time: string;
+  title: string;
+  titleEn: string;
+  unread: boolean;
+};
+
+function asRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function text(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function errorMessage(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function relativeTime(value: unknown) {
+  const date = typeof value === "string" ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return text(value, "");
+
+  const diffMs = Date.now() - date.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < hour) return `${Math.max(1, Math.round(diffMs / minute))}m`;
+  if (diffMs < day) return `${Math.round(diffMs / hour)}h`;
+  if (diffMs < 2 * day) return "Yesterday";
+
+  return `${Math.round(diffMs / day)}d`;
+}
+
+function notificationMeta(type: string) {
+  const normalized = type.toUpperCase();
+
+  if (normalized.includes("SPECIAL")) {
+    return { color: mesh.pink, icon: "calendar-outline" as const, title: "Special day" };
+  }
+
+  if (normalized.includes("SUGGEST")) {
+    return { color: mesh.green700, icon: "sparkles-outline" as const, title: "Connection nudge" };
+  }
+
+  if (normalized.includes("SYSTEM")) {
+    return { color: mesh.blue, icon: "information-circle-outline" as const, title: "System" };
+  }
+
+  return { color: mesh.orange, icon: "notifications-outline" as const, title: "Reminder coming up" };
+}
+
+function notificationSection(value: unknown): ApiNotificationItem["section"] {
+  const date = typeof value === "string" ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "today";
+
+  const now = new Date();
+  return date.toDateString() === now.toDateString() ? "today" : "earlier";
+}
+
+function normalizeNotification(value: unknown): ApiNotificationItem | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const id = text(item._id ?? item.id ?? item.relatedId);
+  if (!id) return null;
+
+  const type = text(item.type, "REMINDER");
+  const meta = notificationMeta(type);
+  const content = text(item.content ?? item.message ?? item.body, meta.title);
+  const title = text(item.title, meta.title);
+  const createdAt = item.createdAt ?? item.updatedAt ?? item.time;
+
+  return {
+    body: content,
+    bodyEn: content,
+    color: meta.color,
+    icon: meta.icon,
+    id,
+    section: notificationSection(createdAt),
+    time: relativeTime(createdAt),
+    title,
+    titleEn: title,
+    unread: Boolean(item.unread ?? (item.isRead === undefined ? false : !item.isRead))
+  };
+}
+
+function SystemStateCard({ error = false, loading = false, message }: { error?: boolean; loading?: boolean; message: string }) {
+  return (
+    <MeshCard style={{ alignItems: "center", gap: 10, padding: 18 }}>
+      {loading ? <ActivityIndicator color={mesh.green700} /> : null}
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{message}</Text>
+    </MeshCard>
+  );
+}
+
 export function NotificationsScreen({ t, lang, nav }: Props) {
-  const grouped = notifications.reduce<Record<string, typeof notifications>>((acc, item) => {
+  const [items, setItems] = useState<ApiNotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [markingAll, setMarkingAll] = useState(false);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await getNotifications();
+      const normalized = extractArray(response, "notifications").map(normalizeNotification).filter(Boolean) as ApiNotificationItem[];
+      setItems(normalized);
+    } catch (err) {
+      setItems([]);
+      setError(errorMessage(err, "Cannot load notifications from API."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const grouped = useMemo(() => items.reduce<Record<string, ApiNotificationItem[]>>((acc, item) => {
     acc[item.section] = acc[item.section] || [];
     acc[item.section].push(item);
     return acc;
-  }, {});
+  }, {}), [items]);
+
+  const handleMarkAll = async () => {
+    try {
+      setMarkingAll(true);
+      setError("");
+      await markAllNotificationsAsRead();
+      await loadNotifications();
+    } catch (err) {
+      setError(errorMessage(err, "Cannot mark notifications as read."));
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleNotificationPress = (item: ApiNotificationItem) => {
+    if (item.unread) {
+      setItems((current) => current.map((notification) => (notification.id === item.id ? { ...notification, unread: false } : notification)));
+      markNotificationAsRead(item.id).catch(() => undefined);
+    }
+
+    nav("noteDetail");
+  };
 
   return (
     <MeshScreen>
@@ -25,17 +177,22 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
           <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("notifications")}</Text>
-          <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>{t("markAllRead")}</Text>
+          <Pressable disabled={markingAll || items.length === 0} onPress={handleMarkAll} hitSlop={8} style={{ opacity: markingAll || items.length === 0 ? 0.55 : 1 }}>
+            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>{markingAll ? "Marking..." : t("markAllRead")}</Text>
+          </Pressable>
         </View>
       </MeshHeader>
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 8 }} bottom={60}>
+        {loading ? <SystemStateCard loading message="Loading notifications from API..." /> : null}
+        {!loading && error ? <SystemStateCard error message={error} /> : null}
+        {!loading && !error && items.length === 0 ? <SystemStateCard message="No notifications from API." /> : null}
         {Object.entries(grouped).map(([section, items]) => (
           <View key={section}>
             <SectionLabel style={{ paddingHorizontal: 4, paddingTop: 14, paddingBottom: 8 }}>{section === "today" ? t("section_today") : t("section_earlier")}</SectionLabel>
             <MeshCard style={{ paddingHorizontal: 14 }}>
               {items.map((item, index) => (
-                <Pressable key={`${item.title}-${index}`} onPress={() => nav("noteDetail")} style={{ flexDirection: "row", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
+                <Pressable key={item.id} onPress={() => handleNotificationPress(item)} style={{ flexDirection: "row", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
                   <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: `${item.color}20` }}>
                     <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={18} color={item.color} />
                   </View>
@@ -97,6 +254,37 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
 }
 
 export function RecentContactsScreen({ t, nav }: Props) {
+  const [recentContacts, setRecentContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRecentContacts() {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await getDashboard();
+        const normalized = extractArray(response, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
+        if (!active) return;
+        setRecentContacts(normalized);
+      } catch (err) {
+        if (!active) return;
+        setRecentContacts([]);
+        setError(errorMessage(err, "Cannot load recent contacts from API."));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadRecentContacts();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <MeshScreen>
       <MeshHeader>
@@ -106,11 +294,15 @@ export function RecentContactsScreen({ t, nav }: Props) {
         </View>
       </MeshHeader>
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={60}>
+        {loading ? <SystemStateCard loading message="Loading recent contacts from API..." /> : null}
+        {!loading && error ? <SystemStateCard error message={error} /> : null}
+        {!loading && !error && recentContacts.length === 0 ? <SystemStateCard message="No recent contacts from API." /> : null}
+        {!loading && !error && recentContacts.length > 0 ? (
         <MeshCard style={{ paddingHorizontal: 14 }}>
-          {contacts.map((contact, index) => {
+          {recentContacts.map((contact, index) => {
             const status = statusById(contact.status);
             return (
-              <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: index < contacts.length - 1 ? 1 : 0, borderColor: mesh.line }}>
+              <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: index < recentContacts.length - 1 ? 1 : 0, borderColor: mesh.line }}>
                 <Avatar name={contact.name} size={44} dot={status?.color} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
@@ -121,6 +313,7 @@ export function RecentContactsScreen({ t, nav }: Props) {
             );
           })}
         </MeshCard>
+        ) : null}
       </MeshScroll>
     </MeshScreen>
   );
