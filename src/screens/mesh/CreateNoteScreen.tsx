@@ -78,10 +78,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
       <View
         style={{
-          height: insets.top + 142,
+          left: 0,
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
-          position: "relative",
+          position: "absolute",
+          right: 0,
+          top: 0,
           zIndex: 3
         }}
       >
@@ -104,28 +106,31 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         </View>
       </View>
 
-      <ScrollView
-        style={{ flex: 1, zIndex: 2 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 16 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <View
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderColor: "rgba(6,69,50,0.06)",
+          borderRadius: 26,
+          borderWidth: 1,
+          bottom: insets.bottom + 88,
+          elevation: 2,
+          left: 20,
+          overflow: "hidden",
+          position: "absolute",
+          right: 20,
+          shadowColor: "#064532",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.05,
+          shadowRadius: 18,
+          top: insets.top + 165,
+          zIndex: 2
+        }}
       >
-        <View style={{ height: 4 }} />
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: 26,
-            borderWidth: 1,
-            borderColor: "rgba(6,69,50,0.06)",
-            shadowColor: "#064532",
-            shadowOpacity: 0.05,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 2,
-            paddingBottom: 18,
-            paddingHorizontal: 16,
-            paddingTop: 22
-          }}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 26, paddingHorizontal: 16, paddingTop: 22 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
         <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
         <ChoiceCard
@@ -190,10 +195,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           <IconBox icon="bulb-outline" />
           <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>{t("noteHint").replace("\n", " ")}</Text>
         </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 4, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
         <Pressable onPress={save} style={{ borderRadius: 25, overflow: "hidden", ...mesh.shadow }}>
           <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <Ionicons name="save-outline" size={20} color="#FFFFFF" />
