@@ -78,7 +78,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
       <View
         style={{
-          height: insets.top + 150,
+          height: insets.top + 142,
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
           position: "relative",
@@ -106,7 +106,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
       <ScrollView
         style={{ flex: 1, zIndex: 2 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 8 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 0 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
