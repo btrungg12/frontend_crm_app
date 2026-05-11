@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from "react-native";
 
-import { getContacts } from "../../api/contactApi";
+import { createContact, getContacts, updateContact } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { ActionTile } from "./parts/ActionTile";
@@ -263,6 +263,38 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const [email, setEmail] = useState(existing?.email || "");
   const [status, setStatus] = useState(existing?.status || "st-close");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setSaveError(t("nameRequired") || "Name is required");
+      return;
+    }
+    setSaveError("");
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
+        statusId: status || undefined,
+        source: "Work"
+      };
+      if (edit && contactId) {
+        await updateContact(contactId, payload);
+        nav("contactDetail", { id: contactId });
+      } else {
+        await createContact(payload);
+        nav("contacts");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save contact";
+      setSaveError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <MeshScreen>
@@ -270,8 +302,15 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
           <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{edit ? t("editContact") : t("createContact")}</Text>
-          <Pressable onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} style={{ borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8 }}>
-            <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            style={{ borderRadius: 999, backgroundColor: saving ? "rgba(255,255,255,0.6)" : "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6 }}
+          >
+            {saving
+              ? <ActivityIndicator size="small" color={mesh.green700} />
+              : <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
+            }
           </Pressable>
         </View>
         <View style={{ alignItems: "center", paddingTop: 14 }}>
@@ -286,6 +325,12 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       </MeshHeader>
 
       <MeshScroll style={{ backgroundColor: "#FFFFFF", marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20 }} bottom={100}>
+        {saveError ? (
+          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+            <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
+          </View>
+        ) : null}
         <FormSection title={t("basicInfo")}>
           <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
           <FormRow icon="call-outline" label={t("phone")} value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
