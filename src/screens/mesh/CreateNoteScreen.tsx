@@ -106,10 +106,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
       <ScrollView
         style={{ flex: 1, zIndex: 2 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 0 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 16 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ height: 4 }} />
         <View
           style={{
             backgroundColor: "#FFFFFF",
@@ -123,7 +124,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
             elevation: 2,
             paddingBottom: 18,
             paddingHorizontal: 16,
-            paddingTop: 18
+            paddingTop: 22
           }}
         >
         <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
