@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
+import { getStatuses } from "../../api/statusApi";
+import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn, TipCard } from "../../mesh/MeshComponents";
-import { Lang, statuses } from "../../mesh/meshData";
+import { Lang, Status, statuses } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -22,6 +24,27 @@ const statusIconMap = {
 } as const;
 
 export function StatusScreen({ t, nav }: Props) {
+  const [apiStatuses, setApiStatuses] = useState<Status[] | null>(null);
+  const sourceStatuses = apiStatuses ?? statuses;
+
+  useEffect(() => {
+    let active = true;
+
+    getStatuses()
+      .then((response) => {
+        if (!active) return;
+        const normalized = extractArray(response, "statuses").map(normalizeApiStatus).filter(Boolean) as Status[];
+        setApiStatuses(normalized.length > 0 ? normalized : null);
+      })
+      .catch(() => {
+        if (active) setApiStatuses(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <MeshScreen>
       <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
@@ -34,11 +57,11 @@ export function StatusScreen({ t, nav }: Props) {
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={150}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
         <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
-          {statuses.map((status, index) => (
+          {sourceStatuses.map((status, index) => (
             <Pressable
               key={status.id}
               onPress={() => nav("createStatus", { id: status.id })}
-              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < statuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < sourceStatuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
             >
               <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />

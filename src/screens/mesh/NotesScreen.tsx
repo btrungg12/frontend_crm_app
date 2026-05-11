@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
+import { getNotes } from "../../api/noteApi";
+import { extractArray, normalizeApiNote } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contactById, Lang, notes } from "../../mesh/meshData";
+import { contactById, Lang, Note, notes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -15,6 +17,8 @@ type Props = {
 
 export function NotesScreen({ t, lang, nav }: Props) {
   const [filter, setFilter] = useState("all");
+  const [apiNotes, setApiNotes] = useState<Note[] | null>(null);
+  const sourceNotes = apiNotes ?? notes;
   const filters = [
     { id: "all", label: t("fAll") },
     { id: "rem", label: t("fReminder") },
@@ -22,15 +26,33 @@ export function NotesScreen({ t, lang, nav }: Props) {
     { id: "rec", label: t("fRecent") }
   ];
 
+  useEffect(() => {
+    let active = true;
+
+    getNotes()
+      .then((response) => {
+        if (!active) return;
+        const normalized = extractArray(response, "notes").map(normalizeApiNote).filter(Boolean) as Note[];
+        setApiNotes(normalized.length > 0 ? normalized : null);
+      })
+      .catch(() => {
+        if (active) setApiNotes(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const grouped = useMemo(() => {
-    return notes.reduce<Record<string, typeof notes>>((acc, note) => {
+    return sourceNotes.reduce<Record<string, Note[]>>((acc, note) => {
       if (filter === "rem" && !note.reminder) return acc;
       if (filter === "np" && note.contact) return acc;
       acc[note.section] = acc[note.section] || [];
       acc[note.section].push(note);
       return acc;
     }, {});
-  }, [filter]);
+  }, [filter, sourceNotes]);
 
   const sectionLabel = {
     today: t("section_today"),

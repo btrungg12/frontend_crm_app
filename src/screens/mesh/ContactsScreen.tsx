@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
 
+import { getContacts } from "../../api/contactApi";
+import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
-import { contactById, contacts, Lang, statuses, statusById, timelineFor } from "../../mesh/meshData";
+import { Contact, contactById, contacts, Lang, statuses, statusById, timelineFor } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -16,8 +18,28 @@ type Props = {
 
 export function ContactsScreen({ t, lang, nav }: Props) {
   const [filter, setFilter] = useState("all");
+  const [apiContacts, setApiContacts] = useState<Contact[] | null>(null);
+  const sourceContacts = apiContacts ?? contacts;
   const filters = [{ id: "all", label: t("fAll"), color: null }, ...statuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
-  const list = filter === "all" ? contacts : contacts.filter((contact) => contact.status === filter);
+  const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
+
+  useEffect(() => {
+    let active = true;
+
+    getContacts()
+      .then((response) => {
+        if (!active) return;
+        const normalized = extractArray(response, "contacts").map(normalizeApiContact).filter(Boolean) as Contact[];
+        setApiContacts(normalized.length > 0 ? normalized : null);
+      })
+      .catch(() => {
+        if (active) setApiContacts(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const grouped = useMemo(() => {
     return list.reduce<Record<string, typeof contacts>>((acc, contact) => {
@@ -34,7 +56,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         left={<Avatar name="Trung Nguyen" size={48} ring />}
         right={<HeaderCircleBtn icon="add" onPress={() => nav("createContact")} />}
         title={t("contacts")}
-        subtitle={t("contactsCount", { n: contacts.length })}
+        subtitle={t("contactsCount", { n: sourceContacts.length })}
       >
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable onPress={() => nav("search")} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>

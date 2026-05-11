@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { getDashboard } from "../../api/dashboardApi";
+import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contacts, Lang, statusById, upcoming } from "../../mesh/meshData";
+import { Contact, contacts, Lang, statusById, Upcoming, upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -20,7 +23,34 @@ const iconMap = {
 } as const;
 
 export function DashboardScreen({ t, lang, nav }: Props) {
-  const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
+  const [apiRecent, setApiRecent] = useState<Contact[] | null>(null);
+  const [apiUpcoming, setApiUpcoming] = useState<Upcoming[] | null>(null);
+  const recent = apiRecent ?? [contacts[0], contacts[7], contacts[8], contacts[9]];
+  const upcomingItems = apiUpcoming ?? upcoming;
+
+  useEffect(() => {
+    let active = true;
+
+    getDashboard()
+      .then((response) => {
+        if (!active) return;
+
+        const recentContacts = extractArray(response, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
+        const upcomingList = extractArray(response, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
+
+        if (recentContacts.length > 0) setApiRecent(recentContacts.slice(0, 4));
+        if (upcomingList.length > 0) setApiUpcoming(upcomingList.slice(0, 4));
+      })
+      .catch(() => {
+        if (!active) return;
+        setApiRecent(null);
+        setApiUpcoming(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <MeshScreen>
@@ -61,7 +91,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>
-              {t("upcoming")} <Text style={{ color: mesh.ink500 }}>(4)</Text>
+              {t("upcoming")} <Text style={{ color: mesh.ink500 }}>({upcomingItems.length})</Text>
             </SectionLabel>
             <Pressable onPress={() => nav("allUpcoming")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
@@ -70,7 +100,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           </View>
 
           <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
-            {upcoming.map((item, index) => {
+            {upcomingItems.map((item, index) => {
               const isReminder = item.kind === "reminder";
               return (
                 <View key={item.id}>
@@ -94,7 +124,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                   </Pressable>
-                  {index < upcoming.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 10 }} /> : null}
+                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 10 }} /> : null}
                 </View>
               );
             })}

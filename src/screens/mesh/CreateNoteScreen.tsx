@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getContacts } from "../../api/contactApi";
 import { submitCreateNote } from "../../api/noteApi";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
@@ -21,9 +22,21 @@ type Props = {
 const titleLimit = 100;
 const contentLimit = 1000;
 
+type PickerContact = {
+  id: string;
+  name: string;
+  status?: string;
+};
+
+type ReminderSelection = {
+  label: string;
+  remindAt: string;
+};
+
 export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: Props) {
   const insets = useSafeAreaInsets();
   const isVi = lang === "vi";
+  const initialContact = initialPerson ? contactById(initialPerson) : undefined;
   const [title, setTitle] = useState(edit ? "Gọi điện hỏi thăm công việc" : "");
   const [content, setContent] = useState(
     edit
@@ -31,19 +44,22 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       : ""
   );
   const [person, setPerson] = useState<string | null>(edit ? "c1" : initialPerson || null);
+  const [personLabel, setPersonLabel] = useState(initialContact?.name || "");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
-  const [reminder, setReminder] = useState<string | null>(null);
+  const [reminder, setReminder] = useState<ReminderSelection | null>(null);
   const [personError, setPersonError] = useState(false);
   const [contentError, setContentError] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
   const contact = contactById(person);
+  const displayPersonName = contact?.name || personLabel;
 
   const clear = () => {
     setTitle("");
     setContent("");
     setPerson(null);
+    setPersonLabel("");
     setReminder(null);
     setPersonError(false);
     setContentError(false);
@@ -63,11 +79,18 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       setSaving(true);
       const token = await getToken();
 
-      if (token && !edit) {
+      if (!token) {
+        setSaveError("Please log in before saving notes.");
+        return;
+      }
+
+      if (!edit) {
         await submitCreateNote({
           contactId: person,
           content: content.trim(),
           interactionDate: new Date().toISOString(),
+          reminderEnabled: Boolean(reminder),
+          remindAt: reminder?.remindAt,
           title: title.trim() || undefined
         });
       }
@@ -159,11 +182,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
         <ChoiceCard
           icon="person-outline"
-          title={contact ? contact.name : t("pickPerson")}
-          subtitle={contact ? undefined : t("attachToPerson")}
+          title={displayPersonName || t("pickPerson")}
+          subtitle={displayPersonName ? undefined : t("attachToPerson")}
           onPress={() => setPickerOpen(true)}
           error={personError}
-          left={contact ? <Avatar name={contact.name} size={44} /> : undefined}
+          left={displayPersonName ? <Avatar name={displayPersonName} size={44} /> : undefined}
           trailing={contact ? <StatusChip statusId={contact.status} /> : undefined}
         />
         {personError ? <ErrorText>{isVi ? "Vui lòng chọn người." : "Please choose a person."}</ErrorText> : null}
@@ -203,7 +226,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         </FieldLabel>
         <ChoiceCard
           icon="notifications-outline"
-          title={reminder || t("addReminder")}
+          title={reminder?.label || t("addReminder")}
           subtitle={reminder ? t("once") : t("reminderHint")}
           onPress={() => setReminderOpen(true)}
           trailing={
@@ -235,8 +258,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       <ContactPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onPick={(id) => {
-          setPerson(id);
+        onPick={(selected) => {
+          setPerson(selected.id);
+          setPersonLabel(selected.name);
           setPersonError(false);
         }}
         t={t}
@@ -383,7 +407,76 @@ function LeafDecor() {
   );
 }
 
-function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: () => void; onPick: (id: string) => void; t: TFn }) {
+function asRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function extractArray(response: unknown, key: string) {
+  if (Array.isArray(response)) return response;
+
+  const root = asRecord(response);
+  if (!root) return [];
+
+  if (Array.isArray(root[key])) return root[key];
+  if (Array.isArray(root.data)) return root.data;
+
+  const data = asRecord(root.data);
+  if (data && Array.isArray(data[key])) return data[key];
+  if (data && Array.isArray(data.items)) return data.items;
+
+  return [];
+}
+
+function normalizePickerContact(value: unknown): PickerContact | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const idValue = item._id ?? item.id;
+  const nameValue = item.name ?? item.fullName;
+  const statusRecord = asRecord(item.status);
+  const statusValue = item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status;
+
+  if (typeof idValue !== "string" || typeof nameValue !== "string") return null;
+
+  return {
+    id: idValue,
+    name: nameValue,
+    status: typeof statusValue === "string" ? statusValue : undefined
+  };
+}
+
+function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: () => void; onPick: (contact: PickerContact) => void; t: TFn }) {
+  const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+
+    getContacts()
+      .then((response) => {
+        if (!active) return;
+        const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
+        setApiContacts(normalized);
+      })
+      .catch(() => {
+        if (active) setApiContacts([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
+  const pickerContacts: PickerContact[] =
+    apiContacts.length > 0
+      ? apiContacts
+      : contacts.slice(0, 6).map((contact) => ({
+          id: contact.id,
+          name: contact.name,
+          status: contact.status
+        }));
+
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
@@ -394,11 +487,11 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
             <Ionicons name="search" size={16} color={mesh.ink400} />
             <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("search")}</Text>
           </View>
-          {contacts.slice(0, 6).map((contact) => (
+          {pickerContacts.map((contact) => (
             <Pressable
               key={contact.id}
               onPress={() => {
-                onPick(contact.id);
+                onPick(contact);
                 onClose();
               }}
               style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: mesh.line }}
@@ -407,7 +500,7 @@ function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: (
               <View style={{ flex: 1 }}>
                 <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
                 <View style={{ marginTop: 3 }}>
-                  <StatusChip statusId={contact.status} />
+                  {contact.status ? <StatusChip statusId={contact.status} /> : null}
                 </View>
               </View>
             </Pressable>
@@ -427,7 +520,7 @@ function ReminderPicker({
 }: {
   open: boolean;
   onClose: () => void;
-  onPick: (value: string) => void;
+  onPick: (value: ReminderSelection) => void;
   t: TFn;
   lang: Lang;
 }) {
@@ -452,7 +545,15 @@ function ReminderPicker({
   const dateLabel = isVi ? `T${(day % 7) + 1}, ${String(day).padStart(2, "0")}/05` : `${weekDays[day % 7]}, ${String(day).padStart(2, "0")}/05`;
 
   const save = () => {
-    onPick(`${time}, ${dateLabel}`);
+    const [hour = 18, minute = 0] = time.split(":").map((value) => Number(value));
+    const remindAt = new Date();
+    remindAt.setDate(day);
+    remindAt.setHours(hour, minute, 0, 0);
+
+    onPick({
+      label: `${time}, ${dateLabel}`,
+      remindAt: remindAt.toISOString()
+    });
     onClose();
   };
 
