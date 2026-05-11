@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
 import { getNotes } from "../../api/noteApi";
 import { extractArray, normalizeApiNote } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contactById, Lang, Note, notes } from "../../mesh/meshData";
+import { contactById, Lang, Note } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -17,8 +17,10 @@ type Props = {
 
 export function NotesScreen({ t, lang, nav }: Props) {
   const [filter, setFilter] = useState("all");
-  const [apiNotes, setApiNotes] = useState<Note[] | null>(null);
-  const sourceNotes = apiNotes ?? notes;
+  const [apiNotes, setApiNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const sourceNotes = apiNotes;
   const filters = [
     { id: "all", label: t("fAll") },
     { id: "rem", label: t("fReminder") },
@@ -33,10 +35,16 @@ export function NotesScreen({ t, lang, nav }: Props) {
       .then((response) => {
         if (!active) return;
         const normalized = extractArray(response, "notes").map(normalizeApiNote).filter(Boolean) as Note[];
-        setApiNotes(normalized.length > 0 ? normalized : null);
+        setApiNotes(normalized);
+        setError("");
       })
-      .catch(() => {
-        if (active) setApiNotes(null);
+      .catch((err) => {
+        if (!active) return;
+        setApiNotes([]);
+        setError(err instanceof Error && err.message ? err.message : "Cannot load notes.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -84,7 +92,13 @@ export function NotesScreen({ t, lang, nav }: Props) {
           </MeshChip>
         </View>
 
-        {Object.entries(grouped).map(([section, items]) => (
+        {loading ? (
+          <InlineState label="Loading notes..." loading />
+        ) : error ? (
+          <InlineState label={error} error />
+        ) : sourceNotes.length === 0 ? (
+          <InlineState label="No notes from API." />
+        ) : Object.entries(grouped).map(([section, items]) => (
           <View key={section} style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
             <SectionLabel style={{ paddingHorizontal: 4, paddingBottom: 6 }}>{sectionLabel[section]}</SectionLabel>
             {items.map((note) => {
@@ -141,5 +155,16 @@ export function NotesScreen({ t, lang, nav }: Props) {
         }}
       />
     </MeshScreen>
+  );
+}
+
+function InlineState({ error = false, label, loading = false }: { error?: boolean; label: string; loading?: boolean }) {
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 10 }}>
+      <MeshCard style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, padding: 18, shadowOpacity: 0.02 }}>
+        {loading ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
+        <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+      </MeshCard>
+    </View>
   );
 }

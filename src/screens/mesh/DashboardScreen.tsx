@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { getDashboard } from "../../api/dashboardApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, contacts, Lang, statusById, Upcoming, upcoming } from "../../mesh/meshData";
+import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -23,10 +23,10 @@ const iconMap = {
 } as const;
 
 export function DashboardScreen({ t, lang, nav }: Props) {
-  const [apiRecent, setApiRecent] = useState<Contact[] | null>(null);
-  const [apiUpcoming, setApiUpcoming] = useState<Upcoming[] | null>(null);
-  const recent = apiRecent ?? [contacts[0], contacts[7], contacts[8], contacts[9]];
-  const upcomingItems = apiUpcoming ?? upcoming;
+  const [recent, setRecent] = useState<Contact[]>([]);
+  const [upcomingItems, setUpcomingItems] = useState<Upcoming[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -38,13 +38,18 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         const recentContacts = extractArray(response, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
         const upcomingList = extractArray(response, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
 
-        if (recentContacts.length > 0) setApiRecent(recentContacts.slice(0, 4));
-        if (upcomingList.length > 0) setApiUpcoming(upcomingList.slice(0, 4));
+        setRecent(recentContacts.slice(0, 4));
+        setUpcomingItems(upcomingList.slice(0, 4));
+        setError("");
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return;
-        setApiRecent(null);
-        setApiUpcoming(null);
+        setRecent([]);
+        setUpcomingItems([]);
+        setError(err instanceof Error && err.message ? err.message : "Cannot load dashboard.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -99,8 +104,15 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Pressable>
           </View>
 
-          <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
-            {upcomingItems.map((item, index) => {
+          {loading ? (
+            <StateCard label="Loading dashboard..." />
+          ) : error ? (
+            <StateCard label={error} tone="error" />
+          ) : upcomingItems.length === 0 ? (
+            <StateCard label="No upcoming items from API." />
+          ) : (
+            <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
+              {upcomingItems.map((item, index) => {
               const isReminder = item.kind === "reminder";
               return (
                 <View key={item.id}>
@@ -127,8 +139,9 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                   {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 10 }} /> : null}
                 </View>
               );
-            })}
-          </MeshCard>
+              })}
+            </MeshCard>
+          )}
 
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 14, paddingBottom: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -149,8 +162,11 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Pressable>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
-            {recent.map((contact) => {
+          {loading ? null : error ? null : recent.length === 0 ? (
+            <StateCard label="No recent contacts from API." />
+          ) : (
+            <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
+              {recent.map((contact) => {
               const status = statusById(contact.status);
               return (
                 <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 64, alignItems: "center", gap: 6 }}>
@@ -161,14 +177,15 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                   <View style={{ width: 0, height: 0, backgroundColor: status?.color }} />
                 </Pressable>
               );
-            })}
-            <Pressable onPress={() => nav("createContact")} style={{ width: 64, alignItems: "center", gap: 6 }}>
-              <View style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: "dashed", borderColor: mesh.green300, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.04)" }}>
-                <Ionicons name="add" size={24} color={mesh.green700} />
-              </View>
-              <Text style={{ textAlign: "center", color: mesh.green700, fontSize: 12, fontWeight: "700", lineHeight: 15 }}>{t("addContact")}</Text>
-            </Pressable>
-          </View>
+              })}
+              <Pressable onPress={() => nav("createContact")} style={{ width: 64, alignItems: "center", gap: 6 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: "dashed", borderColor: mesh.green300, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.04)" }}>
+                  <Ionicons name="add" size={24} color={mesh.green700} />
+                </View>
+                <Text style={{ textAlign: "center", color: mesh.green700, fontSize: 12, fontWeight: "700", lineHeight: 15 }}>{t("addContact")}</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -183,5 +200,14 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         }}
       />
     </MeshScreen>
+  );
+}
+
+function StateCard({ label, tone = "muted" }: { label: string; tone?: "muted" | "error" }) {
+  return (
+    <MeshCard style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, padding: 18, shadowOpacity: 0.02 }}>
+      {label === "Loading dashboard..." ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
+      <Text style={{ color: tone === "error" ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+    </MeshCard>
   );
 }

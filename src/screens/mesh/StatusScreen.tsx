@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
 import { getStatuses } from "../../api/statusApi";
 import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
@@ -24,8 +24,10 @@ const statusIconMap = {
 } as const;
 
 export function StatusScreen({ t, nav }: Props) {
-  const [apiStatuses, setApiStatuses] = useState<Status[] | null>(null);
-  const sourceStatuses = apiStatuses ?? statuses;
+  const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const sourceStatuses = apiStatuses;
 
   useEffect(() => {
     let active = true;
@@ -34,10 +36,16 @@ export function StatusScreen({ t, nav }: Props) {
       .then((response) => {
         if (!active) return;
         const normalized = extractArray(response, "statuses").map(normalizeApiStatus).filter(Boolean) as Status[];
-        setApiStatuses(normalized.length > 0 ? normalized : null);
+        setApiStatuses(normalized);
+        setError("");
       })
-      .catch(() => {
-        if (active) setApiStatuses(null);
+      .catch((err) => {
+        if (!active) return;
+        setApiStatuses([]);
+        setError(err instanceof Error && err.message ? err.message : "Cannot load statuses.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -56,8 +64,15 @@ export function StatusScreen({ t, nav }: Props) {
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={150}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
-        <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
-          {sourceStatuses.map((status, index) => (
+        {loading ? (
+          <InlineState label="Loading statuses..." loading />
+        ) : error ? (
+          <InlineState label={error} error />
+        ) : sourceStatuses.length === 0 ? (
+          <InlineState label="No statuses from API." />
+        ) : (
+          <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
+            {sourceStatuses.map((status, index) => (
             <Pressable
               key={status.id}
               onPress={() => nav("createStatus", { id: status.id })}
@@ -73,8 +88,9 @@ export function StatusScreen({ t, nav }: Props) {
               <Text style={{ color: status.color, fontSize: 18, fontWeight: "700" }}>{status.count}</Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
-          ))}
-        </MeshCard>
+            ))}
+          </MeshCard>
+        )}
 
         <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 20, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, marginTop: 18, padding: 14, flexDirection: "row", gap: 12 }}>
           <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
@@ -99,6 +115,15 @@ export function StatusScreen({ t, nav }: Props) {
         }}
       />
     </MeshScreen>
+  );
+}
+
+function InlineState({ error = false, label, loading = false }: { error?: boolean; label: string; loading?: boolean }) {
+  return (
+    <MeshCard style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, padding: 18, shadowOpacity: 0.02 }}>
+      {loading ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+    </MeshCard>
   );
 }
 

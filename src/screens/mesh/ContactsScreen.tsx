@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from "react-native";
 
 import { getContacts } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
@@ -18,8 +18,10 @@ type Props = {
 
 export function ContactsScreen({ t, lang, nav }: Props) {
   const [filter, setFilter] = useState("all");
-  const [apiContacts, setApiContacts] = useState<Contact[] | null>(null);
-  const sourceContacts = apiContacts ?? contacts;
+  const [apiContacts, setApiContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const sourceContacts = apiContacts;
   const filters = [{ id: "all", label: t("fAll"), color: null }, ...statuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
   const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
 
@@ -30,10 +32,16 @@ export function ContactsScreen({ t, lang, nav }: Props) {
       .then((response) => {
         if (!active) return;
         const normalized = extractArray(response, "contacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-        setApiContacts(normalized.length > 0 ? normalized : null);
+        setApiContacts(normalized);
+        setError("");
       })
-      .catch(() => {
-        if (active) setApiContacts(null);
+      .catch((err) => {
+        if (!active) return;
+        setApiContacts([]);
+        setError(err instanceof Error && err.message ? err.message : "Cannot load contacts.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -80,7 +88,13 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-          {Object.keys(grouped).sort().map((key) => (
+          {loading ? (
+            <InlineState label="Loading contacts..." loading />
+          ) : error ? (
+            <InlineState label={error} error />
+          ) : list.length === 0 ? (
+            <InlineState label="No contacts from API." />
+          ) : Object.keys(grouped).sort().map((key) => (
             <View key={key}>
               <Text style={{ color: "#7A837E", fontSize: 13, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
               {grouped[key].map((contact, index) => (
@@ -115,6 +129,15 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         }}
       />
     </MeshScreen>
+  );
+}
+
+function InlineState({ error = false, label, loading = false }: { error?: boolean; label: string; loading?: boolean }) {
+  return (
+    <View style={{ alignItems: "center", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, marginTop: 10, padding: 18 }}>
+      {loading ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+    </View>
   );
 }
 
