@@ -78,11 +78,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
 
       <View
         style={{
-          height: insets.top + 180,
+          height: insets.top + 150,
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
           position: "relative",
-          zIndex: 2
+          zIndex: 3
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -105,8 +105,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       </View>
 
       <ScrollView
-        style={{ flex: 1, zIndex: 3 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 0 }}
+        style={{ flex: 1, zIndex: 2 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150, paddingHorizontal: 20, paddingTop: 8 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

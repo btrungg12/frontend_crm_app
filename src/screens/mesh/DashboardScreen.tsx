@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRef } from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
@@ -22,29 +21,10 @@ const iconMap = {
 
 export function DashboardScreen({ t, lang, nav }: Props) {
   const recent = [contacts[0], contacts[7], contacts[8], contacts[9]];
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const heroOpacity = scrollY.interpolate({
-    inputRange: [0, 80, 160],
-    outputRange: [1, 0.65, 0],
-    extrapolate: "clamp"
-  });
-  const heroTranslateY = scrollY.interpolate({
-    inputRange: [0, 160],
-    outputRange: [0, -40],
-    extrapolate: "clamp"
-  });
 
   return (
     <MeshScreen>
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          opacity: heroOpacity,
-          transform: [{ translateY: heroTranslateY }]
-        }}
-      >
-        <DashboardMeshBackground />
-      </Animated.View>
+      <DashboardMeshBackground />
 
       <MeshHeader variant="transparent" style={{ paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
@@ -70,15 +50,13 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         </View>
       </MeshHeader>
 
-      <Animated.ScrollView
+      <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
       >
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
@@ -162,7 +140,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Pressable>
           </View>
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
 
       <BottomNav
         active="home"
