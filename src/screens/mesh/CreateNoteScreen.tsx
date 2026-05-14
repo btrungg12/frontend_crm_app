@@ -5,7 +5,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
-import { submitCreateNote } from "../../api/noteApi";
+import { deleteNoteReminder, getNoteById, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { contactById, Lang } from "../../mesh/meshData";
@@ -16,6 +16,7 @@ type Props = {
   lang: Lang;
   nav: NavFn;
   edit?: boolean;
+  noteId?: string;
   initialPerson?: string;
 };
 
@@ -33,33 +34,82 @@ type ReminderSelection = {
   remindAt: string;
 };
 
-export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: Props) {
+type NoteEditData = {
+  contactId: string | null;
+  contactName: string;
+  contactStatus: string;
+  content: string;
+  id: string;
+  remindAt: string | null;
+  title: string;
+};
+
+export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPerson }: Props) {
   const insets = useSafeAreaInsets();
   const isVi = lang === "vi";
-  const initialContact = initialPerson ? contactById(initialPerson) : undefined;
-  const [title, setTitle] = useState(edit ? "Gọi điện hỏi thăm công việc" : "");
-  const [content, setContent] = useState(
-    edit
-      ? "Hôm nay nên gọi hỏi thăm tình hình công việc mới của An, xem có cần hỗ trợ gì không.\n\nAn đang phụ trách dự án mới ở công ty."
-      : ""
-  );
-  const [person, setPerson] = useState<string | null>(edit ? "c1" : initialPerson || null);
-  const [personLabel, setPersonLabel] = useState(initialContact?.name || "");
+
+  // Form states — start empty; edit mode fills via useEffect
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [person, setPerson] = useState<string | null>(initialPerson || null);
+  const [personLabel, setPersonLabel] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminder, setReminder] = useState<ReminderSelection | null>(null);
+  const [hadReminder, setHadReminder] = useState(false);
   const [personError, setPersonError] = useState(false);
   const [contentError, setContentError] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadingNote, setLoadingNote] = useState(edit);
+  const [loadError, setLoadError] = useState("");
+
   const contact = contactById(person);
   const displayPersonName = contact?.name || personLabel;
+
+  // Load note data when in edit mode
+  useEffect(() => {
+    if (!edit) return;
+    if (!noteId) {
+      setLoadError("Missing note id");
+      setLoadingNote(false);
+      return;
+    }
+
+    let active = true;
+    setLoadingNote(true);
+    setLoadError("");
+
+    getNoteById(noteId)
+      .then((response) => {
+        if (!active) return;
+        const data = normalizeEditNote(response);
+        if (!data) { setLoadError("Note not found."); return; }
+        setTitle(data.title);
+        setContent(data.content);
+        setPerson(data.contactId);
+        setPersonLabel(data.contactName);
+        if (data.remindAt) {
+          setReminder({
+            label: new Date(data.remindAt).toLocaleString(),
+            remindAt: data.remindAt
+          });
+          setHadReminder(true);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        setLoadError(err instanceof Error ? err.message : "Failed to load note.");
+      })
+      .finally(() => { if (active) setLoadingNote(false); });
+
+    return () => { active = false; };
+  }, [edit, noteId]);
 
   const clear = () => {
     setTitle("");
     setContent("");
-    setPerson(null);
-    setPersonLabel("");
+    if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); }
     setReminder(null);
     setPersonError(false);
     setContentError(false);
@@ -84,7 +134,23 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
         return;
       }
 
-      if (!edit) {
+      if (edit) {
+        if (!noteId) {
+          setSaveError("Missing note id.");
+          return;
+        }
+        await updateNote(noteId, {
+          contactId: person,
+          title: title.trim() || undefined,
+          content: content.trim()
+        });
+        if (reminder) {
+          await upsertNoteReminder(noteId, { enabled: true, remindAt: reminder.remindAt });
+        } else if (hadReminder) {
+          await deleteNoteReminder(noteId);
+        }
+        nav("noteDetail", { id: noteId });
+      } else {
         await submitCreateNote({
           contactId: person,
           content: content.trim(),
@@ -93,15 +159,45 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
           remindAt: reminder?.remindAt,
           title: title.trim() || undefined
         });
+        nav("notes");
       }
-
-      nav(edit ? "noteDetail" : "notes");
     } catch (err) {
       setSaveError(err instanceof Error && err.message ? err.message : "Could not save note.");
     } finally {
       setSaving(false);
     }
   };
+
+  // Loading state while fetching note for edit
+  if (loadingNote) {
+    return (
+      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={mesh.green700} />
+        </View>
+      </MeshScreen>
+    );
+  }
+
+  // Error state (missing noteId or API failure in edit mode)
+  if (loadError) {
+    return (
+      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 }}>
+          <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
+          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
+            {loadError}
+          </Text>
+          <Pressable
+            onPress={() => nav("notes")}
+            style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back to Notes</Text>
+          </Pressable>
+        </View>
+      </MeshScreen>
+    );
+  }
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
@@ -136,7 +232,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, initialPerson }: 
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable
-            onPress={() => nav(edit ? "noteDetail" : "dashboard")}
+            onPress={() => edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard")}
             style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...mesh.shadow }}
           >
             <Ionicons name="chevron-back" size={24} color={mesh.green700} />
@@ -425,6 +521,54 @@ function extractArray(response: unknown, key: string) {
   if (data && Array.isArray(data.items)) return data.items;
 
   return [];
+}
+
+function extractNoteData(response: unknown): unknown {
+  const root = asRecord(response);
+  if (!root) return response;
+  const data = asRecord(root.data);
+  if (data?.note) return data.note;
+  if (data?.content) return data;
+  if (root.note) return root.note;
+  if (root.content) return root;
+  return response;
+}
+
+function normalizeEditNote(response: unknown): NoteEditData | null {
+  const item = asRecord(extractNoteData(response));
+  if (!item) return null;
+
+  const id = typeof item._id === "string" ? item._id : typeof item.id === "string" ? item.id : null;
+  const content = typeof item.content === "string" ? item.content : typeof item.body === "string" ? item.body : null;
+  if (!id || !content) return null;
+
+  const contactRecord = asRecord(item.contact ?? item.person);
+  const contactId =
+    typeof item.contactId === "string" ? item.contactId :
+    typeof contactRecord?._id === "string" ? String(contactRecord._id) :
+    typeof contactRecord?.id === "string" ? String(contactRecord.id) :
+    null;
+
+  const contactName =
+    typeof contactRecord?.name === "string" ? String(contactRecord.name) :
+    typeof contactRecord?.fullName === "string" ? String(contactRecord.fullName) :
+    "";
+
+  const statusRecord = asRecord(contactRecord?.status);
+  const contactStatus =
+    typeof item.statusId === "string" ? item.statusId :
+    typeof statusRecord?._id === "string" ? String(statusRecord._id) :
+    "";
+
+  const title = typeof item.title === "string" ? item.title : "";
+  const reminderRecord = asRecord(item.reminder);
+  const reminderEnabled = Boolean(reminderRecord?.enabled ?? item.reminderEnabled);
+  const remindAt = reminderEnabled
+    ? (typeof reminderRecord?.remindAt === "string" ? String(reminderRecord.remindAt) :
+       typeof item.remindAt === "string" ? item.remindAt : null)
+    : null;
+
+  return { contactId, contactName, contactStatus, content, id, remindAt, title };
 }
 
 function normalizePickerContact(value: unknown): PickerContact | null {
