@@ -109,6 +109,8 @@ export function AppShell() {
   const common = { t, lang, nav };
   const noteId = (route.props?.id as string) || (route.props?.noteId as string);
   const contactId = (route.props?.id as string) || (route.props?.contactId as string);
+  const emailOrPhone = route.props?.emailOrPhone as string | undefined;
+  const phone = route.props?.phone as string | undefined;
 
   switch (route.name) {
     case "welcome":
@@ -122,11 +124,11 @@ export function AppShell() {
     case "registerErr":
       return <RegisterScreen {...common} error />;
     case "verifyEmail":
-      return <VerifyEmailScreen {...common} />;
+      return <VerifyEmailScreen {...common} emailOrPhone={emailOrPhone} />;
     case "verifyPhone":
-      return <VerifyPhoneScreen {...common} />;
+      return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} />;
     case "verifyPhoneR":
-      return <VerifyPhoneScreen {...common} resend />;
+      return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} resend />;
     case "verifySuccess":
       return <VerifySuccessScreen {...common} />;
     case "forgot":

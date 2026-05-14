@@ -10,7 +10,7 @@ type AuthResponse = Record<string, unknown> & {
   token?: string;
 };
 
-function extractToken(response: AuthResponse) {
+export function extractAuthToken(response: AuthResponse) {
   return response.token ?? response.accessToken ?? response.data?.token ?? response.data?.accessToken;
 }
 
@@ -29,7 +29,7 @@ export async function login(emailOrPhone: string, password: string) {
     method: "POST"
   });
 
-  const token = extractToken(response);
+  const token = extractAuthToken(response);
 
   if (!token) {
     throw new Error("Login thành công nhưng response không có token");
@@ -47,7 +47,7 @@ export async function loginWithGoogle(idToken: string) {
     method: "POST"
   });
 
-  const token = extractToken(response);
+  const token = extractAuthToken(response);
 
   if (!token) {
     throw new Error("Google login thành công nhưng response không có token");

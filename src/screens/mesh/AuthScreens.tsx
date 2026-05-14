@@ -45,7 +45,7 @@ const copy: Record<string, string> = {
   resendCode: "Resend code",
   verify: "Verify",
   verified: "Verified",
-  verifiedDesc: "Your account is ready. Let's start with the people who matter.",
+  verifiedDesc: "Your account is ready. Please log in to continue.",
   continue: "Continue",
   forgotTitle: "Reset your password",
   forgotDesc: "Enter your email or phone and we'll send reset instructions.",
@@ -216,7 +216,7 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
         password,
         ...identityPayload
       });
-      nav("verifyEmail");
+      nav("verifyEmail", { emailOrPhone: trimmed });
     } catch (err) {
       setFormError(messageFromError(err, tx(t, "emailExists")));
     } finally {
@@ -259,12 +259,14 @@ function InlineLink({ text, link, onPress }: { text: string; link: string; onPre
   return <Pressable onPress={onPress}><Text style={{ color: mesh.ink500, fontSize: 13, textAlign: "center", marginTop: 22 }}>{text} <Text style={{ color: mesh.green700, fontWeight: "900" }}>{link}</Text></Text></Pressable>;
 }
 
-export function VerifyEmailScreen({ t, nav }: Props) {
+export function VerifyEmailScreen({ t, nav, emailOrPhone }: Props & { emailOrPhone?: string }) {
+  const target = emailOrPhone?.trim() || "your email";
+
   return (
     <AuthShell showBack onBack={() => nav("register")}>
       <CenteredIcon icon="mail-outline" />
       <Text style={stylesTitle}>{tx(t, "verifyEmail")}</Text>
-      <Text style={stylesBody}>{tx(t, "verifyEmailDesc")} <Text style={{ color: mesh.ink900, fontWeight: "900" }}>an.nguyen@gmail.com</Text></Text>
+      <Text style={stylesBody}>{tx(t, "verifyEmailDesc")} <Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target}</Text></Text>
       <Text style={[stylesBody, { marginTop: 12 }]}>{tx(t, "checkInbox")}</Text>
       <View style={{ flex: 1, minHeight: 160 }} />
       <View style={{ backgroundColor: mesh.bgSubtle, borderRadius: mesh.radiusLg, padding: 16, marginBottom: 16 }}>
@@ -276,13 +278,15 @@ export function VerifyEmailScreen({ t, nav }: Props) {
   );
 }
 
-export function VerifyPhoneScreen({ t, nav, resend = false }: Props & { resend?: boolean }) {
+export function VerifyPhoneScreen({ t, nav, emailOrPhone, phone, resend = false }: Props & { emailOrPhone?: string; phone?: string; resend?: boolean }) {
   const code = resend ? ["2", "4", "8", "1", "0", "6"] : ["", "", "", "", "", ""];
+  const target = phone?.trim() || emailOrPhone?.trim() || "your phone";
+
   return (
     <AuthShell showBack onBack={() => nav("register")}>
       <CenteredIcon icon="phone-portrait-outline" />
       <Text style={stylesTitle}>{tx(t, "verifyPhone")}</Text>
-      <Text style={stylesBody}>{tx(t, "sentCodeTo")}{`\n`}<Text style={{ color: mesh.ink900, fontWeight: "900" }}>+84 912 345 678</Text></Text>
+      <Text style={stylesBody}>{tx(t, "sentCodeTo")}{`\n`}<Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target}</Text></Text>
       <Text style={{ color: mesh.ink500, fontSize: 13, textAlign: "center", marginTop: 10, marginBottom: 24 }}>{tx(t, "enterCode")}</Text>
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 18 }}>
         {code.map((digit, index) => <View key={index} style={{ width: 44, height: 52, borderRadius: 10, borderWidth: 1.5, borderColor: digit ? mesh.green600 : mesh.ink200, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}><Text style={{ color: mesh.ink900, fontSize: 24, fontWeight: "900" }}>{digit}</Text></View>)}
@@ -305,7 +309,7 @@ export function VerifySuccessScreen({ t, nav }: Props) {
         <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "900", marginTop: 32 }}>{tx(t, "verified")}</Text>
         <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, textAlign: "center", maxWidth: 280, marginTop: 10 }}>{tx(t, "verifiedDesc")}</Text>
       </View>
-      <PrimaryButton label={tx(t, "continue")} onPress={() => nav("dashboard")} />
+      <PrimaryButton label={tx(t, "continue")} onPress={() => nav("login")} />
     </AuthShell>
   );
 }
