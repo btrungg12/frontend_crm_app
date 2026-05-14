@@ -148,15 +148,35 @@ export function normalizeApiUpcoming(value: unknown): Upcoming | null {
 
   const rawKind = text(item.kind ?? item.type).toLowerCase();
   const kind: Upcoming["kind"] = rawKind.includes("special") ? "special" : "reminder";
+  const relatedType = text(item.relatedType ?? item.onModel ?? item.targetType).toLowerCase();
+  const targetIsNote = relatedType.includes("note");
+  const noteRecord = asRecord(item.note);
+  const contactRecord = asRecord(item.contact ?? item.person);
+  const relatedId = text(item.relatedId);
+  const targetId = text(item.targetId);
+  const noteId = kind === "reminder"
+    ? text(
+      item.noteId ??
+      noteRecord?._id ??
+      noteRecord?.id ??
+      item.relatedNoteId ??
+      (targetIsNote ? item.relatedId : undefined) ??
+      (targetIsNote ? item.targetId : undefined)
+    )
+    : "";
+  const contactId = text(item.contactId ?? contactRecord?._id ?? contactRecord?.id);
   const title = text(item.title ?? item.name ?? item.content, kind === "special" ? "Special day" : "Reminder");
   const sub = text(item.sub ?? item.subtitle ?? item.dateLabel, "");
   const remindAt = item.remindAt ?? item.date ?? item.dueAt ?? item.createdAt;
   const tag = text(item.tag ?? item.relativeTime, formatTime(remindAt));
 
   return {
+    contactId: contactId || undefined,
     icon: kind === "special" ? "calendar" : "call",
     id,
     kind,
+    noteId: noteId || undefined,
+    relatedId: relatedId || targetId || undefined,
     sub,
     subEn: sub,
     tag,

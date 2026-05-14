@@ -43,8 +43,11 @@ export type Note = {
 };
 
 export type Upcoming = {
+  contactId?: string;
   id: string;
   icon: string;
+  noteId?: string;
+  relatedId?: string;
   time: string;
   title: string;
   titleEn: string;

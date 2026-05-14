@@ -7,7 +7,7 @@ import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } 
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { getProfile } from "../../api/userApi";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
+import { Contact, contacts, Lang, notes, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -20,9 +20,12 @@ type ApiNotificationItem = {
   body: string;
   bodyEn: string;
   color: string;
+  contactId?: string;
   icon: keyof typeof Ionicons.glyphMap;
   id: string;
+  noteId?: string;
   section: "today" | "earlier";
+  targetType?: string;
   time: string;
   title: string;
   titleEn: string;
@@ -91,18 +94,42 @@ function normalizeNotification(value: unknown): ApiNotificationItem | null {
   if (!id) return null;
 
   const type = text(item.type, "REMINDER");
+  const targetType = text(item.targetType ?? item.relatedType ?? item.onModel).toLowerCase();
   const meta = notificationMeta(type);
   const content = text(item.content ?? item.message ?? item.body, meta.title);
   const title = text(item.title, meta.title);
   const createdAt = item.createdAt ?? item.updatedAt ?? item.time;
+  const note = asRecord(item.note);
+  const contact = asRecord(item.contact ?? item.person);
+  const upperType = type.toUpperCase();
+  const targetIsNote = targetType.includes("note");
+  const targetIsContact = targetType.includes("contact");
+  const noteId = text(
+    item.noteId ??
+    note?._id ??
+    note?.id ??
+    item.relatedNoteId ??
+    ((upperType.includes("REMINDER") || targetIsNote) ? item.relatedId : undefined) ??
+    (targetIsNote ? item.targetId : undefined)
+  );
+  const contactId = text(
+    item.contactId ??
+    contact?._id ??
+    contact?.id ??
+    (targetIsContact ? item.relatedId : undefined) ??
+    (targetIsContact ? item.targetId : undefined)
+  );
 
   return {
     body: content,
     bodyEn: content,
     color: meta.color,
+    contactId: contactId || undefined,
     icon: meta.icon,
     id,
+    noteId: noteId || undefined,
     section: notificationSection(createdAt),
+    targetType: targetType || undefined,
     time: relativeTime(createdAt),
     title,
     titleEn: title,
@@ -200,7 +227,13 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
       markNotificationAsRead(item.id).catch(() => undefined);
     }
 
-    nav("noteDetail");
+    if (item.noteId) {
+      nav("noteDetail", { id: item.noteId });
+    } else if (item.contactId) {
+      nav("contactDetail", { id: item.contactId });
+    } else {
+      console.warn("Notification has no navigation target", item);
+    }
   };
 
   return (
@@ -277,6 +310,17 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
     };
   }, []);
 
+  function openUpcoming(item: Upcoming) {
+    if (item.kind !== "reminder") return;
+
+    if (item.noteId) {
+      nav("noteDetail", { id: item.noteId });
+      return;
+    }
+
+    console.warn("Missing noteId for reminder upcoming", item);
+  }
+
   return (
     <MeshScreen>
       <MeshHeader>
@@ -299,7 +343,7 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
         {!loading && !error && items.length > 0 ? (
         <MeshCard style={{ paddingHorizontal: 14 }}>
           {items.map((item, index) => (
-            <Pressable key={item.id} onPress={() => item.kind === "reminder" && nav("noteDetail", { id: item.id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
+            <Pressable key={item.id} onPress={() => openUpcoming(item)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name={item.kind === "reminder" ? "notifications-outline" : "calendar-outline"} size={18} color={item.kind === "reminder" ? mesh.green700 : mesh.pink} />
               </View>

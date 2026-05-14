@@ -54,6 +54,17 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("User");
 
+  function openUpcoming(item: Upcoming) {
+    if (item.kind !== "reminder") return;
+
+    if (item.noteId) {
+      nav("noteDetail", { id: item.noteId });
+      return;
+    }
+
+    console.warn("Missing noteId for reminder upcoming", item);
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -162,7 +173,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
               return (
                 <View key={item.id}>
                   <Pressable
-                    onPress={() => (isReminder ? nav("noteDetail", { id: item.id }) : undefined)}
+                    onPress={() => openUpcoming(item)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, paddingVertical: 14 }}
                   >
                     <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
