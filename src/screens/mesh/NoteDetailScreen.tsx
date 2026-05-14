@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { getNoteById, getNotes } from "../../api/noteApi";
+import { deleteNote, getNoteById, getNotes } from "../../api/noteApi";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { contactById, Lang } from "../../mesh/meshData";
@@ -129,6 +129,8 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
   const [note, setNote] = useState<ApiNoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const contactFallback = note?.contactId ? contactById(note.contactId) : undefined;
   const contactName = note?.contactName || contactFallback?.name;
@@ -176,6 +178,29 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
       active = false;
     };
   }, [noteId]);
+
+  async function handleDeleteNote() {
+    if (deleting) return;
+
+    if (!noteId) {
+      setDeleteError("Missing note id.");
+      setConfirm(false);
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setDeleteError("");
+      await deleteNote(noteId);
+      setConfirm(false);
+      nav("notes");
+    } catch (err) {
+      setConfirm(false);
+      setDeleteError(err instanceof Error && err.message ? err.message : "Cannot delete note.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -228,12 +253,13 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
             <ActionTile icon="notifications-outline" label={t("editReminder")} color={mesh.orange} />
             <ActionTile icon="trash-outline" label={t("deleteNote")} color={mesh.pink} onPress={() => setConfirm(true)} />
           </View>
+          {deleteError ? <DeleteError text={deleteError} /> : null}
           <View style={{ marginTop: 18 }}>
             <TipCard>{t("noteDetailHint")}</TipCard>
           </View>
         </MeshScroll>
 
-        <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => nav("notes")} title={t("deleteNoteTitle")} desc={t("deleteNoteDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
+        <ConfirmDialog open={confirm} onClose={() => (deleting ? undefined : setConfirm(false))} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={deleting ? "Deleting note..." : t("deleteNoteDesc")} confirmLabel={deleting ? "Deleting..." : t("delete")} cancelLabel={t("cancel")} />
       </MeshScreen>
     );
   }
@@ -281,9 +307,18 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
         <ActionTile icon="notifications-outline" label={t("editReminder")} color={mesh.orange} />
         <ActionTile icon="trash-outline" label={t("deleteNote")} color={mesh.pink} onPress={() => setConfirm(true)} />
       </View>
+      {deleteError ? <View style={{ position: "absolute", left: 16, right: 16, bottom: 118 }}><DeleteError text={deleteError} /></View> : null}
 
-      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => nav("notes")} title={t("deleteNoteTitle")} desc={t("deleteNoteDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
+      <ConfirmDialog open={confirm} onClose={() => (deleting ? undefined : setConfirm(false))} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={deleting ? "Deleting note..." : t("deleteNoteDesc")} confirmLabel={deleting ? "Deleting..." : t("delete")} cancelLabel={t("cancel")} />
     </MeshScreen>
+  );
+}
+
+function DeleteError({ text }: { text: string }) {
+  return (
+    <View style={{ borderRadius: 12, backgroundColor: "rgba(217,87,122,0.10)", marginTop: 12, paddingHorizontal: 12, paddingVertical: 10 }}>
+      <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 17 }}>{text}</Text>
+    </View>
   );
 }
 
