@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
+import { getNotes } from "../../api/noteApi";
+import { extractArray, normalizeApiNote } from "../../api/screenAdapters";
 import { Avatar, HeaderCircleBtn, MeshCard, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contactById, Lang, notes } from "../../mesh/meshData";
+import { contactById, Lang, type Note } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -13,11 +15,48 @@ type Props = {
   initialQ?: string;
 };
 
-export function SearchScreen({ t, lang, nav, initialQ = "An" }: Props) {
+export function SearchScreen({ t, lang, nav, initialQ = "" }: Props) {
   const [query, setQuery] = useState(initialQ);
-  const matches = useMemo(() => {
-    const q = query.toLowerCase();
-    return notes.filter((note) => !q || note.title.toLowerCase().includes(q) || note.preview.toLowerCase().includes(q) || note.contentEn.toLowerCase().includes(q));
+  const [results, setResults] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      setError("");
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    const timeout = setTimeout(() => {
+      getNotes({ search: q })
+        .then((response) => {
+          if (!active) return;
+          const normalized = extractArray(response, "notes")
+            .map(normalizeApiNote)
+            .filter(Boolean) as Note[];
+          setResults(normalized);
+        })
+        .catch((err) => {
+          if (!active) return;
+          setResults([]);
+          setError(err instanceof Error ? err.message : "Cannot search notes.");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
   }, [query]);
 
   return (
@@ -50,12 +89,21 @@ export function SearchScreen({ t, lang, nav, initialQ = "An" }: Props) {
               </Pressable>
             ))}
           </View>
-        ) : matches.length > 0 ? (
+        ) : loading ? (
+          <MeshCard style={{ marginTop: 18, padding: 18, alignItems: "center" }}>
+            <ActivityIndicator color={mesh.green700} />
+            <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 10 }}>{t("searchResults")}</Text>
+          </MeshCard>
+        ) : error ? (
+          <MeshCard style={{ marginTop: 18, padding: 18 }}>
+            <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{error}</Text>
+          </MeshCard>
+        ) : results.length > 0 ? (
           <View style={{ paddingTop: 8 }}>
             <Text style={{ color: mesh.ink500, fontSize: 13, paddingHorizontal: 4, paddingTop: 10, paddingBottom: 6 }}>
-              {matches.length} {t("searchResults").toLowerCase()}
+              {results.length} {t("searchResults").toLowerCase()}
             </Text>
-            {matches.map((note) => {
+            {results.map((note) => {
               const contact = contactById(note.contact);
               const preview = lang === "vi" ? note.preview : note.contentEn.split("\n")[0];
               return (
