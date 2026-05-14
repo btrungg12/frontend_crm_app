@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from "react-native";
 
-import { createContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
+import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { ActionTile } from "./parts/ActionTile";
-import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { Contact, contactById, Lang, statuses } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -227,6 +227,9 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("all");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     if (!contactId) {
@@ -267,6 +270,28 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     { id: "reminder", label: t("tlReminders") }
   ];
   const filtered = tab === "all" ? timelineItems : timelineItems.filter((item) => item.kind === tab);
+
+  const handleDeleteContact = async () => {
+    if (deleting) return;
+    if (!contact?.id) {
+      setConfirmDelete(false);
+      setDeleteError("Missing contact id");
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setDeleteError("");
+      await deleteContact(contact.id);
+      setConfirmDelete(false);
+      nav("contacts");
+    } catch (err) {
+      setConfirmDelete(false);
+      setDeleteError(err instanceof Error && err.message ? err.message : "Cannot delete contact.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -345,7 +370,12 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <ActionTile icon="notifications-outline" label={t("addReminder")} color={mesh.orange} />
           <ActionTile icon="calendar-outline" label={t("addSpecial")} color={mesh.pink} />
           <ActionTile icon="create-outline" label={t("editContact")} color={mesh.blue} onPress={() => nav("editContact", { id: contact.id })} />
+          <ActionTile icon="trash-outline" label={t("delete")} color={mesh.pink} onPress={() => setConfirmDelete(true)} />
         </MeshCard>
+
+        {deleteError ? (
+          <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginTop: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
+        ) : null}
 
         <MeshCard style={{ marginTop: 12, paddingHorizontal: 14 }}>
           <InfoRow icon="call-outline" label={t("phone")} value={contact.phone || "-"} />
@@ -389,6 +419,17 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           })}
         </View>
       </MeshScroll>
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => {
+          if (!deleting) setConfirmDelete(false);
+        }}
+        onConfirm={handleDeleteContact}
+        title={t("deleteContactTitle")}
+        desc={deleting ? "Deleting contact..." : t("deleteContactDesc")}
+        confirmLabel={deleting ? "Deleting..." : t("delete")}
+        cancelLabel={t("cancel")}
+      />
     </MeshScreen>
   );
 }
