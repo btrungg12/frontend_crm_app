@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-nativ
 import { getDashboard } from "../../api/dashboardApi";
 import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../../api/notificationApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
-import { getProfile } from "../../api/userApi";
+import { changePassword, getProfile, updateProfile } from "../../api/userApi";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, contacts, Lang, notes, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -445,24 +445,88 @@ function FieldLabel({ children }: { children: string }) {
   return <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "900", marginTop: 20, marginBottom: 8 }}>{children}</Text>;
 }
 
-function BottomSave({ label, onPress }: { label: string; onPress: () => void }) {
+function BottomSave({ disabled = false, label, onPress }: { disabled?: boolean; label: string; onPress: () => void }) {
   return (
     <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "#FFFFFF", borderTopWidth: 1, borderColor: mesh.line, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28 }}>
-      <Pressable onPress={onPress} style={{ borderRadius: mesh.radiusXl, backgroundColor: mesh.green700, paddingVertical: 15, alignItems: "center" }}>
+      <Pressable disabled={disabled} onPress={onPress} style={{ borderRadius: mesh.radiusXl, backgroundColor: disabled ? mesh.ink400 : mesh.green700, paddingVertical: 15, alignItems: "center" }}>
         <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 15 }}>{label}</Text>
       </Pressable>
     </View>
   );
 }
 
-export function EditProfileScreen({ t, lang, nav }: Props) {
-  const [name, setName] = useState("Trần Quang");
-  const [bio, setBio] = useState(lang === "vi" ? "Đang xây dựng thói quen quan tâm." : "Building the habit of caring more.");
+export function EditProfileScreen({ t, nav }: Props) {
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    getProfile()
+      .then((response) => {
+        if (!active) return;
+        const root = asRecord(response);
+        const data = asRecord(root?.data) ?? root;
+        const user = asRecord(data?.user) ?? asRecord(root?.user) ?? data;
+        setName(text(user?.name ?? user?.fullName));
+        setBio(text(user?.bio ?? user?.description));
+        setEmail(text(user?.email));
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Cannot load profile.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Name is required.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccessMessage("");
+      await updateProfile({
+        bio: bio.trim() || undefined,
+        name: trimmedName
+      });
+      setSuccessMessage(t("save"));
+      nav("settings");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
       <SubHeader title={t("editProfile")} nav={nav} />
       <MeshScroll style={{ marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: "#FFFFFF", paddingHorizontal: 20, paddingTop: 24 }} bottom={140}>
+        {loading ? (
+          <View style={{ alignItems: "center", paddingVertical: 24 }}>
+            <ActivityIndicator color={mesh.green700} />
+          </View>
+        ) : null}
+        {error ? <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 19, marginBottom: 10 }}>{error}</Text> : null}
+        {successMessage ? <Text style={{ color: mesh.green700, fontSize: 13, lineHeight: 19, marginBottom: 10 }}>{successMessage}</Text> : null}
         <View style={{ alignItems: "center", marginBottom: 2 }}>
           <View style={{ position: "relative" }}>
             <Avatar name={name} size={92} />
@@ -483,40 +547,78 @@ export function EditProfileScreen({ t, lang, nav }: Props) {
         </View>
         <FieldLabel>Email</FieldLabel>
         <View style={{ borderWidth: 1, borderColor: mesh.line, borderRadius: mesh.radiusLg, paddingHorizontal: 14, backgroundColor: mesh.bgSubtle }}>
-          <TextInput value="quang@mesh.app" editable={false} style={{ minHeight: 48, color: mesh.ink500, fontSize: 15 }} />
+          <TextInput value={email} editable={false} style={{ minHeight: 48, color: mesh.ink500, fontSize: 15 }} />
         </View>
       </MeshScroll>
-      <BottomSave label={t("save")} onPress={() => nav("back")} />
+      <BottomSave disabled={saving || loading} label={saving ? "Saving..." : t("save")} onPress={handleSave} />
     </MeshScreen>
   );
 }
 
 export function ChangePasswordScreen({ t, nav }: Props) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSave = async () => {
+    if (!currentPassword) {
+      setError("Current password is required.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError("New password confirmation does not match.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      await changePassword({
+        currentPassword,
+        newPassword
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      nav("settings");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Cannot change password.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
       <SubHeader title={t("changePassword")} nav={nav} />
       <MeshScroll style={{ marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: "#FFFFFF", paddingHorizontal: 20, paddingTop: 24 }} bottom={140}>
+        {error ? <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 19, marginBottom: 10 }}>{error}</Text> : null}
         <FieldLabel>{t("currentPassword")}</FieldLabel>
-        <PasswordBox value="••••••••" />
+        <PasswordBox value={currentPassword} onChangeText={setCurrentPassword} />
         <FieldLabel>{t("newPassword")}</FieldLabel>
-        <PasswordBox placeholder={t("min8")} />
+        <PasswordBox value={newPassword} onChangeText={setNewPassword} placeholder={t("min8")} />
         <FieldLabel>{t("confirmNewPassword")}</FieldLabel>
-        <PasswordBox />
+        <PasswordBox value={confirmNewPassword} onChangeText={setConfirmNewPassword} />
         <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 20, marginTop: 18 }}>{t("passwordHint")}</Text>
       </MeshScroll>
-      <BottomSave label={t("save")} onPress={() => nav("back")} />
+      <BottomSave disabled={saving} label={saving ? "Saving..." : t("save")} onPress={handleSave} />
     </MeshScreen>
   );
 }
 
-function PasswordBox({ value, placeholder }: { value?: string; placeholder?: string }) {
+function PasswordBox({ onChangeText, placeholder, value }: { onChangeText: (value: string) => void; placeholder?: string; value: string }) {
   return (
     <View style={{ borderWidth: 1, borderColor: mesh.line, borderRadius: mesh.radiusLg, paddingHorizontal: 14, backgroundColor: "#FFFFFF" }}>
-      <TextInput value={value} placeholder={placeholder} placeholderTextColor={mesh.ink400} secureTextEntry={!value} style={{ minHeight: 48, color: mesh.ink900, fontSize: 15 }} />
+      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={mesh.ink400} secureTextEntry style={{ minHeight: 48, color: mesh.ink900, fontSize: 15 }} />
     </View>
   );
 }
-
 export function LanguageScreen({ t, lang, nav }: Props) {
   const options = [
     { id: "vi", label: "Tiếng Việt", sub: "Vietnamese" },
