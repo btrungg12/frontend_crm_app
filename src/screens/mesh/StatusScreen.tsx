@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
-import { getStatuses } from "../../api/statusApi";
+import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
 import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn, TipCard } from "../../mesh/MeshComponents";
-import { Lang, Status, statuses } from "../../mesh/meshData";
+import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -128,19 +128,132 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
 }
 
 export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: string }) {
-  const existing = statusId ? statuses.find((status) => status.id === statusId) : undefined;
-  const [name, setName] = useState(existing?.name || "");
-  const [color, setColor] = useState(existing?.color || statuses[0].color);
-  const [confirm, setConfirm] = useState(false);
   const palette = ["#2F8F5F", "#3B7BD9", "#8B5CD6", "#D9577A", "#E07543", "#E6B53E", "#3FA398", "#93A1A0"];
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(palette[0]);
+  const [existingStatus, setExistingStatus] = useState<Status | null>(null);
+  const [loading, setLoading] = useState(Boolean(statusId));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const isEdit = Boolean(statusId);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadExistingStatus() {
+      if (!statusId) {
+        setName("");
+        setColor(palette[0]);
+        setExistingStatus(null);
+        setLoading(false);
+        setError("");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+        const response = await getStatuses();
+        const list = extractArray(response, "statuses").map(normalizeApiStatus).filter(Boolean) as Status[];
+        const match = list.find((status) => status.id === statusId);
+
+        if (!active) return;
+
+        if (!match) {
+          setExistingStatus(null);
+          setError("Status not found.");
+          return;
+        }
+
+        setExistingStatus(match);
+        setName(match.name);
+        setColor(match.color || palette[0]);
+      } catch (err) {
+        if (!active) return;
+        setExistingStatus(null);
+        setError(apiMessage(err, "Cannot load status."));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadExistingStatus();
+
+    return () => {
+      active = false;
+    };
+  }, [statusId]);
+
+  async function handleSave() {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      setError("Status name is required.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      if (statusId) {
+        await updateStatus(statusId, {
+          color,
+          name: trimmedName
+        });
+      } else {
+        await createStatus({
+          color,
+          name: trimmedName
+        });
+      }
+
+      nav("status");
+    } catch (err) {
+      setError(apiMessage(err, "Cannot save status."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!statusId) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      await deleteStatus(statusId);
+      setConfirm(false);
+      nav("status");
+    } catch (err) {
+      setConfirm(false);
+      setError(apiMessage(err, "Cannot delete status."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <StatusFormState nav={nav} title={t("editStatus")} message="Loading status..." loading />
+    );
+  }
+
+  if (statusId && error && !existingStatus) {
+    return (
+      <StatusFormState nav={nav} title={t("editStatus")} message={error} error />
+    );
+  }
 
   return (
     <MeshScreen>
       <MeshHeader style={{ paddingBottom: 30 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("status")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{existing ? t("editStatus") : t("createStatus")}</Text>
-          <Pressable onPress={() => nav("status")} style={{ borderRadius: 999, backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8 }}>
+          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{isEdit ? t("editStatus") : t("createStatus")}</Text>
+          <Pressable disabled={saving} onPress={handleSave} style={{ alignItems: "center", borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", gap: 7, opacity: saving ? 0.7 : 1, paddingHorizontal: 16, paddingVertical: 8 }}>
+            {saving ? <ActivityIndicator color={mesh.green700} size="small" /> : null}
             <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
           </Pressable>
         </View>
@@ -148,6 +261,12 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       </MeshHeader>
 
       <MeshScroll style={{ backgroundColor: "#FFFFFF", marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20 }} bottom={100}>
+        {error ? (
+          <View style={{ borderRadius: 14, backgroundColor: "rgba(217,87,122,0.10)", marginBottom: 14, paddingHorizontal: 12, paddingVertical: 10 }}>
+            <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 18 }}>{error}</Text>
+          </View>
+        ) : null}
+
         <FieldLabel>
           {t("statusName")} <Text style={{ color: mesh.pink }}>*</Text>
         </FieldLabel>
@@ -187,15 +306,39 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
           </TipCard>
         </View>
 
-        {existing ? (
-          <Pressable onPress={() => setConfirm(true)} style={{ marginTop: 20, borderRadius: 14, borderWidth: 1, borderColor: `${mesh.pink}55`, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+        {statusId ? (
+          <Pressable disabled={saving} onPress={() => setConfirm(true)} style={{ marginTop: 20, borderRadius: 14, borderWidth: 1, borderColor: `${mesh.pink}55`, opacity: saving ? 0.6 : 1, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
             <Ionicons name="trash-outline" size={16} color={mesh.pink} />
             <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "800" }}>{t("deleteStatus")}</Text>
           </Pressable>
         ) : null}
       </MeshScroll>
 
-      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => nav("status")} title={t("deleteStatusTitle")} desc={t("deleteStatusDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
+      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={handleDelete} title={t("deleteStatusTitle")} desc={t("deleteStatusDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
+    </MeshScreen>
+  );
+}
+
+function apiMessage(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function StatusFormState({ error = false, loading = false, message, nav, title }: { error?: boolean; loading?: boolean; message: string; nav: NavFn; title: string }) {
+  return (
+    <MeshScreen>
+      <MeshHeader>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("status")} />
+          <Text style={{ flex: 1, paddingRight: 40, textAlign: "center", color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{title}</Text>
+        </View>
+      </MeshHeader>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+        {loading ? <ActivityIndicator color={mesh.green700} size="small" /> : null}
+        <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 12, textAlign: "center" }}>{message}</Text>
+        <Pressable onPress={() => nav("status")} style={{ marginTop: 20, borderRadius: 999, backgroundColor: mesh.green700, paddingHorizontal: 18, paddingVertical: 11 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>Back to Status</Text>
+        </Pressable>
+      </View>
     </MeshScreen>
   );
 }
