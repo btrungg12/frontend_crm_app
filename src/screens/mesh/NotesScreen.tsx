@@ -24,7 +24,6 @@ export function NotesScreen({ t, lang, nav }: Props) {
   const filters = [
     { id: "all", label: t("fAll") },
     { id: "rem", label: t("fReminder") },
-    { id: "np", label: t("fNoPerson") },
     { id: "rec", label: t("fRecent") }
   ];
 
@@ -55,7 +54,6 @@ export function NotesScreen({ t, lang, nav }: Props) {
   const grouped = useMemo(() => {
     return sourceNotes.reduce<Record<string, Note[]>>((acc, note) => {
       if (filter === "rem" && !note.reminder) return acc;
-      if (filter === "np" && note.contact) return acc;
       acc[note.section] = acc[note.section] || [];
       acc[note.section].push(note);
       return acc;
@@ -111,17 +109,11 @@ export function NotesScreen({ t, lang, nav }: Props) {
                   style={{ marginBottom: 10 }}
                 >
                   <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 20, borderWidth: 1, borderColor: "rgba(6,69,50,0.05)", elevation: 0, shadowOpacity: 0.02, flexDirection: "row", gap: 12, alignItems: "flex-start", paddingHorizontal: 14, paddingVertical: 12 }}>
-                    {contact ? (
-                      <Avatar name={contact.name} size={40} />
-                    ) : (
-                      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: note.kind === "reminder" ? "rgba(31,112,72,0.10)" : mesh.bgSubtle }}>
-                        <Ionicons name={note.kind === "reminder" ? "notifications" : "document-text-outline"} size={18} color={mesh.green700} />
-                      </View>
-                    )}
+                    <Avatar name={contact?.name || note.title || "?"} size={40} />
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact ? contact.name : note.title}</Text>
-                      {contact ? <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "500", marginTop: 1 }}>{note.title}</Text> : null}
+                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact?.name || note.title}</Text>
+                      <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "500", marginTop: 1 }}>{note.title}</Text>
                       <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 3 }}>
                         {preview}
                       </Text>

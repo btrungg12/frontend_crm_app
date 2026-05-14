@@ -97,7 +97,9 @@ export function normalizeApiNote(value: unknown): Note | null {
   if (!id || !content) return null;
 
   const contactRecord = asRecord(item.contact ?? item.person);
-  const contact = text(item.contactId ?? contactRecord?._id ?? contactRecord?.id) || null;
+  const contact = text(item.contactId ?? contactRecord?._id ?? contactRecord?.id);
+  if (!contact) return null;
+
   const title = text(item.title, content.split("\n")[0] || "Note");
   const createdAt = item.interactionDate ?? item.createdAt ?? item.updatedAt;
   const reminderRecord = asRecord(item.reminder);
