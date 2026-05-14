@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
+import { getNoteById, getNotes } from "../../api/noteApi";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
-import { contactById, Lang, notes } from "../../mesh/meshData";
+import { contactById, Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -15,14 +16,180 @@ type Props = {
   variant?: "A" | "B";
 };
 
-export function NoteDetailScreen({ t, lang, nav, noteId = "n1", variant = "A" }: Props) {
-  const note = notes.find((item) => item.id === noteId) || notes[0];
-  const contact = contactById(note.contact);
-  const [confirm, setConfirm] = useState(false);
-  const content = lang === "vi" ? note.content : note.contentEn || note.content;
-  const reminder = lang === "vi" ? note.reminder : note.reminderEn || note.reminder;
+type ApiNoteDetail = {
+  contactId?: string;
+  contactName?: string;
+  contactStatus?: string;
+  content: string;
+  id: string;
+  reminder?: string;
+  title: string;
+};
 
-  if (variant === "B" && contact) {
+function asRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function text(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function unwrapNoteResponse(response: unknown) {
+  const root = asRecord(response);
+  const data = asRecord(root?.data);
+  return asRecord(data?.note) ?? asRecord(root?.note) ?? data ?? root;
+}
+
+function unwrapNotesResponse(response: unknown) {
+  if (Array.isArray(response)) return response;
+
+  const root = asRecord(response);
+  const data = root?.data;
+
+  if (Array.isArray(data)) return data;
+
+  const dataRecord = asRecord(data);
+  if (Array.isArray(dataRecord?.notes)) return dataRecord.notes;
+  if (Array.isArray(dataRecord?.items)) return dataRecord.items;
+  if (Array.isArray(dataRecord?.results)) return dataRecord.results;
+  if (Array.isArray(root?.notes)) return root.notes;
+  if (Array.isArray(root?.items)) return root.items;
+  if (Array.isArray(root?.results)) return root.results;
+
+  return [];
+}
+
+function formatReminder(value: unknown) {
+  const raw = text(value);
+  if (!raw) return "";
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+
+  const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const day = date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
+  return `${time}, ${day}`;
+}
+
+function normalizeNoteDetail(response: unknown): ApiNoteDetail | null {
+  const item = unwrapNoteResponse(response);
+  if (!item) return null;
+
+  const id = text(item._id ?? item.id);
+  const content = text(item.content ?? item.body);
+  if (!id || !content) return null;
+
+  const contact = asRecord(item.contact ?? item.person);
+  const contactId = text(item.contactId ?? contact?._id ?? contact?.id);
+  const status = asRecord(contact?.status);
+  const reminder = asRecord(item.reminder);
+  const reminderValue = reminder?.remindAt ?? item.remindAt;
+  const title = text(item.title, content.split("\n")[0] || "Untitled note");
+
+  return {
+    contactId: contactId || undefined,
+    contactName: text(contact?.name ?? contact?.fullName) || undefined,
+    contactStatus: text(item.contactStatus ?? item.statusId ?? contact?.statusId ?? status?._id ?? status?.id ?? contact?.status) || undefined,
+    content,
+    id,
+    reminder: formatReminder(reminderValue) || undefined,
+    title
+  };
+}
+
+async function loadNoteFromApi(noteId: string) {
+  try {
+    const response = await getNoteById(noteId);
+    return normalizeNoteDetail(response);
+  } catch {
+    const response = await getNotes();
+    const list = unwrapNotesResponse(response);
+    const match = list.find((item) => {
+      const record = asRecord(item);
+      return text(record?._id ?? record?.id) === noteId;
+    });
+
+    return match ? normalizeNoteDetail(match) : null;
+  }
+}
+
+function cleanErrorMessage(error: unknown) {
+  if (!(error instanceof Error) || !error.message.trim()) {
+    return "Cannot load note from API.";
+  }
+
+  if (error.message.includes("<!DOCTYPE") || error.message.includes("Cannot GET")) {
+    return "Backend does not support note detail endpoint, and this note was not found in the notes list.";
+  }
+
+  return error.message;
+}
+
+export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props) {
+  const [note, setNote] = useState<ApiNoteDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(false);
+  const contactFallback = note?.contactId ? contactById(note.contactId) : undefined;
+  const contactName = note?.contactName || contactFallback?.name;
+  const contactStatus = note?.contactStatus || contactFallback?.status;
+  const content = note?.content || "";
+  const reminder = note?.reminder;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadNote() {
+      if (!noteId) {
+        setNote(null);
+        setError("Missing note id.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+        const normalized = await loadNoteFromApi(noteId);
+
+        if (!active) return;
+
+        if (!normalized) {
+          setNote(null);
+          setError("Note not found from API.");
+          return;
+        }
+
+        setNote(normalized);
+      } catch (err) {
+        if (!active) return;
+        setNote(null);
+        setError(cleanErrorMessage(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadNote();
+
+    return () => {
+      active = false;
+    };
+  }, [noteId]);
+
+  if (loading) {
+    return (
+      <NoteStateScreen nav={nav} title={t("notes")} message="Loading note from API..." loading />
+    );
+  }
+
+  if (error || !note) {
+    return (
+      <NoteStateScreen nav={nav} title={t("notes")} message={error || "Note not found from API."} error />
+    );
+  }
+
+  if (variant === "B" && contactName) {
     return (
       <MeshScreen>
         <MeshHeader>
@@ -32,16 +199,10 @@ export function NoteDetailScreen({ t, lang, nav, noteId = "n1", variant = "A" }:
             <HeaderCircleBtn icon="ellipsis-horizontal" />
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingTop: 16 }}>
-            <Avatar name={contact.name} size={68} ring />
+            <Avatar name={contactName} size={68} ring />
             <View>
-              <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "900" }}>{contact.name}</Text>
-              <View style={{ marginTop: 4 }}>
-                <StatusChip statusId={contact.status} />
-              </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5 }}>
-                <Ionicons name="sparkles-outline" size={12} color="rgba(255,255,255,0.92)" />
-                <Text style={{ color: "rgba(255,255,255,0.92)", fontSize: 12 }}>{t("interactions", { n: contact.interactions })}</Text>
-              </View>
+              <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "900" }}>{contactName}</Text>
+              {contactStatus ? <View style={{ marginTop: 4 }}><StatusChip statusId={contactStatus} /></View> : null}
             </View>
           </View>
         </MeshHeader>
@@ -58,11 +219,11 @@ export function NoteDetailScreen({ t, lang, nav, noteId = "n1", variant = "A" }:
             <Text style={{ color: mesh.ink700, fontSize: 15, lineHeight: 24, marginTop: 6 }}>{content}</Text>
             <Divider />
             <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800", marginBottom: 8 }}>{t("reminder")}</Text>
-            <ReminderRow reminder={reminder || "18:00, Today"} t={t} />
+            <ReminderRow reminder={reminder || "No reminder"} t={t} />
           </MeshCard>
 
           <View style={{ flexDirection: "row", gap: 8, marginTop: 18 }}>
-            <ActionTile icon="create-outline" label={t("editNote")} color={mesh.green700} onPress={() => nav("editNote")} />
+            <ActionTile icon="create-outline" label={t("editNote")} color={mesh.green700} onPress={() => nav("editNote", { id: note.id })} />
             <ActionTile icon="person-outline" label={t("changePerson")} color={mesh.blue} />
             <ActionTile icon="notifications-outline" label={t("editReminder")} color={mesh.orange} />
             <ActionTile icon="trash-outline" label={t("deleteNote")} color={mesh.pink} onPress={() => setConfirm(true)} />
@@ -86,10 +247,10 @@ export function NoteDetailScreen({ t, lang, nav, noteId = "n1", variant = "A" }:
         </View>
         <View style={{ paddingTop: 36 }}>
           <Text style={{ color: "#FFFFFF", fontSize: 28, fontWeight: "900", lineHeight: 34, letterSpacing: -0.4 }}>{note.title}</Text>
-          {contact ? (
+          {contactName ? (
             <Pressable style={{ alignSelf: "flex-start", marginTop: 12, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 }}>
               <Ionicons name="person-outline" size={14} color={mesh.green800} />
-              <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800" }}>{contact.name}</Text>
+              <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800" }}>{contactName}</Text>
               <Ionicons name="chevron-forward" size={14} color={mesh.green800} />
             </Pressable>
           ) : null}
@@ -109,19 +270,39 @@ export function NoteDetailScreen({ t, lang, nav, noteId = "n1", variant = "A" }:
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("reminder")}</Text>
-            <ReminderRow reminder={reminder || "18:00, Today"} t={t} compact />
+            <ReminderRow reminder={reminder || "No reminder"} t={t} compact />
           </View>
         </View>
       </MeshScroll>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", gap: 4, backgroundColor: "rgba(255,255,255,0.96)", borderTopWidth: 1, borderColor: mesh.line, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 28 }}>
-        <ActionTile icon="create-outline" label={t("editNote")} color={mesh.green700} onPress={() => nav("editNote")} />
+        <ActionTile icon="create-outline" label={t("editNote")} color={mesh.green700} onPress={() => nav("editNote", { id: note.id })} />
         <ActionTile icon="person-outline" label={t("changePerson")} color={mesh.blue} />
         <ActionTile icon="notifications-outline" label={t("editReminder")} color={mesh.orange} />
         <ActionTile icon="trash-outline" label={t("deleteNote")} color={mesh.pink} onPress={() => setConfirm(true)} />
       </View>
 
       <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={() => nav("notes")} title={t("deleteNoteTitle")} desc={t("deleteNoteDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
+    </MeshScreen>
+  );
+}
+
+function NoteStateScreen({ error = false, loading = false, message, nav, title }: { error?: boolean; loading?: boolean; message: string; nav: NavFn; title: string }) {
+  return (
+    <MeshScreen>
+      <MeshHeader>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("notes")} />
+          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{title}</Text>
+        </View>
+      </MeshHeader>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+        {loading ? <ActivityIndicator color={mesh.green700} /> : null}
+        <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 14, lineHeight: 21, marginTop: 12, textAlign: "center" }}>{message}</Text>
+        <Pressable onPress={() => nav("notes")} style={{ marginTop: 20, borderRadius: 999, backgroundColor: mesh.green700, paddingHorizontal: 18, paddingVertical: 11 }}>
+          <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>Back to Notes</Text>
+        </Pressable>
+      </View>
     </MeshScreen>
   );
 }
