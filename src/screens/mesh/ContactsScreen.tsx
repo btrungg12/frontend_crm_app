@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from "react-native";
 
-import { createContact, getContacts, updateContact } from "../../api/contactApi";
+import { createContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
-import { Contact, contactById, contacts, Lang, statuses, statusById, timelineFor } from "../../mesh/meshData";
+import { Contact, contactById, Lang, statuses } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -50,7 +50,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
   }, []);
 
   const grouped = useMemo(() => {
-    return list.reduce<Record<string, typeof contacts>>((acc, contact) => {
+    return list.reduce<Record<string, Contact[]>>((acc, contact) => {
       const key = contact.name[0].toUpperCase();
       acc[key] = acc[key] || [];
       acc[key].push(contact);
@@ -141,17 +141,164 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
   );
 }
 
-export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & { contactId?: string }) {
-  const contact = contactById(contactId) || contacts[0];
+// ── Timeline helpers ──────────────────────────────────────────────────────────
+
+type TimelineItem = {
+  date: string;
+  desc: string;
+  icon: string;
+  kind: "note" | "reminder" | "special";
+  label: string;
+  title: string;
+};
+
+function asRec(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+
+/** Unwrap various backend shapes → raw contact object */
+function extractContactData(response: unknown): unknown {
+  const root = asRec(response);
+  if (!root) return response;
+  const data = asRec(root.data);
+  if (data?.contact) return data.contact;
+  if (data?.name) return data;
+  if (root.contact) return root.contact;
+  if (root.name) return root;
+  return response;
+}
+
+/** Unwrap various backend shapes → raw array */
+function extractTimelineArray(response: unknown): unknown[] {
+  if (Array.isArray(response)) return response;
+  const root = asRec(response);
+  if (!root) return [];
+  if (Array.isArray(root.timeline)) return root.timeline;
+  if (Array.isArray(root.data)) return root.data;
+  if (Array.isArray(root.items)) return root.items;
+  const data = asRec(root.data);
+  if (data) {
+    if (Array.isArray(data.timeline)) return data.timeline;
+    if (Array.isArray(data.items)) return data.items;
+  }
+  return [];
+}
+
+function normalizeTimelineItem(value: unknown): TimelineItem | null {
+  const item = asRec(value);
+  if (!item) return null;
+
+  const rawKind = String(item.kind ?? item.type ?? "note").toLowerCase();
+  const kind: TimelineItem["kind"] = rawKind.includes("special")
+    ? "special"
+    : rawKind.includes("reminder")
+    ? "reminder"
+    : "note";
+
+  const iconMap: Record<TimelineItem["kind"], string> = {
+    note: "document-text-outline",
+    reminder: "notifications-outline",
+    special: "calendar-outline"
+  };
+  const labelMap: Record<TimelineItem["kind"], string> = {
+    note: "Note",
+    reminder: "Reminder",
+    special: "Special Day"
+  };
+
+  const rawTitle = String(item.title ?? item.name ?? item.content ?? "");
+  const title = rawTitle.split("\n")[0] || labelMap[kind];
+  const desc = String(item.content ?? item.desc ?? item.description ?? "");
+  const rawDate = item.createdAt ?? item.date ?? item.remindAt ?? item.dueAt;
+  const dateObj = typeof rawDate === "string" ? new Date(rawDate) : null;
+  const date =
+    dateObj && !isNaN(dateObj.getTime())
+      ? dateObj.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+      : "--";
+
+  return { date, desc, icon: iconMap[kind], kind, label: labelMap[kind], title };
+}
+
+// ── ContactDetailScreen ───────────────────────────────────────────────────────
+
+export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { contactId?: string }) {
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [tab, setTab] = useState("all");
-  const timeline = timelineFor(contact.id, lang);
-  const filtered = tab === "all" ? timeline : timeline.filter((item) => item.kind === tab);
+
+  useEffect(() => {
+    if (!contactId) {
+      setError("No contact selected.");
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    Promise.all([
+      getContactById(contactId),
+      getContactTimeline(contactId).catch(() => [])
+    ])
+      .then(([contactRes, timelineRes]) => {
+        if (!active) return;
+        const normalized = normalizeApiContact(extractContactData(contactRes));
+        if (!normalized) { setError("Contact not found."); return; }
+        setContact(normalized);
+        setTimelineItems(
+          extractTimelineArray(timelineRes).map(normalizeTimelineItem).filter(Boolean) as TimelineItem[]
+        );
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load contact.");
+      })
+      .finally(() => { if (active) setLoading(false); });
+
+    return () => { active = false; };
+  }, [contactId]);
+
   const tabs = [
     { id: "all", label: t("tlAll") },
     { id: "note", label: t("tlNotes") },
     { id: "special", label: t("tlSpecial") },
     { id: "reminder", label: t("tlReminders") }
   ];
+  const filtered = tab === "all" ? timelineItems : timelineItems.filter((item) => item.kind === tab);
+
+  if (loading) {
+    return (
+      <MeshScreen>
+        <MeshHeader>
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
+        </MeshHeader>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={mesh.green700} />
+        </View>
+      </MeshScreen>
+    );
+  }
+
+  if (error || !contact) {
+    return (
+      <MeshScreen>
+        <MeshHeader>
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
+        </MeshHeader>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingBottom: 80 }}>
+          <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
+          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
+            {error || "Contact not found"}
+          </Text>
+          <Pressable onPress={() => nav("contacts")} style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}>
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back to Contacts</Text>
+          </Pressable>
+        </View>
+      </MeshScreen>
+    );
+  }
 
   return (
     <MeshScreen>
@@ -218,7 +365,11 @@ export function ContactDetailScreen({ t, lang, nav, contactId = "c1" }: Props & 
         </View>
 
         <View style={{ paddingLeft: 26 }}>
-          {filtered.map((item, index) => {
+          {filtered.length === 0 ? (
+            <Text style={{ color: mesh.ink400, fontSize: 13, textAlign: "center", paddingVertical: 20 }}>
+              No timeline items yet.
+            </Text>
+          ) : filtered.map((item, index) => {
             const color = item.kind === "reminder" ? mesh.orange : item.kind === "special" ? mesh.pink : mesh.green700;
             return (
               <View key={`${item.title}-${index}`} style={{ position: "relative", marginBottom: 14 }}>
