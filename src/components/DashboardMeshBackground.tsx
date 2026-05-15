@@ -51,7 +51,6 @@ export function DashboardMeshBackground() {
 
       <Image source={leafPng} resizeMode="contain" style={styles.leafMain} />
       <Image source={leafPng} resizeMode="contain" style={styles.leafSoft} />
-      <View style={styles.leafHaze} />
     </View>
   );
 }
@@ -70,31 +69,22 @@ const styles = StyleSheet.create({
   },
   leafMain: {
     position: "absolute",
-    top: 115,
-    right: -70,
+    top: 135,
+    right: -80,
     width: 430,
     height: 330,
-    opacity: 0.11,
+    opacity: 0.09,
     tintColor: "#FFFFFF",
     transform: [{ rotate: "-10deg" }]
   },
   leafSoft: {
     position: "absolute",
-    top: 165,
-    right: 70,
-    width: 310,
-    height: 240,
-    opacity: 0.06,
+    top: 180,
+    right: 80,
+    width: 300,
+    height: 230,
+    opacity: 0.05,
     tintColor: "#E7F3EC",
     transform: [{ rotate: "8deg" }]
-  },
-  leafHaze: {
-    position: "absolute",
-    left: -40,
-    right: -40,
-    top: 180,
-    height: 160,
-    borderRadius: 120,
-    backgroundColor: "rgba(255,255,255,0.30)"
   }
 });
