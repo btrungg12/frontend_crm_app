@@ -17,13 +17,6 @@ type Props = {
   nav: NavFn;
 };
 
-const iconMap = {
-  call: "call-outline",
-  calendar: "calendar-outline",
-  gift: "gift-outline",
-  bag: "bag-handle-outline"
-} as const;
-
 function asRecord(value: unknown) {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
@@ -45,6 +38,65 @@ function formatCurrentDate(lang: Lang) {
   const weekday = date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
   const month = date.toLocaleDateString(locale, { month: "short" });
   return `${weekday} ${date.getDate()} ${month}`;
+}
+
+function upcomingSearchText(item: Upcoming) {
+  return `${item.title} ${item.titleEn} ${item.sub} ${item.subEn} ${item.tag} ${item.tagEn}`.toLowerCase();
+}
+
+function getUpcomingVisual(item: Upcoming): {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconBg: string;
+  iconColor: string;
+  pillBg: string;
+  pillColor: string;
+  pillIcon: keyof typeof Ionicons.glyphMap;
+} {
+  const searchText = upcomingSearchText(item);
+
+  if (item.kind === "birthday") {
+    return {
+      icon: "gift-outline",
+      iconBg: "rgba(139,92,214,0.12)",
+      iconColor: "#7C3AED",
+      pillBg: "rgba(139,92,214,0.12)",
+      pillColor: "#7C3AED",
+      pillIcon: "calendar-outline"
+    };
+  }
+
+  if (item.kind === "special") {
+    return {
+      icon: searchText.includes("anniversary") || searchText.includes("kỷ niệm") ? "gift-outline" : "sparkles-outline",
+      iconBg: "rgba(224,117,67,0.12)",
+      iconColor: mesh.orange,
+      pillBg: "rgba(230,181,62,0.16)",
+      pillColor: mesh.orange,
+      pillIcon: "time-outline"
+    };
+  }
+
+  const icon =
+    searchText.includes("call") || searchText.includes("gọi") || searchText.includes("phone") || searchText.includes("điện thoại")
+      ? "call-outline"
+      : searchText.includes("buy") || searchText.includes("mua") || searchText.includes("gift") || searchText.includes("quà")
+        ? "notifications-outline"
+        : "alarm-outline";
+
+  return {
+    icon,
+    iconBg: "rgba(31,112,72,0.10)",
+    iconColor: mesh.green700,
+    pillBg: "rgba(31,112,72,0.10)",
+    pillColor: mesh.green700,
+    pillIcon: "time-outline"
+  };
+}
+
+function upcomingSubtitle(item: Upcoming, lang: Lang) {
+  const sub = lang === "vi" ? item.sub : item.subEn;
+  if (item.kind !== "reminder" || !item.time || item.time === "--" || item.time === "-") return sub;
+  return sub ? `${sub} · ${item.time}` : item.time;
 }
 
 export function DashboardScreen({ t, lang, nav }: Props) {
@@ -169,26 +221,25 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           ) : (
             <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
               {upcomingItems.map((item, index) => {
-              const isReminder = item.kind === "reminder";
+              const visual = getUpcomingVisual(item);
               return (
                 <View key={item.id}>
                   <Pressable
                     onPress={() => openUpcoming(item)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 10, paddingVertical: 14 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 18 }}
                   >
-                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name={iconMap[item.icon as keyof typeof iconMap] || "ellipse-outline"} size={20} color={mesh.green700} />
+                    <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name={visual.icon} size={26} color={visual.iconColor} />
                     </View>
-                    <Text style={{ width: 56, color: mesh.green700, fontSize: 16, fontWeight: "700" }}>{item.time}</Text>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 17, fontWeight: "800" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
-                      <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: 14, marginTop: 5 }}>{upcomingSubtitle(item, lang)}</Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: mesh.bgSubtle }}>
-                      <Ionicons name={isReminder ? "time-outline" : "calendar-outline"} size={11} color={mesh.green700} />
-                      <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: visual.pillBg }}>
+                      <Ionicons name={visual.pillIcon} size={13} color={visual.pillColor} />
+                      <Text style={{ color: visual.pillColor, fontSize: 12, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                   </Pressable>
@@ -199,18 +250,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </MeshCard>
           )}
 
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, paddingTop: 14, paddingBottom: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.green600 }} />
-              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "500" }}>{t("reminderLegend")}</Text>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.ink300 }} />
-              <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "500" }}>{t("specialDayLegend")}</Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 14, paddingBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 22, paddingBottom: 14 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>

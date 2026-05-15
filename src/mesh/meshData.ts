@@ -55,7 +55,7 @@ export type Upcoming = {
   subEn: string;
   tag: string;
   tagEn: string;
-  kind: "reminder" | "special";
+  kind: "reminder" | "special" | "birthday";
 };
 
 const STRINGS = {

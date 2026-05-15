@@ -147,7 +147,14 @@ export function normalizeApiUpcoming(value: unknown): Upcoming | null {
   if (!id) return null;
 
   const rawKind = text(item.kind ?? item.type).toLowerCase();
-  const kind: Upcoming["kind"] = rawKind.includes("special") ? "special" : "reminder";
+  const rawTitle = text(item.title ?? item.name ?? item.content);
+  const sub = text(item.sub ?? item.subtitle ?? item.dateLabel, "");
+  const birthdayText = `${rawKind} ${rawTitle} ${sub} ${text(item.tag)}`.toLowerCase();
+  const isBirthday =
+    birthdayText.includes("birthday") ||
+    birthdayText.includes("sinh nhật") ||
+    birthdayText.includes("bday");
+  const kind: Upcoming["kind"] = isBirthday ? "birthday" : rawKind.includes("special") ? "special" : "reminder";
   const relatedType = text(item.relatedType ?? item.onModel ?? item.targetType).toLowerCase();
   const targetIsNote = relatedType.includes("note");
   const noteRecord = asRecord(item.note);
@@ -165,14 +172,13 @@ export function normalizeApiUpcoming(value: unknown): Upcoming | null {
     )
     : "";
   const contactId = text(item.contactId ?? contactRecord?._id ?? contactRecord?.id);
-  const title = text(item.title ?? item.name ?? item.content, kind === "special" ? "Special day" : "Reminder");
-  const sub = text(item.sub ?? item.subtitle ?? item.dateLabel, "");
+  const title = text(rawTitle, kind === "reminder" ? "Reminder" : kind === "birthday" ? "Birthday" : "Special day");
   const remindAt = item.remindAt ?? item.date ?? item.dueAt ?? item.createdAt;
   const tag = text(item.tag ?? item.relativeTime, formatTime(remindAt));
 
   return {
     contactId: contactId || undefined,
-    icon: kind === "special" ? "calendar" : "call",
+    icon: kind === "birthday" ? "gift" : kind === "special" ? "gift" : "call",
     id,
     kind,
     noteId: noteId || undefined,
