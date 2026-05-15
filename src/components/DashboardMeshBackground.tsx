@@ -1,5 +1,7 @@
 import { MeshGradientView } from "expo-mesh-gradient";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
+
+const leafPng = require("../../assets/leaf.png");
 
 export function DashboardMeshBackground() {
   return (
@@ -46,6 +48,9 @@ export function DashboardMeshBackground() {
         ]}
         smoothsColors
       />
+
+      <Image source={leafPng} resizeMode="contain" style={styles.leafMain} />
+      <Image source={leafPng} resizeMode="contain" style={styles.leafSoft} />
     </View>
   );
 }
@@ -61,5 +66,23 @@ const styles = StyleSheet.create({
   },
   mesh: {
     ...StyleSheet.absoluteFillObject
+  },
+  leafMain: {
+    position: "absolute",
+    top: 72,
+    right: -34,
+    width: 260,
+    height: 260,
+    opacity: 0.22,
+    transform: [{ rotate: "-8deg" }]
+  },
+  leafSoft: {
+    position: "absolute",
+    top: 145,
+    right: 72,
+    width: 180,
+    height: 180,
+    opacity: 0.1,
+    transform: [{ rotate: "18deg" }]
   }
 });
