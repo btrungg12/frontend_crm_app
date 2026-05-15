@@ -69,22 +69,22 @@ const styles = StyleSheet.create({
   },
   leafMain: {
     position: "absolute",
-    top: 135,
-    right: -80,
-    width: 430,
-    height: 330,
-    opacity: 0.09,
-    tintColor: "#FFFFFF",
-    transform: [{ rotate: "-10deg" }]
+    top: 92,
+    right: -72,
+    width: 390,
+    height: 300,
+    opacity: 0.15,
+    tintColor: "#DCEFE4",
+    transform: [{ rotate: "-8deg" }]
   },
   leafSoft: {
     position: "absolute",
-    top: 180,
-    right: 80,
-    width: 300,
-    height: 230,
-    opacity: 0.05,
-    tintColor: "#E7F3EC",
-    transform: [{ rotate: "8deg" }]
+    top: 132,
+    right: 52,
+    width: 260,
+    height: 210,
+    opacity: 0.08,
+    tintColor: "#FFFFFF",
+    transform: [{ rotate: "10deg" }]
   }
 });
