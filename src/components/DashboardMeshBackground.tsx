@@ -1,4 +1,4 @@
-import { MeshGradientView } from "expo-mesh-gradient";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image, StyleSheet, View } from "react-native";
 
 const leafPng = require("../../assets/leaf.png");
@@ -6,51 +6,27 @@ const leafPng = require("../../assets/leaf.png");
 export function DashboardMeshBackground() {
   return (
     <View pointerEvents="none" style={styles.wrapper}>
-      <MeshGradientView
-        style={styles.mesh}
-        columns={4}
-        rows={4}
-        colors={[
-          "#003A30",
-          "#004737",
-          "#00624D",
-          "#0C6B54",
-          "#CFE8DA",
-          "#DCEFE4",
-          "#6FB493",
-          "#18765A",
-          "#FFFFFF",
-          "#FFFFFF",
-          "#F3FAF5",
-          "#CFE8DA",
-          "#FFFFFF",
-          "#FFFFFF",
-          "#FFFFFF",
-          "#FFFFFF"
-        ]}
-        points={[
-          [0, 0],
-          [0.35, 0],
-          [0.7, 0],
-          [1, 0],
-          [0, 0.25],
-          [0.35, 0.32],
-          [0.7, 0.28],
-          [1, 0.32],
-          [0, 0.55],
-          [0.38, 0.55],
-          [0.72, 0.58],
-          [1, 0.6],
-          [0, 1],
-          [0.35, 1],
-          [0.7, 1],
-          [1, 1]
-        ]}
-        smoothsColors
+      <LinearGradient
+        colors={["#003A30", "#00624D", "#18765A"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.greenLayer}
       />
 
       <Image source={leafPng} resizeMode="contain" style={styles.leafMain} />
-      <Image source={leafPng} resizeMode="contain" style={styles.leafSoft} />
+
+      <LinearGradient
+        colors={[
+          "rgba(255,255,255,0.00)",
+          "rgba(255,255,255,0.18)",
+          "rgba(255,255,255,0.72)",
+          "rgba(255,255,255,1.00)"
+        ]}
+        locations={[0, 0.25, 0.58, 1]}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.15, y: 0.95 }}
+        style={styles.whiteVeil}
+      />
     </View>
   );
 }
@@ -61,30 +37,22 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 390,
+    height: 420,
     overflow: "hidden"
   },
-  mesh: {
+  greenLayer: {
     ...StyleSheet.absoluteFillObject
   },
   leafMain: {
     position: "absolute",
-    top: 92,
-    right: -72,
-    width: 390,
-    height: 300,
-    opacity: 0.15,
-    tintColor: "#DCEFE4",
-    transform: [{ rotate: "-8deg" }]
+    top: 55,
+    right: -130,
+    width: 540,
+    height: 360,
+    opacity: 0.45,
+    transform: [{ rotate: "-6deg" }]
   },
-  leafSoft: {
-    position: "absolute",
-    top: 132,
-    right: 52,
-    width: 260,
-    height: 210,
-    opacity: 0.08,
-    tintColor: "#FFFFFF",
-    transform: [{ rotate: "10deg" }]
+  whiteVeil: {
+    ...StyleSheet.absoluteFillObject
   }
 });
