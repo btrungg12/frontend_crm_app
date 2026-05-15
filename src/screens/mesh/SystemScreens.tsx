@@ -7,7 +7,7 @@ import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } 
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { changePassword, getProfile, updateProfile } from "../../api/userApi";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, contacts, Lang, notes, statusById, Upcoming } from "../../mesh/meshData";
+import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -885,12 +885,45 @@ export function DashboardEmptyScreen({ t, lang, nav }: Props) {
 }
 
 export function SettingsScreen({ t, lang, nav }: Props) {
+  const [profileNameVal, setProfileNameVal] = useState("");
+  const [profileEmailVal, setProfileEmailVal] = useState("");
+  const [contactsCount, setContactsCount] = useState<number | null>(null);
+  const [notesCount, setNotesCount] = useState<number | null>(null);
+  const [streakDays, setStreakDays] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([getProfile(), getDashboard()])
+      .then(([profileRes, dashRes]) => {
+        if (!active) return;
+        setProfileNameVal(profileName(profileRes));
+        setProfileEmailVal(profileEmail(profileRes));
+        const stats = dashboardStats(dashRes);
+        if (stats.contacts !== null) setContactsCount(stats.contacts);
+        if (stats.notes !== null) setNotesCount(stats.notes);
+        if (stats.streak !== null) setStreakDays(stats.streak);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const displayName = profileNameVal || "—";
+  const displayEmail = profileEmailVal || "—";
+
   const sections = [
     {
       label: t("account"),
       items: [
-        { icon: "person-outline" as const, label: t("profile"), trail: "Trần Quang", route: "editProfile" },
-        { icon: "mail-outline" as const, label: "Email", trail: "quang@mesh.app" },
+        { icon: "person-outline" as const, label: t("profile"), trail: displayName, route: "editProfile" },
+        { icon: "mail-outline" as const, label: "Email", trail: displayEmail },
         { icon: "lock-closed-outline" as const, label: t("changePassword"), route: "changePassword" }
       ]
     },
@@ -920,9 +953,12 @@ export function SettingsScreen({ t, lang, nav }: Props) {
           <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("settings")}</Text>
         </View>
         <View style={{ alignItems: "center", paddingTop: 18 }}>
-          <Avatar name="Trung Nguyễn" size={84} ring />
-          <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "900", marginTop: 12 }}>Trung Nguyễn</Text>
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 }}>trung@mesh.app</Text>
+          {loading ? (
+            <ActivityIndicator color="rgba(255,255,255,0.7)" size="small" style={{ marginBottom: 8 }} />
+          ) : null}
+          <Avatar name={displayName} size={84} ring />
+          <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "900", marginTop: 12 }}>{displayName}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 }}>{displayEmail}</Text>
           <Pressable onPress={() => nav("editProfile")} style={{ marginTop: 12, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "rgba(255,255,255,0.18)" }}>
             <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800" }}>{t("editProfile")}</Text>
           </Pressable>
@@ -932,12 +968,14 @@ export function SettingsScreen({ t, lang, nav }: Props) {
       <MeshScroll style={{ marginTop: -34, paddingHorizontal: 16 }} bottom={80}>
         <View style={{ flexDirection: "row", gap: 8 }}>
           {[
-            { value: contacts.length, label: t("contacts"), color: mesh.green700 },
-            { value: notes.length, label: t("notes"), color: mesh.blue },
-            { value: 7, label: t("streakDays"), color: mesh.orange }
+            { value: contactsCount, label: t("contacts"), color: mesh.green700 },
+            { value: notesCount, label: t("notes"), color: mesh.blue },
+            { value: streakDays, label: t("streakDays"), color: mesh.orange }
           ].map((item) => (
             <MeshCard key={item.label} style={{ flex: 1, padding: 14, alignItems: "center" }}>
-              <Text style={{ color: item.color, fontSize: 22, fontWeight: "900" }}>{item.value}</Text>
+              <Text style={{ color: item.color, fontSize: 22, fontWeight: "900" }}>
+                {loading ? "—" : item.value !== null ? String(item.value) : "—"}
+              </Text>
               <Text style={{ color: mesh.ink500, fontSize: 11, marginTop: 4 }}>{item.label}</Text>
             </MeshCard>
           ))}
