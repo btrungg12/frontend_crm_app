@@ -201,24 +201,81 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      <LinearGradient
-        colors={["#043326", "#07583D", "#DCEBE4", "#F7FAF7"]}
-        locations={[0, 0.24, 0.58, 1]}
-        start={{ x: 0.08, y: 0 }}
-        end={{ x: 0.45, y: 1 }}
+      <View
+        pointerEvents="none"
         style={{
-          height: insets.top + 330,
+          height: insets.top + 335,
           left: 0,
           overflow: "hidden",
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 14,
           position: "absolute",
           right: 0,
           top: 0
         }}
       >
-        {/* <LeafDecor /> */}
-      </LinearGradient>
+        <LinearGradient
+          colors={["#043326", "#06533C", "#08764A"]}
+          locations={[0, 0.56, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0
+          }}
+        />
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0)",
+            "rgba(255,255,255,0.22)",
+            "rgba(255,255,255,0.58)",
+            "rgba(247,250,247,0.92)",
+            "#F7FAF7"
+          ]}
+          locations={[0, 0.22, 0.48, 0.78, 1]}
+          start={{ x: 0.28, y: 0 }}
+          end={{ x: 0.48, y: 1 }}
+          style={{
+            height: 285,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: insets.top + 55
+          }}
+        />
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0)",
+            "rgba(255,255,255,0.28)",
+            "rgba(255,255,255,0.68)"
+          ]}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0, y: 0.25 }}
+          end={{ x: 1, y: 0.75 }}
+          style={{
+            borderRadius: 220,
+            height: 300,
+            position: "absolute",
+            right: -70,
+            top: insets.top + 12,
+            width: 310
+          }}
+        />
+        <LinearGradient
+          colors={["rgba(247,250,247,0)", "rgba(247,250,247,0.72)", "#F7FAF7"]}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{
+            bottom: 0,
+            height: 120,
+            left: 0,
+            position: "absolute",
+            right: 0
+          }}
+        />
+      </View>
 
       <View
         style={{
@@ -243,7 +300,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 38, maxWidth: 320 }}>
+        <View style={{ marginTop: 34, maxWidth: 320 }}>
           <Text style={{ color: "#064532", fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
@@ -269,7 +326,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           shadowOffset: { width: 0, height: 12 },
           shadowOpacity: 0.08,
           shadowRadius: 24,
-          top: insets.top + 225,
+          top: insets.top + 215,
           zIndex: 2
         }}
       >
