@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
@@ -449,6 +451,7 @@ function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ioni
 }
 
 export function CreateContactScreen({ t, nav, edit = false, contactId }: Props & { edit?: boolean; contactId?: string }) {
+  const insets = useSafeAreaInsets();
   const existing = edit && contactId ? contactById(contactId) : undefined;
   const [name, setName] = useState(existing?.name || "");
   const [phone, setPhone] = useState(existing?.phone || "");
@@ -490,33 +493,100 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
   return (
     <MeshScreen>
-      <MeshHeader style={{ paddingBottom: 50 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View
+        style={{
+          height: insets.top + 310,
+          overflow: "hidden",
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          position: "relative"
+        }}
+      >
+        <MeshGradientView
+          pointerEvents="none"
+          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+          columns={4}
+          rows={4}
+          colors={[
+            "#064532",
+            "#0B573E",
+            "#1D704F",
+            "#2F805E",
+            "#DDEFE5",
+            "#EAF6EF",
+            "#BFDCCB",
+            "#74AE8D",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#F8FCF7",
+            "#EEF8F0",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF"
+          ]}
+          points={[
+            [0, 0],
+            [0.35, 0],
+            [0.7, 0],
+            [1, 0],
+            [0, 0.3],
+            [0.35, 0.34],
+            [0.7, 0.32],
+            [1, 0.28],
+            [0, 0.6],
+            [0.35, 0.64],
+            [0.7, 0.68],
+            [1, 0.64],
+            [0, 1],
+            [0.35, 1],
+            [0.7, 1],
+            [1, 1]
+          ]}
+          smoothsColors
+        />
+
+        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{edit ? t("editContact") : t("createContact")}</Text>
+          <Text style={{ color: "#064532", fontSize: 18, fontWeight: "800", letterSpacing: -0.2 }}>{edit ? t("editContact") : t("createContact")}</Text>
           <Pressable
             onPress={handleSave}
             disabled={saving}
-            style={{ borderRadius: 999, backgroundColor: saving ? "rgba(255,255,255,0.6)" : "#FFFFFF", paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6 }}
+            style={{
+              alignItems: "center",
+              backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
+              borderRadius: 999,
+              elevation: 3,
+              flexDirection: "row",
+              gap: 6,
+              justifyContent: "center",
+              minWidth: 72,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              shadowColor: "#064532",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16
+            }}
           >
             {saving
-              ? <ActivityIndicator size="small" color={mesh.green700} />
-              : <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
+              ? <ActivityIndicator size="small" color="#FFFFFF" />
+              : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>
             }
           </Pressable>
         </View>
-        <View style={{ alignItems: "center", paddingTop: 14 }}>
+        <View style={{ alignItems: "center", marginTop: 26 }}>
           <View style={{ position: "relative" }}>
-            <Avatar name={existing?.name || name || "New Contact"} size={88} />
-            <View style={{ position: "absolute", right: -2, bottom: -2, width: 30, height: 30, borderRadius: 15, backgroundColor: mesh.green700, borderWidth: 2, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="camera-outline" size={14} color="#FFFFFF" />
+            <Avatar name={existing?.name || name || "New Contact"} size={112} />
+            <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 18, borderWidth: 3, bottom: 2, height: 36, justifyContent: "center", position: "absolute", right: 2, width: 36 }}>
+              <Ionicons name="camera-outline" size={17} color="#FFFFFF" />
             </View>
           </View>
-          <Text style={{ color: "#FFFFFF", marginTop: 8, fontSize: 12, fontWeight: "700" }}>{t("addAvatar")}</Text>
+          <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800", marginTop: 10 }}>{t("addAvatar")}</Text>
         </View>
-      </MeshHeader>
+      </View>
 
-      <MeshScroll style={{ backgroundColor: "#FFFFFF", marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -18, paddingHorizontal: 16, paddingTop: 0 }} bottom={120}>
         {saveError ? (
           <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
@@ -529,34 +599,38 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
           <FormRow icon="mail-outline" label="Email" value={email} onChangeText={setEmail} placeholder={t("enterEmail")} last />
         </FormSection>
 
-        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{t("relationshipInfo")}</Text>
-        <MeshCard style={{ paddingHorizontal: 14 }}>
-          <Pressable onPress={() => setStatusOpen(true)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderColor: mesh.line }}>
-            <Ionicons name="people-outline" size={18} color={mesh.ink500} />
-            <Text style={{ flex: 1, color: mesh.ink900, fontSize: 15 }}>{t("relationship")}</Text>
+        <FormSection title={t("relationshipInfo")}>
+          <Pressable onPress={() => setStatusOpen(true)} style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+              <Ionicons name="people-outline" size={20} color={mesh.green700} />
+            </View>
+            <Text style={{ color: "#073F33", flex: 1, fontSize: 14, fontWeight: "800" }}>{t("relationship")}</Text>
             <StatusChip statusId={status} />
             <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
           </Pressable>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14 }}>
-            <Ionicons name="link-outline" size={18} color={mesh.ink500} />
-            <Text style={{ flex: 1, color: mesh.ink900, fontSize: 15 }}>{t("source")}</Text>
+          <View style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+              <Ionicons name="link-outline" size={20} color={mesh.green700} />
+            </View>
+            <Text style={{ color: "#073F33", flex: 1, fontSize: 14, fontWeight: "800" }}>{t("source")}</Text>
             <View style={{ borderRadius: 999, backgroundColor: mesh.bgSubtle, paddingHorizontal: 12, paddingVertical: 6 }}>
               <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "700" }}>Work</Text>
             </View>
           </View>
-        </MeshCard>
+        </FormSection>
 
-        <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{t("specialDays")}</Text>
-        <MeshCard style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="calendar-outline" size={18} color={mesh.green700} />
+        <FormSection title={t("specialDays")}>
+          <View style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+              <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("addSpecialDay")}</Text>
+              <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{t("addSpecialHint")}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("addSpecialDay")}</Text>
-            <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{t("addSpecialHint")}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
-        </MeshCard>
+        </FormSection>
 
         <FormSection title={t("moreInfo")}>
           <FormRow icon="location-outline" label={t("address")} value="" placeholder={t("enterAddress")} />
@@ -564,7 +638,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
           <FormRow icon="document-text-outline" label={t("moreNote")} value="" placeholder={t("enterMoreNote")} last />
         </FormSection>
 
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginBottom: 24, marginTop: 16 }}>
           <TipCard>{t("canAddLater")}</TipCard>
         </View>
       </MeshScroll>
@@ -576,19 +650,35 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <>
-      <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginTop: 20, marginBottom: 10 }}>{title}</Text>
-      <MeshCard style={{ paddingHorizontal: 14 }}>{children}</MeshCard>
-    </>
+    <View
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderColor: "rgba(6,69,50,0.06)",
+        borderRadius: 24,
+        borderWidth: 1,
+        elevation: 2,
+        marginTop: 16,
+        padding: 16,
+        shadowColor: "#064532",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20
+      }}
+    >
+      <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>{title.toUpperCase()}</Text>
+      <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>{children}</View>
+    </View>
   );
 }
 
 function FormRow({ icon, label, value, onChangeText, placeholder, last = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; onChangeText?: (value: string) => void; placeholder?: string; last?: boolean }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: last ? 0 : 1, borderColor: mesh.line }}>
-      <Ionicons name={icon} size={18} color={mesh.ink500} />
-      <Text style={{ width: 96, color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>{label}</Text>
-      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={mesh.ink400} style={{ flex: 1, color: mesh.ink900, fontSize: 14, textAlign: "right" }} />
+    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+        <Ionicons name={icon} size={20} color={mesh.green700} />
+      </View>
+      <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", width: 110 }}>{label}</Text>
+      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8C9691" style={{ color: mesh.ink900, flex: 1, fontSize: 14, textAlign: "right" }} />
     </View>
   );
 }
