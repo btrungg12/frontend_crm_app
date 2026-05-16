@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
 import { deleteNoteReminder, getNoteById, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
+import { CreateNoteMeshBackground } from "../../components/CreateNoteMeshBackground";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { contactById, Lang } from "../../mesh/meshData";
@@ -201,81 +202,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      <View
-        pointerEvents="none"
-        style={{
-          height: insets.top + 335,
-          left: 0,
-          overflow: "hidden",
-          position: "absolute",
-          right: 0,
-          top: 0
-        }}
-      >
-        <LinearGradient
-          colors={["#043326", "#06533C", "#08764A"]}
-          locations={[0, 0.56, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            bottom: 0,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            top: 0
-          }}
-        />
-        <LinearGradient
-          colors={[
-            "rgba(255,255,255,0)",
-            "rgba(255,255,255,0.22)",
-            "rgba(255,255,255,0.58)",
-            "rgba(247,250,247,0.92)",
-            "#F7FAF7"
-          ]}
-          locations={[0, 0.22, 0.48, 0.78, 1]}
-          start={{ x: 0.28, y: 0 }}
-          end={{ x: 0.48, y: 1 }}
-          style={{
-            height: 285,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            top: insets.top + 55
-          }}
-        />
-        <LinearGradient
-          colors={[
-            "rgba(255,255,255,0)",
-            "rgba(255,255,255,0.28)",
-            "rgba(255,255,255,0.68)"
-          ]}
-          locations={[0, 0.45, 1]}
-          start={{ x: 0, y: 0.25 }}
-          end={{ x: 1, y: 0.75 }}
-          style={{
-            borderRadius: 220,
-            height: 300,
-            position: "absolute",
-            right: -70,
-            top: insets.top + 12,
-            width: 310
-          }}
-        />
-        <LinearGradient
-          colors={["rgba(247,250,247,0)", "rgba(247,250,247,0.72)", "#F7FAF7"]}
-          locations={[0, 0.45, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{
-            bottom: 0,
-            height: 120,
-            left: 0,
-            position: "absolute",
-            right: 0
-          }}
-        />
-      </View>
+      <CreateNoteMeshBackground />
 
       <View
         style={{
