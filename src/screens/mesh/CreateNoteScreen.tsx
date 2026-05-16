@@ -227,20 +227,20 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         <LinearGradient
           colors={[
             "rgba(255,255,255,0.00)",
-            "rgba(255,255,255,0.12)",
-            "rgba(255,255,255,0.48)",
-            "rgba(255,255,255,0.82)",
+            "rgba(255,255,255,0.18)",
+            "rgba(255,255,255,0.58)",
+            "rgba(255,255,255,0.86)",
             "rgba(247,250,247,1)"
           ]}
-          locations={[0, 0.18, 0.42, 0.7, 1]}
+          locations={[0, 0.16, 0.38, 0.66, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={{
-            height: 320,
+            height: 350,
             left: 0,
             position: "absolute",
             right: 0,
-            top: insets.top + 38
+            top: insets.top + 8
           }}
         />
         <LinearGradient
