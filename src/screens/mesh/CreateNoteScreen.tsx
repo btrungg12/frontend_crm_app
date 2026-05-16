@@ -236,11 +236,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={{
-            height: 285,
+            height: 320,
             left: 0,
             position: "absolute",
             right: 0,
-            top: insets.top + 70
+            top: insets.top + 38
           }}
         />
         <LinearGradient
@@ -281,7 +281,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 34, maxWidth: 320 }}>
+        <View style={{ marginTop: 18, maxWidth: 320 }}>
           <Text style={{ color: "#064532", fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
@@ -307,7 +307,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           shadowOffset: { width: 0, height: 12 },
           shadowOpacity: 0.08,
           shadowRadius: 24,
-          top: insets.top + 215,
+          top: insets.top + 195,
           zIndex: 2
         }}
       >
