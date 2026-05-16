@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -212,10 +213,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           top: 0
         }}
       >
-        <LinearGradient
-          colors={["#003A30", "#00624D", "#18765A"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <MeshGradientView
           style={{
             bottom: 0,
             left: 0,
@@ -223,38 +221,45 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             right: 0,
             top: 0
           }}
-        />
-        <LinearGradient
+          columns={4}
+          rows={4}
           colors={[
-            "rgba(255,255,255,0.00)",
-            "rgba(255,255,255,0.18)",
-            "rgba(255,255,255,0.58)",
-            "rgba(255,255,255,0.86)",
-            "rgba(247,250,247,1)"
+            "#064532",
+            "#0B573E",
+            "#1D704F",
+            "#2F805E",
+            "#DDEFE5",
+            "#EAF6EF",
+            "#BFDCCB",
+            "#74AE8D",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#F8FCF7",
+            "#EEF8F0",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF"
           ]}
-          locations={[0, 0.16, 0.38, 0.66, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{
-            height: 350,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            top: insets.top + 8
-          }}
-        />
-        <LinearGradient
-          colors={["rgba(247,250,247,0)", "rgba(247,250,247,0.72)", "#F7FAF7"]}
-          locations={[0, 0.45, 1]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={{
-            bottom: 0,
-            height: 130,
-            left: 0,
-            position: "absolute",
-            right: 0
-          }}
+          points={[
+            [0, 0],
+            [0.35, 0],
+            [0.7, 0],
+            [1, 0],
+            [0, 0.36],
+            [0.35, 0.38],
+            [0.7, 0.34],
+            [1, 0.3],
+            [0, 0.66],
+            [0.35, 0.68],
+            [0.7, 0.72],
+            [1, 0.7],
+            [0, 1],
+            [0.35, 1],
+            [0.7, 1],
+            [1, 1]
+          ]}
+          smoothsColors
         />
       </View>
 
