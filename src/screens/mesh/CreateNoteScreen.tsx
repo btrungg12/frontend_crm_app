@@ -202,12 +202,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
       <LinearGradient
-        colors={["#043326", "#07583D", "rgba(255,255,255,0.72)", "#F7FAF7"]}
-        locations={[0, 0.34, 0.72, 1]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.75, y: 1 }}
+        colors={["#043326", "#0A5C43", "rgba(255,255,255,0.68)", "#F7FAF7"]}
+        locations={[0, 0.26, 0.58, 1]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.65, y: 1 }}
         style={{
-          height: insets.top + 360,
+          height: insets.top + 310,
           left: 0,
           overflow: "hidden",
           paddingHorizontal: 20,
@@ -243,11 +243,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 58, maxWidth: 320 }}>
-          <Text style={{ color: mesh.green800, fontSize: 36, fontWeight: "800", letterSpacing: -0.8 }}>
+        <View style={{ marginTop: 38, maxWidth: 320 }}>
+          <Text style={{ color: mesh.green800, fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
             {edit ? t("editNote") : t("newNote")}
           </Text>
-          <Text style={{ color: mesh.ink500, fontSize: 16, lineHeight: 24, marginTop: 10, maxWidth: 300 }}>
+          <Text style={{ color: "#4F5F58", fontSize: 15, lineHeight: 22, marginTop: 6, maxWidth: 300 }}>
             {edit ? "Update the details you want to remember." : "Capture something meaningful\nso you won't forget."}
           </Text>
         </View>
@@ -269,13 +269,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           shadowOffset: { width: 0, height: 12 },
           shadowOpacity: 0.08,
           shadowRadius: 24,
-          top: insets.top + 255,
+          top: insets.top + 225,
           zIndex: 2
         }}
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 28, paddingHorizontal: 16, paddingTop: 24 }}
+          contentContainerStyle={{ paddingBottom: 80, paddingHorizontal: 16, paddingTop: 22 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
