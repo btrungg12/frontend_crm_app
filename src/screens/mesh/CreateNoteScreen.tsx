@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
 import { deleteNoteReminder, getNoteById, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
-import { CreateNoteMeshBackground } from "../../components/CreateNoteMeshBackground";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { contactById, Lang } from "../../mesh/meshData";
@@ -202,7 +201,62 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      <CreateNoteMeshBackground />
+      <View
+        pointerEvents="none"
+        style={{
+          height: insets.top + 335,
+          left: 0,
+          overflow: "hidden",
+          position: "absolute",
+          right: 0,
+          top: 0
+        }}
+      >
+        <LinearGradient
+          colors={["#003A30", "#00624D", "#18765A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0
+          }}
+        />
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0.00)",
+            "rgba(255,255,255,0.12)",
+            "rgba(255,255,255,0.48)",
+            "rgba(255,255,255,0.82)",
+            "rgba(247,250,247,1)"
+          ]}
+          locations={[0, 0.18, 0.42, 0.7, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{
+            height: 285,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: insets.top + 70
+          }}
+        />
+        <LinearGradient
+          colors={["rgba(247,250,247,0)", "rgba(247,250,247,0.72)", "#F7FAF7"]}
+          locations={[0, 0.45, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{
+            bottom: 0,
+            height: 130,
+            left: 0,
+            position: "absolute",
+            right: 0
+          }}
+        />
+      </View>
 
       <View
         style={{
