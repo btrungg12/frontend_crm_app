@@ -70,7 +70,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         subtitle={t("contactsCount", { n: sourceContacts.length })}
       >
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable onPress={() => nav("search")} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+          <Pressable onPress={() => nav("search", { type: "contacts" })} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
             <Text numberOfLines={1} style={{ flex: 1, color: "#8A928D", fontSize: 14 }}>{t("searchContactPh")}</Text>
           </Pressable>

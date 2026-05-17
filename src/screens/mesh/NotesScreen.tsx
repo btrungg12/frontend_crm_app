@@ -68,9 +68,9 @@ export function NotesScreen({ t, lang, nav }: Props) {
 
   return (
     <MeshScreen>
-      <MeshHeroHeader title={t("notes")} subtitle={t("notesSub")} right={<HeaderCircleBtn icon="search" onPress={() => nav("search")} />}>
+      <MeshHeroHeader title={t("notes")} subtitle={t("notesSub")} right={<HeaderCircleBtn icon="search" onPress={() => nav("search", { type: "notes" })} />}>
         <Pressable
-          onPress={() => nav("search")}
+          onPress={() => nav("search", { type: "notes" })}
           style={{ borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", paddingHorizontal: 16, height: 44, flexDirection: "row", alignItems: "center", gap: 10 }}
         >
           <Ionicons name="search" size={18} color={mesh.ink400} />

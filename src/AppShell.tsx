@@ -150,7 +150,7 @@ export function AppShell() {
     case "editNote":
       return <CreateNoteScreen {...common} edit />;
     case "search":
-      return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} />;
+      return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} type={(route.props?.type as "contacts" | "notes" | undefined) || "notes"} />;
     case "contacts":
       return <ContactsScreen {...common} />;
     case "contactDetail":
