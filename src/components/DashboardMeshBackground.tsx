@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { Image, StyleSheet, View } from "react-native";
 
@@ -56,6 +57,20 @@ export function DashboardMeshBackground() {
       />
 
       <Image source={leafPng} resizeMode="contain" style={styles.leafMain} />
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={[
+          "rgba(255,255,255,0)",
+          "rgba(255,255,255,0.46)",
+          "rgba(255,255,255,0.82)",
+          "rgba(255,255,255,0.98)"
+        ]}
+        locations={[0, 0.32, 0.68, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.leafWhiteVeil}
+      />
     </View>
   );
 }
@@ -80,5 +95,12 @@ const styles = StyleSheet.create({
     height: 315,
     opacity: 0.14,
     transform: [{ rotate: "-6deg" }]
+  },
+  leafWhiteVeil: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 185,
+    height: 145
   }
 });
