@@ -253,7 +253,7 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
     <MeshScreen>
       <View
         style={{
-          height: insets.top + 245,
+          height: insets.top + 225,
           overflow: "hidden",
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
@@ -329,13 +329,13 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
             <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>
           </Pressable>
         </View>
-        <View style={{ alignItems: "center", marginTop: 26 }}>
-          <Text style={{ color: "#064532", fontSize: 22, fontWeight: "800", letterSpacing: -0.3, textAlign: "center" }}>{isEdit ? t("editStatus") : t("createStatus")}</Text>
-          <Text style={{ color: "#4F5F58", fontSize: 15, lineHeight: 23, marginTop: 18, maxWidth: 300, textAlign: "center" }}>{t("statusFormSub")}</Text>
+        <View style={{ alignItems: "center", marginTop: 10 }}>
+          <Text style={{ color: "#064532", fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 28, textAlign: "center" }}>{isEdit ? t("editStatus") : t("createStatus")}</Text>
+          <Text style={{ color: "#4F5F58", fontSize: 15, lineHeight: 23, marginTop: 12, maxWidth: 300, textAlign: "center" }}>{t("statusFormSub")}</Text>
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -42, paddingHorizontal: 16, paddingTop: 0 }} bottom={120}>
+      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -24, paddingHorizontal: 16, paddingTop: 0 }} bottom={120}>
         {error ? (
           <View style={{ borderRadius: 14, backgroundColor: "rgba(217,87,122,0.10)", marginBottom: 14, paddingHorizontal: 12, paddingVertical: 10 }}>
             <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 18 }}>{error}</Text>
