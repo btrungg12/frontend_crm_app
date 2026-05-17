@@ -16,15 +16,15 @@ export function DashboardMeshBackground() {
           "#166B4B",
           "#0E7A55",
 
+          "#ECF6EF",
+          "#F4FAF6",
           "#DDEFE5",
-          "#EAF6EF",
-          "#CFE7D8",
-          "#8BC3A5",
+          "#A7CDB8",
 
           "#FFFFFF",
           "#FFFFFF",
-          "#F8FCF7",
-          "#EEF8F0",
+          "#FBFDFB",
+          "#F4FAF6",
 
           "#FFFFFF",
           "#FFFFFF",
@@ -37,15 +37,15 @@ export function DashboardMeshBackground() {
           [0.72, 0],
           [1, 0],
 
-          [0, 0.30],
-          [0.35, 0.34],
-          [0.72, 0.32],
-          [1, 0.26],
+          [0, 0.24],
+          [0.35, 0.28],
+          [0.72, 0.30],
+          [1, 0.25],
 
-          [0, 0.58],
-          [0.35, 0.62],
-          [0.72, 0.66],
-          [1, 0.62],
+          [0, 0.52],
+          [0.35, 0.56],
+          [0.72, 0.62],
+          [1, 0.58],
 
           [0, 1],
           [0.35, 1],
@@ -74,11 +74,11 @@ const styles = StyleSheet.create({
   },
   leafMain: {
     position: "absolute",
-    top: 72,
-    right: -85,
-    width: 420,
-    height: 300,
-    opacity: 0.22,
+    top: 76,
+    right: -145,
+    width: 440,
+    height: 315,
+    opacity: 0.14,
     transform: [{ rotate: "-6deg" }]
   }
 });
