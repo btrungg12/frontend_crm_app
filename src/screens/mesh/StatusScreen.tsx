@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
 import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
-import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn, TipCard } from "../../mesh/MeshComponents";
+import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -128,7 +130,8 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
 }
 
 export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: string }) {
-  const palette = ["#2F8F5F", "#3B7BD9", "#8B5CD6", "#D9577A", "#E07543", "#E6B53E", "#3FA398", "#93A1A0"];
+  const insets = useSafeAreaInsets();
+  const palette = ["#2F8F5F", "#3B7BD9", "#8B5CD6", "#D9577A", "#F5B83B", "#35C7B7"];
   const [name, setName] = useState("");
   const [color, setColor] = useState(palette[0]);
   const [existingStatus, setExistingStatus] = useState<Status | null>(null);
@@ -248,70 +251,191 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
 
   return (
     <MeshScreen>
-      <MeshHeader style={{ paddingBottom: 30 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View
+        style={{
+          height: insets.top + 245,
+          overflow: "hidden",
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          position: "relative"
+        }}
+      >
+        <MeshGradientView
+          pointerEvents="none"
+          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+          columns={4}
+          rows={4}
+          colors={[
+            "#064532",
+            "#0B573E",
+            "#1D704F",
+            "#2F805E",
+            "#DDEFE5",
+            "#EAF6EF",
+            "#BFDCCB",
+            "#74AE8D",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#F8FCF7",
+            "#EEF8F0",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF",
+            "#FFFFFF"
+          ]}
+          points={[
+            [0, 0],
+            [0.35, 0],
+            [0.7, 0],
+            [1, 0],
+            [0, 0.28],
+            [0.35, 0.32],
+            [0.7, 0.3],
+            [1, 0.26],
+            [0, 0.58],
+            [0.35, 0.62],
+            [0.7, 0.66],
+            [1, 0.62],
+            [0, 1],
+            [0.35, 1],
+            [0.7, 1],
+            [1, 1]
+          ]}
+          smoothsColors
+        />
+
+        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("status")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 60, color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{isEdit ? t("editStatus") : t("createStatus")}</Text>
-          <Pressable disabled={saving} onPress={handleSave} style={{ alignItems: "center", borderRadius: 999, backgroundColor: "#FFFFFF", flexDirection: "row", gap: 7, opacity: saving ? 0.7 : 1, paddingHorizontal: 16, paddingVertical: 8 }}>
-            {saving ? <ActivityIndicator color={mesh.green700} size="small" /> : null}
-            <Text style={{ color: mesh.green700, fontWeight: "800", fontSize: 13 }}>{t("save")}</Text>
+          <Pressable
+            disabled={saving}
+            onPress={handleSave}
+            style={{
+              alignItems: "center",
+              backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
+              borderRadius: 999,
+              elevation: 3,
+              flexDirection: "row",
+              gap: 7,
+              opacity: saving ? 0.7 : 1,
+              paddingHorizontal: 20,
+              paddingVertical: 11,
+              shadowColor: "#064532",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16
+            }}
+          >
+            {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
+            <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>
           </Pressable>
         </View>
-        <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 19, marginTop: 14, textAlign: "center", alignSelf: "center", maxWidth: 280 }}>{t("statusFormSub")}</Text>
-      </MeshHeader>
+        <View style={{ alignItems: "center", marginTop: 26 }}>
+          <Text style={{ color: "#064532", fontSize: 22, fontWeight: "800", letterSpacing: -0.3, textAlign: "center" }}>{isEdit ? t("editStatus") : t("createStatus")}</Text>
+          <Text style={{ color: "#4F5F58", fontSize: 15, lineHeight: 23, marginTop: 18, maxWidth: 300, textAlign: "center" }}>{t("statusFormSub")}</Text>
+        </View>
+      </View>
 
-      <MeshScroll style={{ backgroundColor: "#FFFFFF", marginTop: -10, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingTop: 20 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -42, paddingHorizontal: 16, paddingTop: 0 }} bottom={120}>
         {error ? (
           <View style={{ borderRadius: 14, backgroundColor: "rgba(217,87,122,0.10)", marginBottom: 14, paddingHorizontal: 12, paddingVertical: 10 }}>
             <Text style={{ color: mesh.pink, fontSize: 13, lineHeight: 18 }}>{error}</Text>
           </View>
         ) : null}
 
-        <FieldLabel>
-          {t("statusName")} <Text style={{ color: mesh.pink }}>*</Text>
-        </FieldLabel>
-        <View style={{ borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 24 }}>
-          <TextInput value={name} onChangeText={setName} placeholder={t("enterStatusName")} placeholderTextColor={mesh.ink400} style={{ color: mesh.ink900, fontSize: 15 }} />
-          <Text style={{ position: "absolute", right: 12, bottom: 6, color: mesh.ink400, fontSize: 11 }}>{name.length}/30</Text>
-        </View>
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(6,69,50,0.06)",
+            borderRadius: 26,
+            borderWidth: 1,
+            elevation: 2,
+            padding: 16,
+            shadowColor: "#064532",
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.06,
+            shadowRadius: 24
+          }}
+        >
+          <View style={{ alignItems: "center", flexDirection: "row", gap: 12, marginBottom: 14 }}>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 44, justifyContent: "center", width: 44 }}>
+              <Ionicons name="pricetag-outline" size={20} color={mesh.green700} />
+            </View>
+            <Text style={{ color: "#073F33", fontSize: 16, fontWeight: "800" }}>
+              {t("statusName")} <Text style={{ color: mesh.pink }}>*</Text>
+            </Text>
+          </View>
+          <View style={{ borderColor: "rgba(6,69,50,0.12)", borderRadius: 16, borderWidth: 1, paddingBottom: 26, paddingHorizontal: 14, paddingTop: 13 }}>
+            <TextInput value={name} onChangeText={setName} placeholder={t("enterStatusName")} placeholderTextColor="#8C9691" style={{ color: mesh.ink900, fontSize: 15 }} />
+            <Text style={{ bottom: 7, color: mesh.ink400, fontSize: 12, position: "absolute", right: 12 }}>{name.length}/30</Text>
+          </View>
+          <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 20, marginTop: 12 }}>Use a short, clear name that helps you recognize and organize relationships easily.</Text>
 
-        <FieldLabel>
-          {t("statusColor")} <Text style={{ color: mesh.pink }}>*</Text>
-        </FieldLabel>
-        <Text style={{ color: mesh.ink500, fontSize: 12, marginBottom: 12 }}>{t("statusColorDesc")}</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-          {palette.map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => setColor(item)}
-              style={{ width: "22%", aspectRatio: 1, borderRadius: 999, backgroundColor: item, alignItems: "center", justifyContent: "center", borderWidth: color === item ? 3 : 0, borderColor: "#FFFFFF", shadowColor: item, shadowOpacity: color === item ? 0.35 : 0, shadowRadius: 8 }}
-            >
-              {color === item ? <Ionicons name="checkmark" size={20} color="#FFFFFF" /> : null}
+          <Text style={{ color: "#073F33", fontSize: 16, fontWeight: "800", marginTop: 24 }}>
+            {t("statusColor")} <Text style={{ color: mesh.pink }}>*</Text>
+          </Text>
+          <Text style={{ color: mesh.ink500, fontSize: 13, marginBottom: 16, marginTop: 8 }}>{t("statusColorDesc")}</Text>
+          <View style={{ flexDirection: "row", gap: 10, justifyContent: "space-between" }}>
+            {palette.map((item) => {
+              const active = color === item;
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setColor(item)}
+                  style={{
+                    alignItems: "center",
+                    backgroundColor: item,
+                    borderColor: "#FFFFFF",
+                    borderRadius: 27,
+                    borderWidth: 3,
+                    elevation: active ? 4 : 2,
+                    height: 54,
+                    justifyContent: "center",
+                    shadowColor: item,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: active ? 0.32 : 0.18,
+                    shadowRadius: active ? 12 : 8,
+                    width: 54
+                  }}
+                >
+                  {active ? <Ionicons name="checkmark" size={24} color="#FFFFFF" /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.07)", borderRadius: 22, borderWidth: 1, marginTop: 28, padding: 16 }}>
+            <View style={{ alignItems: "center", flexDirection: "row", gap: 12 }}>
+              <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 44, justifyContent: "center", width: 44 }}>
+                <Ionicons name="eye-outline" size={20} color={mesh.green700} />
+              </View>
+              <View>
+                <Text style={{ color: "#073F33", fontSize: 16, fontWeight: "800" }}>Preview</Text>
+                <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 4 }}>{t("statusPreviewDesc")}</Text>
+              </View>
+            </View>
+            <View style={{ alignItems: "center", alignSelf: "center", backgroundColor: `${color}18`, borderRadius: 999, flexDirection: "row", gap: 8, marginTop: 18, paddingHorizontal: 18, paddingVertical: 10 }}>
+              <View style={{ backgroundColor: color, borderRadius: 4, height: 8, width: 8 }} />
+              <Text style={{ color, fontSize: 15, fontWeight: "800" }}>{name || t("statusName")}</Text>
+            </View>
+          </View>
+
+          <View style={{ alignItems: "flex-start", backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 20, flexDirection: "row", gap: 12, marginTop: 18, padding: 16 }}>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 44, justifyContent: "center", width: 44 }}>
+              <Ionicons name="bulb-outline" size={20} color={mesh.green700} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#073F33", fontSize: 16, fontWeight: "800" }}>{t("tip")}</Text>
+              <Text style={{ color: mesh.ink700, fontSize: 14, lineHeight: 22, marginTop: 4 }}>{t("statusTip")}</Text>
+            </View>
+          </View>
+
+          {statusId ? (
+            <Pressable disabled={saving} onPress={() => setConfirm(true)} style={{ alignItems: "center", borderColor: `${mesh.pink}55`, borderRadius: 14, borderWidth: 1, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 20, opacity: saving ? 0.6 : 1, paddingVertical: 14 }}>
+              <Ionicons name="trash-outline" size={16} color={mesh.pink} />
+              <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "800" }}>{t("deleteStatus")}</Text>
             </Pressable>
-          ))}
+          ) : null}
         </View>
-
-        <FieldLabel>Preview</FieldLabel>
-        <Text style={{ color: mesh.ink500, fontSize: 12, marginBottom: 12 }}>{t("statusPreviewDesc")}</Text>
-        <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, borderRadius: 999, backgroundColor: `${color}20`, paddingHorizontal: 12, paddingVertical: 8 }}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
-          <Text style={{ color, fontWeight: "800", fontSize: 13 }}>{name || t("statusName")}</Text>
-        </View>
-
-        <View style={{ marginTop: 22 }}>
-          <TipCard>
-            <Text style={{ color: mesh.green700, fontWeight: "800" }}>{t("tip")}</Text>
-            {"\n"}
-            {t("statusTip")}
-          </TipCard>
-        </View>
-
-        {statusId ? (
-          <Pressable disabled={saving} onPress={() => setConfirm(true)} style={{ marginTop: 20, borderRadius: 14, borderWidth: 1, borderColor: `${mesh.pink}55`, opacity: saving ? 0.6 : 1, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
-            <Ionicons name="trash-outline" size={16} color={mesh.pink} />
-            <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "800" }}>{t("deleteStatus")}</Text>
-          </Pressable>
-        ) : null}
       </MeshScroll>
 
       <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={handleDelete} title={t("deleteStatusTitle")} desc={t("deleteStatusDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
