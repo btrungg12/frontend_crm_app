@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { ReactNode, useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
@@ -23,6 +23,7 @@ type Props = {
 
 const titleLimit = 100;
 const contentLimit = 1000;
+const leaf2Png = require("../../../assets/leaf_2.png");
 
 type PickerContact = {
   id: string;
@@ -260,6 +261,20 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             [1, 1]
           ]}
           smoothsColors
+        />
+
+        <Image
+          source={leaf2Png}
+          resizeMode="contain"
+          style={{
+            position: "absolute",
+            top: insets.top + 78,
+            right: -92,
+            width: 340,
+            height: 250,
+            opacity: 0.2,
+            transform: [{ rotate: "-6deg" }]
+          }}
         />
       </View>
 
