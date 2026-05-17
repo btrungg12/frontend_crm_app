@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getNotes } from "../../api/noteApi";
 import { extractArray, normalizeApiNote } from "../../api/screenAdapters";
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function SearchScreen({ t, lang, nav, initialQ = "" }: Props) {
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState(initialQ);
   const [results, setResults] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,7 +63,7 @@ export function SearchScreen({ t, lang, nav, initialQ = "" }: Props) {
 
   return (
     <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1, borderColor: mesh.line, backgroundColor: "#FFFFFF" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: insets.top + 10, paddingBottom: 12, borderBottomWidth: 1, borderColor: mesh.line, backgroundColor: "#FFFFFF", zIndex: 10 }}>
         <HeaderCircleBtn icon="chevron-back" onPress={() => nav("notes")} style={{ width: 36, height: 36, backgroundColor: mesh.bgSubtle, shadowOpacity: 0, elevation: 0 }} />
         <View style={{ flex: 1, height: 42, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: mesh.bgSubtle, borderRadius: 12, paddingHorizontal: 12 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
