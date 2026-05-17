@@ -28,6 +28,10 @@ export function MeshScroll({ children, bottom = 100, style }: PropsWithChildren<
     <ScrollView
       style={[{ flex: 1 }, style]}
       contentContainerStyle={{ paddingBottom: bottom }}
+      automaticallyAdjustKeyboardInsets={false}
+      contentInsetAdjustmentBehavior="never"
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
       {children}

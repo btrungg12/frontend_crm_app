@@ -65,7 +65,16 @@ export function SearchScreen({ t, lang, nav, initialQ = "" }: Props) {
         <HeaderCircleBtn icon="chevron-back" onPress={() => nav("notes")} style={{ width: 36, height: 36, backgroundColor: mesh.bgSubtle, shadowOpacity: 0, elevation: 0 }} />
         <View style={{ flex: 1, height: 42, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: mesh.bgSubtle, borderRadius: 12, paddingHorizontal: 12 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
-          <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={t("searchNote")} placeholderTextColor={mesh.ink400} style={{ flex: 1, color: mesh.ink900, fontSize: 15 }} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            autoFocus
+            blurOnSubmit={false}
+            returnKeyType="search"
+            placeholder={t("searchNote")}
+            placeholderTextColor={mesh.ink400}
+            style={{ flex: 1, color: mesh.ink900, fontSize: 15 }}
+          />
           {query ? (
             <Pressable onPress={() => setQuery("")}>
               <Ionicons name="close" size={16} color={mesh.ink400} />
