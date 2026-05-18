@@ -55,7 +55,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [content, setContent] = useState("");
   const [person, setPerson] = useState<string | null>(initialPerson || null);
   const [personLabel, setPersonLabel] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [personQuery, setPersonQuery] = useState("");
+  const [personFocused, setPersonFocused] = useState(false);
+  const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState("");
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminder, setReminder] = useState<ReminderSelection | null>(null);
   const [hadReminder, setHadReminder] = useState(false);
@@ -65,9 +69,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [saving, setSaving] = useState(false);
   const [loadingNote, setLoadingNote] = useState(edit);
   const [loadError, setLoadError] = useState("");
-
-  const contact = contactById(person);
-  const displayPersonName = contact?.name || personLabel;
 
   // Load note data when in edit mode
   useEffect(() => {
@@ -91,6 +92,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         setContent(data.content);
         setPerson(data.contactId);
         setPersonLabel(data.contactName);
+        setPersonQuery(data.contactName);
         if (data.remindAt) {
           setReminder({
             label: new Date(data.remindAt).toLocaleString(),
@@ -108,10 +110,29 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     return () => { active = false; };
   }, [edit, noteId]);
 
+  // Load contacts for inline suggestions on mount
+  useEffect(() => {
+    let active = true;
+    setContactsLoading(true);
+    setContactsError("");
+    getContacts()
+      .then((response) => {
+        if (!active) return;
+        const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
+        setApiContacts(normalized);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setContactsError(err instanceof Error ? err.message : "Cannot load contacts.");
+      })
+      .finally(() => { if (active) setContactsLoading(false); });
+    return () => { active = false; };
+  }, []);
+
   const clear = () => {
     setTitle("");
     setContent("");
-    if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); }
+    if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); setPersonQuery(""); }
     setReminder(null);
     setPersonError(false);
     setContentError(false);
@@ -119,7 +140,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   };
 
   const save = async () => {
-    const missingPerson = !person;
+    const typedName = personLabel.trim() || personQuery.trim();
+    const missingPerson = !person && typedName.length === 0;
     const missingContent = content.trim().length === 0;
     setPersonError(missingPerson);
     setContentError(missingContent);
@@ -154,7 +176,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         nav("noteDetail", { id: noteId });
       } else {
         await submitCreateNote({
-          contactId: person,
+          contactId: person || undefined,
+          // TODO: when backend supports quick-create by name, add:
+          // contactName: person ? undefined : (personLabel.trim() || personQuery.trim()) || undefined,
           content: content.trim(),
           interactionDate: new Date().toISOString(),
           reminderEnabled: Boolean(reminder),
@@ -337,17 +361,44 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <FieldLabel error={personError} first>{t("person").toUpperCase()}</FieldLabel>
-        <ChoiceCard
-          icon="person-outline"
-          title={displayPersonName || t("pickPerson")}
-          subtitle={displayPersonName ? undefined : t("attachToPerson")}
-          onPress={() => setPickerOpen(true)}
+        <FieldLabel error={personError} first>
+          {t("person").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
+        </FieldLabel>
+        <PersonInlineInput
+          value={personQuery}
+          selectedPersonId={person}
+          contacts={
+            personQuery.trim().length > 0
+              ? apiContacts
+                  .filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase()))
+                  .slice(0, 4)
+              : []
+          }
+          focused={personFocused}
           error={personError}
-          left={displayPersonName ? <Avatar name={displayPersonName} size={44} /> : undefined}
-          trailing={contact ? <StatusChip statusId={contact.status} /> : undefined}
+          loading={contactsLoading}
+          onFocus={() => setPersonFocused(true)}
+          onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
+          onChangeText={(value) => {
+            setPersonQuery(value);
+            setPersonLabel(value);
+            setPerson(null);
+            setPersonError(false);
+          }}
+          onSelectTyped={() => {
+            setPersonLabel(personQuery.trim());
+            setPerson(null);
+            setPersonFocused(false);
+          }}
+          onSelectContact={(c) => {
+            setPerson(c.id);
+            setPersonLabel(c.name);
+            setPersonQuery(c.name);
+            setPersonError(false);
+            setPersonFocused(false);
+          }}
         />
-        {personError ? <ErrorText>{isVi ? "Vui lòng chọn người." : "Please choose a person."}</ErrorText> : null}
+        {personError ? <ErrorText>{isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}</ErrorText> : null}
 
         <FieldLabel>
           {t("noteTitle").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
@@ -413,16 +464,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         </Pressable>
       </View>
 
-      <ContactPicker
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onPick={(selected) => {
-          setPerson(selected.id);
-          setPersonLabel(selected.name);
-          setPersonError(false);
-        }}
-        t={t}
-      />
       <ReminderPicker open={reminderOpen} onClose={() => setReminderOpen(false)} onPick={setReminder} t={t} lang={lang} />
     </MeshScreen>
   );
@@ -438,6 +479,157 @@ function FieldLabel({ children, error = false, first = false }: { children: Reac
 
 function ErrorText({ children }: { children: string }) {
   return <Text style={{ color: mesh.pink, fontSize: 12, fontWeight: "700", marginTop: 8 }}>{children}</Text>;
+}
+
+function PersonInlineInput({
+  contacts,
+  error,
+  focused,
+  loading,
+  onBlur,
+  onChangeText,
+  onFocus,
+  onSelectContact,
+  onSelectTyped,
+  selectedPersonId,
+  value
+}: {
+  contacts: PickerContact[];
+  error: boolean;
+  focused: boolean;
+  loading: boolean;
+  onBlur: () => void;
+  onChangeText: (value: string) => void;
+  onFocus: () => void;
+  onSelectContact: (contact: PickerContact) => void;
+  onSelectTyped: () => void;
+  selectedPersonId: string | null;
+  value: string;
+}) {
+  const trimmed = value.trim();
+  const showSuggestions = focused && trimmed.length > 0;
+  const borderColor = error
+    ? "rgba(217,87,122,0.55)"
+    : focused
+    ? mesh.green700
+    : "rgba(6,69,50,0.10)";
+
+  return (
+    <View>
+      {/* Text input row */}
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: "#FFFFFF",
+          borderColor,
+          borderRadius: 20,
+          borderWidth: 1,
+          flexDirection: "row",
+          gap: 12,
+          minHeight: 64,
+          paddingHorizontal: 14,
+          paddingVertical: 10
+        }}
+      >
+        {trimmed || selectedPersonId ? (
+          <Avatar name={trimmed || "?"} size={40} />
+        ) : (
+          <IconBox icon="person-outline" />
+        )}
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          placeholder="Type a person name..."
+          placeholderTextColor={mesh.ink400}
+          returnKeyType="done"
+          style={{ color: mesh.ink900, flex: 1, fontSize: mesh.font.input, padding: 0 }}
+        />
+        {value.length > 0 ? (
+          <Pressable onPress={() => onChangeText("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={mesh.ink400} />
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* Inline suggestion panel — sits in flow, pushes fields below */}
+      {showSuggestions ? (
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(6,69,50,0.08)",
+            borderRadius: 20,
+            borderWidth: 1,
+            elevation: 2,
+            marginTop: 8,
+            overflow: "hidden",
+            shadowColor: "#064532",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.06,
+            shadowRadius: 12
+          }}
+        >
+          {/* Row 0 — exactly what user typed */}
+          <Pressable
+            onPress={onSelectTyped}
+            style={{
+              alignItems: "center",
+              borderBottomWidth: contacts.length > 0 || loading ? 1 : 0,
+              borderColor: "rgba(6,69,50,0.06)",
+              flexDirection: "row",
+              gap: 12,
+              minHeight: 62,
+              paddingHorizontal: 12,
+              paddingVertical: 10
+            }}
+          >
+            <Avatar name={trimmed} size={40} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{trimmed}</Text>
+            </View>
+            <Ionicons name="return-down-back-outline" size={16} color={mesh.ink400} />
+          </Pressable>
+
+          {/* Existing contact rows */}
+          {contacts.map((contact, index) => (
+            <Pressable
+              key={contact.id}
+              onPress={() => onSelectContact(contact)}
+              style={{
+                alignItems: "center",
+                borderBottomWidth: index < contacts.length - 1 ? 1 : 0,
+                borderColor: "rgba(6,69,50,0.06)",
+                flexDirection: "row",
+                gap: 12,
+                minHeight: 62,
+                paddingHorizontal: 12,
+                paddingVertical: 10
+              }}
+            >
+              <Avatar name={contact.name} size={40} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
+                {contact.status ? (
+                  <View style={{ marginTop: 3 }}>
+                    <StatusChip statusId={contact.status} />
+                  </View>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+            </Pressable>
+          ))}
+
+          {/* Loading spinner while contacts fetch */}
+          {loading && contacts.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+              <ActivityIndicator size="small" color={mesh.green700} />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
@@ -649,86 +841,6 @@ function normalizePickerContact(value: unknown): PickerContact | null {
     name: nameValue,
     status: typeof statusValue === "string" ? statusValue : undefined
   };
-}
-
-function ContactPicker({ open, onClose, onPick, t }: { open: boolean; onClose: () => void; onPick: (contact: PickerContact) => void; t: TFn }) {
-  const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let active = true;
-
-    setLoading(true);
-    setError("");
-    setApiContacts([]);
-
-    getContacts()
-      .then((response) => {
-        if (!active) return;
-        const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
-        setApiContacts(normalized);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setApiContacts([]);
-        setError(err instanceof Error && err.message ? err.message : "Cannot load contacts from API.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open]);
-
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
-        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 14 }} />
-          <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 16 }}>{t("pickPerson")}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: mesh.bgSubtle, borderRadius: 12, paddingHorizontal: 12, height: 42, marginBottom: 12 }}>
-            <Ionicons name="search" size={16} color={mesh.ink400} />
-            <Text style={{ color: mesh.ink400, fontSize: 14 }}>{t("search")}</Text>
-          </View>
-          {loading ? <PickerState loading message="Loading contacts from API..." /> : null}
-          {!loading && error ? <PickerState error message={error} /> : null}
-          {!loading && !error && apiContacts.length === 0 ? <PickerState message="No contacts from API." /> : null}
-          {!loading && !error ? apiContacts.map((contact) => (
-            <Pressable
-              key={contact.id}
-              onPress={() => {
-                onPick(contact);
-                onClose();
-              }}
-              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: mesh.line }}
-            >
-              <Avatar name={contact.name} size={40} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
-                <View style={{ marginTop: 3 }}>
-                  {contact.status ? <StatusChip statusId={contact.status} /> : null}
-                </View>
-              </View>
-            </Pressable>
-          )) : null}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function PickerState({ error = false, loading = false, message }: { error?: boolean; loading?: boolean; message: string }) {
-  return (
-    <View style={{ alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 20 }}>
-      {loading ? <ActivityIndicator color={mesh.green700} /> : null}
-      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, fontWeight: "600", textAlign: "center" }}>{message}</Text>
-    </View>
-  );
 }
 
 function ReminderPicker({
