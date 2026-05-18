@@ -1,12 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { getNotes } from "../../api/noteApi";
-import { extractArray, normalizeApiNote } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { Avatar, BottomNav, HeaderCircleBtn, MeshCard, MeshChip, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { contactById, Lang, Note } from "../../mesh/meshData";
+import { contactById, Lang, Note, notes as mockNotes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -17,39 +15,12 @@ type Props = {
 
 export function NotesScreen({ t, lang, nav }: Props) {
   const [filter, setFilter] = useState("all");
-  const [apiNotes, setApiNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const sourceNotes = apiNotes;
+  const sourceNotes = mockNotes;
   const filters = [
     { id: "all", label: t("fAll") },
     { id: "rem", label: t("fReminder") },
     { id: "rec", label: t("fRecent") }
   ];
-
-  useEffect(() => {
-    let active = true;
-
-    getNotes()
-      .then((response) => {
-        if (!active) return;
-        const normalized = extractArray(response, "notes").map(normalizeApiNote).filter(Boolean) as Note[];
-        setApiNotes(normalized);
-        setError("");
-      })
-      .catch((err) => {
-        if (!active) return;
-        setApiNotes([]);
-        setError(err instanceof Error && err.message ? err.message : "Cannot load notes.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const grouped = useMemo(() => {
     return sourceNotes.reduce<Record<string, Note[]>>((acc, note) => {
@@ -90,12 +61,8 @@ export function NotesScreen({ t, lang, nav }: Props) {
           </MeshChip>
         </View>
 
-        {loading ? (
-          <InlineState label="Loading notes..." loading />
-        ) : error ? (
-          <InlineState label={error} error />
-        ) : sourceNotes.length === 0 ? (
-          <InlineState label="No notes from API." />
+        {sourceNotes.length === 0 ? (
+          <InlineState label="No notes yet." />
         ) : Object.entries(grouped).map(([section, items]) => (
           <View key={section} style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
             <SectionLabel style={{ paddingHorizontal: 4, paddingBottom: 6 }}>{sectionLabel[section]}</SectionLabel>
