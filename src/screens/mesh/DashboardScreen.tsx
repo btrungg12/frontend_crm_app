@@ -6,7 +6,8 @@ import { getDashboard } from "../../api/dashboardApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
-import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { GradientAvatar } from "../../components/GradientAvatar";
+import { Avatar, BottomNav, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { getToken } from "../../storage/tokenStorage";
@@ -263,18 +264,17 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             <StateCard label="No recent contacts from API." />
           ) : (
             <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
-              {recent.map((contact) => {
-              const status = statusById(contact.status);
-              return (
-                <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 64, alignItems: "center", gap: 6 }}>
-                  <ContactAvatarRow contact={contact} />
-                  <Text numberOfLines={2} style={{ textAlign: "center", color: mesh.ink700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>
+              {recent.map((contact) => (
+                <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 68, alignItems: "center", gap: 5 }}>
+                  <GradientAvatar name={contact.name} statusColor={statusById(contact.status)?.color} size={64} />
+                  <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>
                     {contact.name.split(" ").slice(-2).join(" ")}
                   </Text>
-                  <View style={{ width: 0, height: 0, backgroundColor: status?.color }} />
+                  <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink400, fontSize: 10, lineHeight: 13 }}>
+                    2d ago
+                  </Text>
                 </Pressable>
-              );
-              })}
+              ))}
               <Pressable onPress={() => nav("createContact")} style={{ width: 64, alignItems: "center", gap: 6 }}>
                 <View style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: "dashed", borderColor: mesh.green300, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.04)" }}>
                   <Ionicons name="add" size={24} color={mesh.green700} />

@@ -8,7 +8,8 @@ import { createContact, deleteContact, getContactById, getContactTimeline, getCo
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
-import { Contact, contactById, Lang, statuses } from "../../mesh/meshData";
+import { GradientAvatar } from "../../components/GradientAvatar";
+import { Contact, contactById, Lang, statuses, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 const leafPng = require("../../../assets/leaf.png");
@@ -106,7 +107,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
                   onPress={() => nav("contactDetail", { id: contact.id })}
                   style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
                 >
-                  <Avatar name={contact.name} size={40} />
+                  <GradientAvatar name={contact.name} statusColor={statusById(contact.status)?.color} size={48} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact.name}</Text>
                     <View style={{ marginTop: 3 }}>
@@ -394,7 +395,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <HeaderCircleBtn icon="ellipsis-horizontal" />
         </View>
         <View style={{ alignItems: "center", marginTop: 52 }}>
-          <Avatar name={contact.name} size={126} ring />
+          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={112} ringWidth={1.75} ringOpacity={0.65} />
           <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "800", letterSpacing: -0.7, marginTop: 22, textAlign: "center" }}>{contact.name}</Text>
           <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }}>
             <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 10, width: 10 }} />
