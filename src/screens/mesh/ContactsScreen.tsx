@@ -304,11 +304,8 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
   if (loading) {
     return (
-      <MeshScreen>
-        <MeshHeader>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
-        </MeshHeader>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: insets.top }}>
           <ActivityIndicator size="large" color={mesh.green700} />
         </View>
       </MeshScreen>
@@ -317,10 +314,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
   if (error || !contact) {
     return (
-      <MeshScreen>
-        <MeshHeader>
+      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+        <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
-        </MeshHeader>
+        </View>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingBottom: 80 }}>
           <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
           <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
