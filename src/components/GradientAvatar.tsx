@@ -22,11 +22,11 @@ function getInitials(name?: string): string {
 type Props = {
   avatarUrl?: string;
   name?: string;
-  /** Gap in px between ring edge and avatar circle. Default 3. */
+  /** Gap in px between ring edge and avatar circle. Default 2.5. */
   gap?: number;
-  /** Ring opacity 0–1. Default 0.6. */
+  /** Ring opacity 0–1. Default 0.78. */
   ringOpacity?: number;
-  /** Ring thickness in px. Default 1.5. */
+  /** Ring thickness in px. Default 2. */
   ringWidth?: number;
   /** Outer diameter in px. Default 48. */
   size?: number;
@@ -36,18 +36,18 @@ type Props = {
 
 export function GradientAvatar({
   avatarUrl,
-  gap = 3,
+  gap = 2.5,
   name,
-  ringOpacity = 0.6,
-  ringWidth = 1.5,
+  ringOpacity = 0.78,
+  ringWidth = 2,
   size = 48,
   statusColor
 }: Props) {
-  // ring start: mildly saturated (≈ opacity 0.65 on white)
-  // ring end  : very lightened (≈ opacity 0.30 on white)
+  // ring start: ≈ statusColor at 0.85 opacity on white (15% toward white)
+  // ring end  : ≈ statusColor at 0.55 opacity on white (55% toward white — lighter but clearly tinted)
   const gradColors: [string, string] = statusColor
-    ? [lightenHex(statusColor, 0.35), lightenHex(statusColor, 0.72)]
-    : ["#C8DBD3", "#E6F1EC"];
+    ? [lightenHex(statusColor, 0.15), lightenHex(statusColor, 0.55)]
+    : ["#A8C4B8", "#D2E8DF"];
 
   const whiteLayerSize = size - ringWidth * 2;
   const avatarSize = size - (ringWidth + gap) * 2;

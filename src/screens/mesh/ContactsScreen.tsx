@@ -395,7 +395,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <HeaderCircleBtn icon="ellipsis-horizontal" />
         </View>
         <View style={{ alignItems: "center", marginTop: 52 }}>
-          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={112} ringWidth={1.75} ringOpacity={0.65} />
+          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={112} ringWidth={2} ringOpacity={0.75} gap={3.5} />
           <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "800", letterSpacing: -0.7, marginTop: 22, textAlign: "center" }}>{contact.name}</Text>
           <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }}>
             <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 10, width: 10 }} />
