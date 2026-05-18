@@ -57,9 +57,9 @@ function getUpcomingVisual(item: Upcoming): {
   if (item.kind === "birthday") {
     return {
       icon: "gift-outline",
-      iconBg: "rgba(139,92,214,0.12)",
+      iconBg: "rgba(139,92,214,0.08)",
       iconColor: "#7C3AED",
-      pillBg: "rgba(139,92,214,0.12)",
+      pillBg: "rgba(139,92,214,0.08)",
       pillColor: "#7C3AED",
       pillIcon: "calendar-outline"
     };
@@ -68,9 +68,9 @@ function getUpcomingVisual(item: Upcoming): {
   if (item.kind === "special") {
     return {
       icon: searchText.includes("anniversary") || searchText.includes("kỷ niệm") ? "gift-outline" : "sparkles-outline",
-      iconBg: "rgba(224,117,67,0.12)",
+      iconBg: "rgba(224,117,67,0.09)",
       iconColor: mesh.orange,
-      pillBg: "rgba(230,181,62,0.16)",
+      pillBg: "rgba(230,181,62,0.09)",
       pillColor: mesh.orange,
       pillIcon: "time-outline"
     };
@@ -85,9 +85,9 @@ function getUpcomingVisual(item: Upcoming): {
 
   return {
     icon,
-    iconBg: "rgba(31,112,72,0.10)",
+    iconBg: "rgba(31,112,72,0.075)",
     iconColor: mesh.green700,
-    pillBg: "rgba(31,112,72,0.10)",
+    pillBg: "rgba(31,112,72,0.075)",
     pillColor: mesh.green700,
     pillIcon: "time-outline"
   };
@@ -170,7 +170,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
     <MeshScreen>
       <DashboardMeshBackground />
 
-      <MeshHeader variant="transparent" style={{ paddingBottom: 40 }}>
+      <MeshHeader variant="transparent" style={{ paddingBottom: 34 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
             <Avatar name={userName} size={44} ring />
@@ -186,11 +186,11 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           </View>
         </View>
 
-        <View style={{ marginTop: 46 }}>
-          <Text style={{ color: mesh.green800, fontSize: 32, fontWeight: "800", letterSpacing: -0.4 }}>
-            {t("greeting")}, {userName} <Text style={{ fontSize: 28 }}>👋</Text>
+        <View style={{ marginTop: 42 }}>
+          <Text style={{ color: mesh.green800, fontSize: 31, fontWeight: "800", letterSpacing: -0.4 }}>
+            {t("greeting")}, {userName} <Text style={{ fontSize: 27 }}>👋</Text>
           </Text>
-          <Text style={{ color: mesh.ink500, fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
+          <Text style={{ color: "#5F6864", fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
         </View>
       </MeshHeader>
 
@@ -202,8 +202,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         alwaysBounceVertical={false}
         overScrollMode="never"
       >
-        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 8 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 10 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>
               {t("upcoming")} <Text style={{ color: mesh.ink500 }}>({upcomingItems.length})</Text>
             </SectionLabel>
@@ -220,38 +220,38 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           ) : upcomingItems.length === 0 ? (
             <StateCard label="No upcoming items from API." />
           ) : (
-            <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.025, paddingHorizontal: 6, paddingVertical: 2 }}>
+            <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.86)", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.045)", elevation: 0, shadowOpacity: 0.012, paddingHorizontal: 4, paddingVertical: 0 }}>
               {upcomingItems.map((item, index) => {
               const visual = getUpcomingVisual(item);
               return (
                 <View key={item.id}>
                   <Pressable
                     onPress={() => openUpcoming(item)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 10 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 10, paddingVertical: 8 }}
                   >
-                    <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
                       <Ionicons name={visual.icon} size={21} color={visual.iconColor} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 14.5, fontWeight: "700" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
-                      <Text style={{ color: mesh.ink500, fontSize: 12.5, marginTop: 3 }}>{upcomingSubtitle(item, lang)}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: 12.2, marginTop: 3 }}>{upcomingSubtitle(item, lang)}</Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: visual.pillBg }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: visual.pillBg }}>
                       <Ionicons name={visual.pillIcon} size={11} color={visual.pillColor} />
                       <Text style={{ color: visual.pillColor, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={14} color={mesh.ink400} />
                   </Pressable>
-                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 8 }} /> : null}
+                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.045)", marginHorizontal: 8 }} /> : null}
                 </View>
               );
               })}
             </MeshCard>
           )}
 
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 18, paddingBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
