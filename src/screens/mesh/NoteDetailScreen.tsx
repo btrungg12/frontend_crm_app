@@ -2,10 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { deleteNote, getNoteById, getNotes } from "../../api/noteApi";
 import { ActionTile } from "./parts/ActionTile";
 import { Avatar, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
-import { contactById, Lang } from "../../mesh/meshData";
+import { contactById, Lang, notes as mockNotes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -40,96 +39,23 @@ function unwrapNoteResponse(response: unknown) {
   return asRecord(data?.note) ?? asRecord(root?.note) ?? data ?? root;
 }
 
-function unwrapNotesResponse(response: unknown) {
-  if (Array.isArray(response)) return response;
-
-  const root = asRecord(response);
-  const data = root?.data;
-
-  if (Array.isArray(data)) return data;
-
-  const dataRecord = asRecord(data);
-  if (Array.isArray(dataRecord?.notes)) return dataRecord.notes;
-  if (Array.isArray(dataRecord?.items)) return dataRecord.items;
-  if (Array.isArray(dataRecord?.results)) return dataRecord.results;
-  if (Array.isArray(root?.notes)) return root.notes;
-  if (Array.isArray(root?.items)) return root.items;
-  if (Array.isArray(root?.results)) return root.results;
-
-  return [];
-}
-
-function formatReminder(value: unknown) {
-  const raw = text(value);
-  if (!raw) return "";
-
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-
-  const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-  const day = date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
-  return `${time}, ${day}`;
-}
-
-function normalizeNoteDetail(response: unknown): ApiNoteDetail | null {
-  const item = unwrapNoteResponse(response);
-  if (!item) return null;
-
-  const id = text(item._id ?? item.id);
-  const content = text(item.content ?? item.body);
-  if (!id || !content) return null;
-
-  const contact = asRecord(item.contact ?? item.person);
-  const contactId = text(item.contactId ?? contact?._id ?? contact?.id);
-  const status = asRecord(contact?.status);
-  const reminder = asRecord(item.reminder);
-  const reminderValue = reminder?.remindAt ?? item.remindAt;
-  const title = text(item.title, content.split("\n")[0] || "Untitled note");
-
+function normalizeMockNote(note: (typeof mockNotes)[number]): ApiNoteDetail {
+  const contact = contactById(note.contact ?? undefined);
   return {
-    contactId: contactId || undefined,
-    contactName: text(contact?.name ?? contact?.fullName) || undefined,
-    contactStatus: text(item.contactStatus ?? item.statusId ?? contact?.statusId ?? status?._id ?? status?.id ?? contact?.status) || undefined,
-    content,
-    id,
-    reminder: formatReminder(reminderValue) || undefined,
-    title
+    contactId: note.contact ?? undefined,
+    contactName: contact?.name,
+    contactStatus: contact?.status,
+    content: note.contentEn || note.preview || note.title,
+    id: note.id,
+    reminder: note.reminder || undefined,
+    title: note.title
   };
-}
-
-async function loadNoteFromApi(noteId: string) {
-  try {
-    const response = await getNoteById(noteId);
-    return normalizeNoteDetail(response);
-  } catch {
-    const response = await getNotes();
-    const list = unwrapNotesResponse(response);
-    const match = list.find((item) => {
-      const record = asRecord(item);
-      return text(record?._id ?? record?.id) === noteId;
-    });
-
-    return match ? normalizeNoteDetail(match) : null;
-  }
-}
-
-function cleanErrorMessage(error: unknown) {
-  if (!(error instanceof Error) || !error.message.trim()) {
-    return "Cannot load note from API.";
-  }
-
-  if (error.message.includes("<!DOCTYPE") || error.message.includes("Cannot GET")) {
-    return "Backend does not support note detail endpoint, and this note was not found in the notes list.";
-  }
-
-  return error.message;
 }
 
 export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props) {
   const [note, setNote] = useState<ApiNoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const contactFallback = note?.contactId ? contactById(note.contactId) : undefined;
@@ -141,76 +67,47 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
   useEffect(() => {
     let active = true;
 
-    async function loadNote() {
-      if (!noteId) {
-        setNote(null);
-        setError("Missing note id.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError("");
-        const normalized = await loadNoteFromApi(noteId);
-
-        if (!active) return;
-
-        if (!normalized) {
-          setNote(null);
-          setError("Note not found from API.");
-          return;
-        }
-
-        setNote(normalized);
-      } catch (err) {
-        if (!active) return;
-        setNote(null);
-        setError(cleanErrorMessage(err));
-      } finally {
-        if (active) setLoading(false);
-      }
+    if (!noteId) {
+      setNote(null);
+      setError("Missing note id.");
+      setLoading(false);
+      return () => { active = false; };
     }
 
-    loadNote();
+    setLoading(true);
+    setError("");
 
-    return () => {
-      active = false;
-    };
+    const mock = mockNotes.find((item) => item.id === noteId);
+
+    if (!active) return () => { active = false; };
+
+    if (!mock) {
+      setNote(null);
+      setError("Note not found.");
+      setLoading(false);
+      return () => { active = false; };
+    }
+
+    setNote(normalizeMockNote(mock));
+    setLoading(false);
+
+    return () => { active = false; };
   }, [noteId]);
 
-  async function handleDeleteNote() {
-    if (deleting) return;
-
-    if (!noteId) {
-      setDeleteError("Missing note id.");
-      setConfirm(false);
-      return;
-    }
-
-    try {
-      setDeleting(true);
-      setDeleteError("");
-      await deleteNote(noteId);
-      setConfirm(false);
-      nav("notes");
-    } catch (err) {
-      setConfirm(false);
-      setDeleteError(err instanceof Error && err.message ? err.message : "Cannot delete note.");
-    } finally {
-      setDeleting(false);
-    }
+  function handleDeleteNote() {
+    setConfirm(false);
+    nav("notes");
   }
 
   if (loading) {
     return (
-      <NoteStateScreen nav={nav} title={t("notes")} message="Loading note from API..." loading />
+      <NoteStateScreen nav={nav} title={t("notes")} message="Loading note..." loading />
     );
   }
 
   if (error || !note) {
     return (
-      <NoteStateScreen nav={nav} title={t("notes")} message={error || "Note not found from API."} error />
+      <NoteStateScreen nav={nav} title={t("notes")} message={error || "Note not found."} error />
     );
   }
 
@@ -259,7 +156,7 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
           </View>
         </MeshScroll>
 
-        <ConfirmDialog open={confirm} onClose={() => (deleting ? undefined : setConfirm(false))} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={deleting ? "Deleting note..." : t("deleteNoteDesc")} confirmLabel={deleting ? "Deleting..." : t("delete")} cancelLabel={t("cancel")} />
+        <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={t("deleteNoteDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
       </MeshScreen>
     );
   }
@@ -309,7 +206,7 @@ export function NoteDetailScreen({ t, lang, nav, noteId, variant = "A" }: Props)
       </View>
       {deleteError ? <View style={{ position: "absolute", left: 16, right: 16, bottom: 118 }}><DeleteError text={deleteError} /></View> : null}
 
-      <ConfirmDialog open={confirm} onClose={() => (deleting ? undefined : setConfirm(false))} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={deleting ? "Deleting note..." : t("deleteNoteDesc")} confirmLabel={deleting ? "Deleting..." : t("delete")} cancelLabel={t("cancel")} />
+      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={handleDeleteNote} title={t("deleteNoteTitle")} desc={t("deleteNoteDesc")} confirmLabel={t("delete")} cancelLabel={t("cancel")} />
     </MeshScreen>
   );
 }
