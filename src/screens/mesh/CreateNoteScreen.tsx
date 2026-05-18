@@ -48,6 +48,39 @@ type NoteEditData = {
 
 type Preset = { id: string; label: string; sublabel: string; date: Date };
 
+function addDays(from: Date, days: number): Date {
+  const d = new Date(from);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function setTime(date: Date, hour: number, minute = 0): Date {
+  const d = new Date(date);
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
+
+function nextSaturday(from: Date): Date {
+  const d = new Date(from);
+  const day = d.getDay(); // 0 = Sun, 6 = Sat
+  const diff = (6 - day + 7) % 7 || 7; // always move forward at least 1 day
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function formatPresetDateTime(date: Date, lang: Lang): string {
+  const isVi = lang === "vi";
+  const weekdays = isVi
+    ? ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+    : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = isVi
+    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${weekdays[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} · ${hh}:${mm}`;
+}
+
 // ─── Helper functions ─────────────────────────────────────────────────────────
 
 function defaultReminderDate(): Date {
@@ -97,51 +130,35 @@ function buildMonthCells(year: number, month: number): (number | null)[] {
 function getPresets(lang: Lang): Preset[] {
   const isVi = lang === "vi";
   const now = new Date();
-  const dow = now.getDay(); // 0 = Sun
 
-  const monthShort = isVi
-    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
-    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-  tomorrow.setHours(9, 0, 0, 0);
-
-  const daysToSat = dow === 6 ? 7 : (6 - dow + 7) % 7 || 7;
-  const saturday = new Date(now);
-  saturday.setDate(now.getDate() + daysToSat);
-  saturday.setHours(9, 0, 0, 0);
-
-  const daysToMon = dow === 1 ? 7 : (1 - dow + 7) % 7 || 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + daysToMon);
-  monday.setHours(9, 0, 0, 0);
-
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 9, 0, 0, 0);
+  const tomorrow  = setTime(addDays(now, 1),  9);
+  const weekend   = setTime(nextSaturday(now), 9);
+  const nextWeek  = setTime(addDays(now, 7),  9);
+  const nextMonth = setTime(addDays(now, 31), 9);
 
   return [
     {
       id: "tomorrow",
-      label: isVi ? "Sáng ngày mai" : "Tomorrow morning",
-      sublabel: `${isVi ? "Ngày mai" : "Tomorrow"} · 09:00`,
+      label: isVi ? "Sáng mai" : "Tomorrow morning",
+      sublabel: formatPresetDateTime(tomorrow, lang),
       date: tomorrow
     },
     {
       id: "weekend",
       label: isVi ? "Cuối tuần này" : "This weekend",
-      sublabel: `${isVi ? "Thứ 7" : "Saturday"} · 09:00`,
-      date: saturday
+      sublabel: formatPresetDateTime(weekend, lang),
+      date: weekend
     },
     {
       id: "nextweek",
       label: isVi ? "Tuần sau" : "Next week",
-      sublabel: `${isVi ? "Thứ 2" : "Monday"} · 09:00`,
-      date: monday
+      sublabel: formatPresetDateTime(nextWeek, lang),
+      date: nextWeek
     },
     {
       id: "nextmonth",
       label: isVi ? "Tháng sau" : "Next month",
-      sublabel: `1 ${monthShort[nextMonth.getMonth()]} · 09:00`,
+      sublabel: formatPresetDateTime(nextMonth, lang),
       date: nextMonth
     }
   ];
