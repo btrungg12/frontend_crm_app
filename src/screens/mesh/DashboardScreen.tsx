@@ -202,8 +202,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         alwaysBounceVertical={false}
         overScrollMode="never"
       >
-        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 12 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 8 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>
               {t("upcoming")} <Text style={{ color: mesh.ink500 }}>({upcomingItems.length})</Text>
             </SectionLabel>
@@ -220,38 +220,38 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           ) : upcomingItems.length === 0 ? (
             <StateCard label="No upcoming items from API." />
           ) : (
-            <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.03, paddingHorizontal: 6, paddingVertical: 6 }}>
+            <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.025, paddingHorizontal: 6, paddingVertical: 2 }}>
               {upcomingItems.map((item, index) => {
               const visual = getUpcomingVisual(item);
               return (
                 <View key={item.id}>
                   <Pressable
                     onPress={() => openUpcoming(item)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 18 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 10 }}
                   >
-                    <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name={visual.icon} size={26} color={visual.iconColor} />
+                    <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name={visual.icon} size={21} color={visual.iconColor} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 17, fontWeight: "800" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
-                      <Text style={{ color: mesh.ink500, fontSize: 14, marginTop: 5 }}>{upcomingSubtitle(item, lang)}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: 12.5, marginTop: 3 }}>{upcomingSubtitle(item, lang)}</Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: visual.pillBg }}>
-                      <Ionicons name={visual.pillIcon} size={13} color={visual.pillColor} />
-                      <Text style={{ color: visual.pillColor, fontSize: 12, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: visual.pillBg }}>
+                      <Ionicons name={visual.pillIcon} size={11} color={visual.pillColor} />
+                      <Text style={{ color: visual.pillColor, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                    <Ionicons name="chevron-forward" size={14} color={mesh.ink400} />
                   </Pressable>
-                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 10 }} /> : null}
+                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.08)", marginHorizontal: 8 }} /> : null}
                 </View>
               );
               })}
             </MeshCard>
           )}
 
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 22, paddingBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 18, paddingBottom: 14 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
