@@ -187,10 +187,10 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         </View>
 
         <View style={{ marginTop: 42 }}>
-          <Text style={{ color: mesh.green800, fontSize: 31, fontWeight: "800", letterSpacing: -0.4 }}>
-            {t("greeting")}, {userName} <Text style={{ fontSize: 27 }}>👋</Text>
+          <Text style={{ color: mesh.green800, fontSize: mesh.font.hero, fontWeight: "800", letterSpacing: -0.4 }}>
+            {t("greeting")}, {userName} <Text style={{ fontSize: mesh.font.hero - 4 }}>👋</Text>
           </Text>
-          <Text style={{ color: "#5F6864", fontSize: 16, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
+          <Text style={{ color: "#5F6864", fontSize: mesh.font.body + 2, lineHeight: 23, marginTop: 10 }}>{t("greetingSub")}</Text>
         </View>
       </MeshHeader>
 
@@ -208,7 +208,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
               {t("upcoming")} <Text style={{ color: mesh.ink500 }}>({upcomingItems.length})</Text>
             </SectionLabel>
             <Pressable onPress={() => nav("allUpcoming")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
+              <Text style={{ color: mesh.green700, fontSize: mesh.font.bodySm, fontWeight: "700" }}>{t("viewAll")}</Text>
               <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
             </Pressable>
           </View>
@@ -233,14 +233,14 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                       <Ionicons name={visual.icon} size={21} color={visual.iconColor} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: 14.5, fontWeight: "700" }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, fontSize: mesh.font.body, fontWeight: "700" }}>
                         {lang === "vi" ? item.title : item.titleEn}
                       </Text>
-                      <Text style={{ color: mesh.ink500, fontSize: 12.2, marginTop: 3 }}>{upcomingSubtitle(item, lang)}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: mesh.font.caption, marginTop: 3 }}>{upcomingSubtitle(item, lang)}</Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: visual.pillBg }}>
                       <Ionicons name={visual.pillIcon} size={11} color={visual.pillColor} />
-                      <Text style={{ color: visual.pillColor, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                      <Text style={{ color: visual.pillColor, fontSize: mesh.font.nav, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={14} color={mesh.ink400} />
                   </Pressable>
@@ -254,7 +254,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
             <SectionLabel style={{ color: mesh.green700, fontSize: 15 }}>{t("recentContacts")}</SectionLabel>
             <Pressable onPress={() => nav("recentContacts")} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{t("viewAll")}</Text>
+              <Text style={{ color: mesh.green700, fontSize: mesh.font.bodySm, fontWeight: "700" }}>{t("viewAll")}</Text>
               <Ionicons name="chevron-forward" size={14} color={mesh.green700} />
             </Pressable>
           </View>
@@ -268,7 +268,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
               return (
                 <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 64, alignItems: "center", gap: 6 }}>
                   <ContactAvatarRow contact={contact} />
-                  <Text numberOfLines={2} style={{ textAlign: "center", color: mesh.ink700, fontSize: 12, fontWeight: "700", lineHeight: 15 }}>
+                  <Text numberOfLines={2} style={{ textAlign: "center", color: mesh.ink700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>
                     {contact.name.split(" ").slice(-2).join(" ")}
                   </Text>
                   <View style={{ width: 0, height: 0, backgroundColor: status?.color }} />
@@ -279,7 +279,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                 <View style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: "dashed", borderColor: mesh.green300, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.04)" }}>
                   <Ionicons name="add" size={24} color={mesh.green700} />
                 </View>
-                <Text style={{ textAlign: "center", color: mesh.green700, fontSize: 12, fontWeight: "700", lineHeight: 15 }}>{t("addContact")}</Text>
+                <Text style={{ textAlign: "center", color: mesh.green700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>{t("addContact")}</Text>
               </Pressable>
             </View>
           )}

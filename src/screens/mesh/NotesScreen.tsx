@@ -45,7 +45,7 @@ export function NotesScreen({ t, lang, nav }: Props) {
           style={{ borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", paddingHorizontal: 16, height: 44, flexDirection: "row", alignItems: "center", gap: 10 }}
         >
           <Ionicons name="search" size={18} color={mesh.ink400} />
-          <Text style={{ color: "#8A928D", fontSize: 14 }}>{t("searchNote")}</Text>
+          <Text style={{ color: "#8A928D", fontSize: mesh.font.body }}>{t("searchNote")}</Text>
         </Pressable>
       </MeshHeroHeader>
 
@@ -79,14 +79,14 @@ export function NotesScreen({ t, lang, nav }: Props) {
                     <Avatar name={contact?.name || note.title || "?"} size={40} />
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact?.name || note.title}</Text>
-                      <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "500", marginTop: 1 }}>{note.title}</Text>
-                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 3 }}>
+                      <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact?.name || note.title}</Text>
+                      <Text style={{ color: mesh.ink700, fontSize: mesh.font.bodySm, fontWeight: "500", marginTop: 1 }}>{note.title}</Text>
+                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: mesh.lineHeight.bodySm, marginTop: 3 }}>
                         {preview}
                       </Text>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
                         <Ionicons name="time-outline" size={12} color={mesh.green700} />
-                        <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
+                        <Text style={{ color: mesh.green700, fontSize: mesh.font.bodySm, fontWeight: "700" }}>{lang === "vi" ? note.time : note.timeEn || note.time}</Text>
                       </View>
                     </View>
 

@@ -60,7 +60,7 @@ export function StatusScreen({ t, nav }: Props) {
       <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
         <View style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
-          <Text style={{ color: "#8A928D", fontSize: 14 }}>{t("searchStatus")}</Text>
+          <Text style={{ color: "#8A928D", fontSize: mesh.font.body }}>{t("searchStatus")}</Text>
         </View>
       </MeshHeroHeader>
 
@@ -84,8 +84,8 @@ export function StatusScreen({ t, nav }: Props) {
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{status.name}</Text>
-                <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{status.desc}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{status.name}</Text>
+                <Text style={{ color: mesh.ink500, fontSize: mesh.font.bodySm, marginTop: 2 }}>{status.desc}</Text>
               </View>
               <Text style={{ color: status.color, fontSize: 18, fontWeight: "700" }}>{status.count}</Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
@@ -98,7 +98,7 @@ export function StatusScreen({ t, nav }: Props) {
           <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
             <Ionicons name="bulb-outline" size={16} color={mesh.green600} />
           </View>
-          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 13, lineHeight: 20 }}>
+          <Text style={{ flex: 1, color: mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: 20 }}>
             <Text style={{ color: mesh.green700, fontWeight: "700" }}>{t("aboutStatus")}</Text>
             {"\n"}
             {t("aboutStatusDesc")}
@@ -124,7 +124,7 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
   return (
     <MeshCard style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, padding: 18, shadowOpacity: 0.02 }}>
       {loading ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
-      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: mesh.lineHeight.bodySm, textAlign: "center" }}>{label}</Text>
     </MeshCard>
   );
 }

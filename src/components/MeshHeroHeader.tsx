@@ -3,6 +3,8 @@ import { PropsWithChildren, ReactNode } from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { mesh } from "../mesh/meshTheme";
+
 type Props = PropsWithChildren<{
   left?: ReactNode;
   right?: ReactNode;
@@ -108,14 +110,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#004B3A",
-    fontSize: 25,
+    fontSize: mesh.font.screenTitle,
     fontWeight: "800",
     letterSpacing: -0.3
   },
   subtitle: {
     color: "#6B726E",
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: mesh.font.bodySm,
+    lineHeight: mesh.lineHeight.bodySm,
     marginTop: 3
   },
   children: {

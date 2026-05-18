@@ -72,7 +72,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable onPress={() => nav("search", { type: "contacts" })} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
-            <Text numberOfLines={1} style={{ flex: 1, color: "#8A928D", fontSize: 14 }}>{t("searchContactPh")}</Text>
+            <Text numberOfLines={1} style={{ flex: 1, color: "#8A928D", fontSize: mesh.font.body }}>{t("searchContactPh")}</Text>
           </Pressable>
           <Pressable style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
             <Ionicons name="options-outline" size={16} color={mesh.ink700} />
@@ -99,7 +99,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
             <InlineState label="No contacts from API." />
           ) : Object.keys(grouped).sort().map((key) => (
             <View key={key}>
-              <Text style={{ color: "#7A837E", fontSize: 13, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
+              <Text style={{ color: "#7A837E", fontSize: mesh.font.bodySm, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
               {grouped[key].map((contact, index) => (
                 <Pressable
                   key={contact.id}
@@ -108,7 +108,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
                 >
                   <Avatar name={contact.name} size={40} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
+                    <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact.name}</Text>
                     <View style={{ marginTop: 3 }}>
                       <StatusChip statusId={contact.status} />
                     </View>
@@ -139,7 +139,7 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
   return (
     <View style={{ alignItems: "center", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, marginTop: 10, padding: 18 }}>
       {loading ? <ActivityIndicator color={mesh.green700} size="small" style={{ marginBottom: 8 }} /> : null}
-      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: 13, lineHeight: 19, textAlign: "center" }}>{label}</Text>
+      <Text style={{ color: error ? mesh.pink : mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: mesh.lineHeight.bodySm, textAlign: "center" }}>{label}</Text>
     </View>
   );
 }

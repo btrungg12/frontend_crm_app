@@ -29,5 +29,34 @@ export const mesh = {
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3
-  }
+  },
+  font: {
+    hero: 32,
+    screenTitle: 25,
+    formTitle: 22,
+    sectionTitle: 15,
+    cardTitle: 15,
+    body: 14,
+    bodySm: 13,
+    caption: 12,
+    nav: 11,
+    input: 15,
+    button: 15,
+    buttonLg: 17
+  },
+  lineHeight: {
+    hero: 40,
+    screenTitle: 31,
+    formTitle: 28,
+    body: 21,
+    bodySm: 19,
+    caption: 17
+  },
+  weight: {
+    regular: "400",
+    medium: "500",
+    semibold: "700",
+    bold: "800",
+    black: "900"
+  } as const
 };

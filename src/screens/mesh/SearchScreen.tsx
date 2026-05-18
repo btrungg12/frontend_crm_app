@@ -91,7 +91,7 @@ export function SearchScreen({ t, lang, nav, initialQ = "", type = "notes" }: Pr
             returnKeyType="search"
             placeholder={isContactSearch ? t("searchContactPh") : t("searchNote")}
             placeholderTextColor={mesh.ink400}
-            style={{ flex: 1, color: mesh.ink900, fontSize: 15 }}
+            style={{ flex: 1, color: mesh.ink900, fontSize: mesh.font.input }}
           />
           {query ? (
             <Pressable onPress={() => setQuery("")}>
@@ -106,7 +106,7 @@ export function SearchScreen({ t, lang, nav, initialQ = "", type = "notes" }: Pr
           <View style={{ paddingTop: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10 }}>
               <SectionLabel>{t("recentSearches")}</SectionLabel>
-              <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{t("clearAll")}</Text>
+              <Text style={{ color: mesh.green700, fontSize: mesh.font.bodySm, fontWeight: "800" }}>{t("clearAll")}</Text>
             </View>
             {(isContactSearch ? [] : ["An", "Nam", "Birthday", "Coffee"]).map((item) => (
               <Pressable key={item} onPress={() => setQuery(item)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: mesh.line }}>
@@ -140,8 +140,8 @@ export function SearchScreen({ t, lang, nav, initialQ = "", type = "notes" }: Pr
                 <MeshCard style={{ flexDirection: "row", gap: 12, padding: 14, marginBottom: 10 }}>
                   <Avatar name={contact.name} size={40} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{contact.name}</Text>
-                    <Text numberOfLines={1} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 2 }}>
+                    <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "800" }}>{contact.name}</Text>
+                    <Text numberOfLines={1} style={{ color: mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: mesh.lineHeight.bodySm, marginTop: 2 }}>
                       {[contact.phone, contact.email].filter(Boolean).join(" · ") || t("contacts")}
                     </Text>
                   </View>
@@ -169,8 +169,8 @@ export function SearchScreen({ t, lang, nav, initialQ = "", type = "notes" }: Pr
                       </View>
                     )}
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{note.title}</Text>
-                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 2 }}>
+                      <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "900" }}>{note.title}</Text>
+                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: mesh.font.bodySm, lineHeight: mesh.lineHeight.bodySm, marginTop: 2 }}>
                         {preview}
                       </Text>
                     </View>
@@ -184,8 +184,8 @@ export function SearchScreen({ t, lang, nav, initialQ = "", type = "notes" }: Pr
             <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
               <Ionicons name="search" size={28} color={mesh.ink400} />
             </View>
-            <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "900", marginBottom: 6 }}>{t("noResults")}</Text>
-            <Text style={{ color: mesh.ink500, fontSize: 14, textAlign: "center", lineHeight: 21 }}>
+            <Text style={{ color: mesh.ink900, fontSize: mesh.font.buttonLg, fontWeight: "900", marginBottom: 6 }}>{t("noResults")}</Text>
+            <Text style={{ color: mesh.ink500, fontSize: mesh.font.body, textAlign: "center", lineHeight: mesh.lineHeight.body }}>
               {t("noResultsFor", { q: query })}
               {"\n"}
               {t("tryAnother")}
