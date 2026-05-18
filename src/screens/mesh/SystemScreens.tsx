@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getDashboard } from "../../api/dashboardApi";
 import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../../api/notificationApi";
@@ -177,6 +179,68 @@ function dashboardStats(value: unknown) {
   };
 }
 
+function SystemMeshHeader({
+  action,
+  nav,
+  title
+}: {
+  action?: ReactNode;
+  nav: NavFn;
+  title: string;
+}) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View
+      style={{
+        height: insets.top + 142,
+        overflow: "hidden",
+        paddingHorizontal: 20,
+        paddingTop: insets.top + 14
+      }}
+    >
+      <MeshGradientView
+        pointerEvents="none"
+        style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532", "#0B573E", "#166B4B", "#0E7A55",
+          "#ECF6EF", "#F4FAF6", "#DDEFE5", "#A7CDB8",
+          "#FFFFFF", "#FFFFFF", "#FBFDFB", "#F4FAF6",
+          "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF"
+        ]}
+        points={[
+          [0, 0],    [0.35, 0],    [0.72, 0],    [1, 0],
+          [0, 0.28], [0.35, 0.32], [0.72, 0.30], [1, 0.26],
+          [0, 0.62], [0.35, 0.66], [0.72, 0.70], [1, 0.66],
+          [0, 1],    [0.35, 1],    [0.72, 1],    [1, 1]
+        ]}
+        smoothsColors
+      />
+
+      <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
+        <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
+        {action ?? <View style={{ width: 52 }} />}
+      </View>
+
+      <Text
+        numberOfLines={1}
+        style={{
+          color: "#064532",
+          fontSize: mesh.font.formTitle,
+          fontWeight: "900",
+          letterSpacing: -0.2,
+          marginTop: 14,
+          textAlign: "center"
+        }}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 export function NotificationsScreen({ t, lang, nav }: Props) {
   const [items, setItems] = useState<ApiNotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,28 +329,41 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
   };
 
   return (
-    <MeshScreen>
-      <MeshHeader>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("notifications")}</Text>
-          <Pressable disabled={markingAll || items.length === 0} onPress={handleMarkAll} hitSlop={8} style={{ opacity: markingAll || items.length === 0 ? 0.55 : 1 }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "800" }}>{markingAll ? "Marking..." : t("markAllRead")}</Text>
+    <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <SystemMeshHeader
+        nav={nav}
+        title={t("notifications")}
+        action={
+          <Pressable
+            disabled={markingAll || items.length === 0}
+            onPress={handleMarkAll}
+            hitSlop={8}
+            style={{
+              backgroundColor: "rgba(255,255,255,0.88)",
+              borderRadius: 999,
+              opacity: markingAll || items.length === 0 ? 0.55 : 1,
+              paddingHorizontal: 14,
+              paddingVertical: 9
+            }}
+          >
+            <Text style={{ color: mesh.green800, fontSize: mesh.font.bodySm, fontWeight: "800" }}>
+              {markingAll ? "Marking..." : t("markAllRead")}
+            </Text>
           </Pressable>
-        </View>
-      </MeshHeader>
+        }
+      />
 
-      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 8 }} bottom={60}>
+      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 0, marginTop: -8 }} bottom={60}>
         {loading ? <SystemStateCard loading message="Loading notifications from API..." /> : null}
         {!loading && error ? <SystemStateCard error message={error} /> : null}
         {!loading && !error && items.length === 0 ? <SystemStateCard message="No notifications from API." /> : null}
         {Object.entries(grouped).map(([section, items]) => (
           <View key={section}>
             <SectionLabel style={{ paddingHorizontal: 4, paddingTop: 14, paddingBottom: 8 }}>{section === "today" ? t("section_today") : t("section_earlier")}</SectionLabel>
-            <MeshCard style={{ paddingHorizontal: 14 }}>
+            <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.92)", borderColor: "rgba(6,69,50,0.055)", elevation: 1, paddingHorizontal: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.035, shadowRadius: 14 }}>
               {items.map((item, index) => (
-                <Pressable key={item.id} onPress={() => handleNotificationPress(item)} style={{ flexDirection: "row", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: `${item.color}20` }}>
+                <Pressable key={item.id} onPress={() => handleNotificationPress(item)} style={{ borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line, flexDirection: "row", gap: 12, paddingVertical: 14 }}>
+                  <View style={{ alignItems: "center", backgroundColor: `${item.color}20`, borderRadius: 12, height: 40, justifyContent: "center", width: 40 }}>
                     <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={18} color={item.color} />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -294,7 +371,7 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
                     <Text style={{ color: mesh.ink700, fontSize: 13, lineHeight: 19, marginTop: 3 }}>{lang === "vi" ? item.body : item.bodyEn}</Text>
                     <Text style={{ color: mesh.ink500, fontSize: 11, marginTop: 6 }}>{item.time}</Text>
                   </View>
-                  {item.unread ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mesh.green700, marginTop: 6 }} /> : null}
+                  {item.unread ? <View style={{ backgroundColor: mesh.green700, borderRadius: 4, height: 8, marginTop: 6, width: 8 }} /> : null}
                 </Pressable>
               ))}
             </MeshCard>
@@ -350,17 +427,12 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
   }
 
   return (
-    <MeshScreen>
-      <MeshHeader>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("allUpcoming")}</Text>
-        </View>
-      </MeshHeader>
-      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={60}>
+    <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <SystemMeshHeader nav={nav} title={t("allUpcoming")} />
+      <MeshScroll style={{ marginTop: -6, paddingHorizontal: 16, paddingTop: 0 }} bottom={60}>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
           {filters.map((filter, index) => (
-            <MeshChip key={filter} active={index === 0} style={{ backgroundColor: index === 0 ? mesh.green700 : "#FFFFFF", borderWidth: 1, borderColor: index === 0 ? mesh.green700 : mesh.line }}>
+            <MeshChip key={filter} active={index === 0} style={{ backgroundColor: index === 0 ? mesh.green700 : "#FFFFFF", borderColor: index === 0 ? mesh.green700 : mesh.line, borderWidth: 1 }}>
               {filter}
             </MeshChip>
           ))}
@@ -369,23 +441,23 @@ export function AllUpcomingScreen({ t, lang, nav }: Props) {
         {!loading && error ? <SystemStateCard error message={error} /> : null}
         {!loading && !error && items.length === 0 ? <SystemStateCard message="No upcoming items from API." /> : null}
         {!loading && !error && items.length > 0 ? (
-        <MeshCard style={{ paddingHorizontal: 14 }}>
-          {items.map((item, index) => (
-            <Pressable key={item.id} onPress={() => openUpcoming(item)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name={item.kind === "reminder" ? "notifications-outline" : "calendar-outline"} size={18} color={item.kind === "reminder" ? mesh.green700 : mesh.pink} />
-              </View>
-              <View style={{ width: 54 }}>
-                <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "900" }}>{item.time}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{lang === "vi" ? item.title : item.titleEn}</Text>
-                <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
-              </View>
-              <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "900" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
-            </Pressable>
-          ))}
-        </MeshCard>
+          <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.92)", borderColor: "rgba(6,69,50,0.055)", elevation: 1, paddingHorizontal: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.035, shadowRadius: 14 }}>
+            {items.map((item, index) => (
+              <Pressable key={item.id} onPress={() => openUpcoming(item)} style={{ alignItems: "center", borderBottomWidth: index < items.length - 1 ? 1 : 0, borderColor: mesh.line, flexDirection: "row", gap: 12, paddingVertical: 14 }}>
+                <View style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 12, height: 40, justifyContent: "center", width: 40 }}>
+                  <Ionicons name={item.kind === "reminder" ? "notifications-outline" : "calendar-outline"} size={18} color={item.kind === "reminder" ? mesh.green700 : mesh.pink} />
+                </View>
+                <View style={{ width: 54 }}>
+                  <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "900" }}>{item.time}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{lang === "vi" ? item.title : item.titleEn}</Text>
+                  <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{lang === "vi" ? item.sub : item.subEn}</Text>
+                </View>
+                <Text style={{ color: mesh.green700, fontSize: 11, fontWeight: "900" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+              </Pressable>
+            ))}
+          </MeshCard>
         ) : null}
       </MeshScroll>
     </MeshScreen>
@@ -425,33 +497,30 @@ export function RecentContactsScreen({ t, nav }: Props) {
   }, []);
 
   return (
-    <MeshScreen>
-      <MeshHeader>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("recentContactsTitle")}</Text>
-        </View>
-      </MeshHeader>
-      <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={60}>
+    <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <SystemMeshHeader nav={nav} title={t("recentContactsTitle")} />
+      <MeshScroll style={{ marginTop: -6, paddingHorizontal: 16, paddingTop: 0 }} bottom={60}>
         {loading ? <SystemStateCard loading message="Loading recent contacts from API..." /> : null}
         {!loading && error ? <SystemStateCard error message={error} /> : null}
         {!loading && !error && recentContacts.length === 0 ? <SystemStateCard message="No recent contacts from API." /> : null}
         {!loading && !error && recentContacts.length > 0 ? (
-        <MeshCard style={{ paddingHorizontal: 14 }}>
-          {recentContacts.map((contact, index) => {
-            const status = statusById(contact.status);
-            return (
-              <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: index < recentContacts.length - 1 ? 1 : 0, borderColor: mesh.line }}>
-                <Avatar name={contact.name} size={44} dot={status?.color} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
-                  <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{contact.interactions} interactions</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
-              </Pressable>
-            );
-          })}
-        </MeshCard>
+          <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.92)", borderColor: "rgba(6,69,50,0.055)", elevation: 1, paddingHorizontal: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.035, shadowRadius: 14 }}>
+            {recentContacts.map((contact, index) => {
+              const status = statusById(contact.status);
+              return (
+                <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ alignItems: "center", borderBottomWidth: index < recentContacts.length - 1 ? 1 : 0, borderColor: mesh.line, flexDirection: "row", gap: 12, paddingVertical: 12 }}>
+                  <Avatar name={contact.name} size={44} dot={status?.color} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "900" }}>{contact.name}</Text>
+                    {contact.interactions ? (
+                      <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{contact.interactions} interactions</Text>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+                </Pressable>
+              );
+            })}
+          </MeshCard>
         ) : null}
       </MeshScroll>
     </MeshScreen>
