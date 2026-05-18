@@ -154,11 +154,19 @@ export function AppShell() {
     case "contacts":
       return <ContactsScreen {...common} />;
     case "contactDetail":
-      return contactId ? <ContactDetailScreen {...common} contactId={contactId} /> : <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />;
+      return contactId ? (
+        <ContactDetailScreen key={`contact-detail-${contactId}`} {...common} contactId={contactId} />
+      ) : (
+        <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
+      );
     case "createContact":
       return <CreateContactScreen {...common} />;
     case "editContact":
-      return contactId ? <CreateContactScreen {...common} edit contactId={contactId} /> : <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />;
+      return contactId ? (
+        <CreateContactScreen key={`edit-contact-${contactId}`} {...common} edit contactId={contactId} />
+      ) : (
+        <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
+      );
     case "contactsEmpty":
       return <ContactsEmptyScreen {...common} />;
     case "status":

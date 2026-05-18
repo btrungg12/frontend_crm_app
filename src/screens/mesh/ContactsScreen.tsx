@@ -239,11 +239,15 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     if (!contactId) {
       setError("No contact selected.");
       setLoading(false);
+      setContact(null);
+      setTimelineItems([]);
       return;
     }
     let active = true;
     setLoading(true);
     setError("");
+    setContact(null);
+    setTimelineItems([]);
 
     Promise.all([
       getContactById(contactId),
