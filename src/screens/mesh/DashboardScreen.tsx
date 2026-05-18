@@ -220,14 +220,14 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           ) : upcomingItems.length === 0 ? (
             <StateCard label="No upcoming items from API." />
           ) : (
-            <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.86)", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.045)", elevation: 0, shadowOpacity: 0.012, paddingHorizontal: 4, paddingVertical: 0 }}>
+            <MeshCard style={{ backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 24, borderWidth: 1, borderColor: "rgba(6,69,50,0.055)", elevation: 2, shadowColor: "#064532", shadowOpacity: 0.045, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, paddingHorizontal: 8, paddingVertical: 4 }}>
               {upcomingItems.map((item, index) => {
               const visual = getUpcomingVisual(item);
               return (
                 <View key={item.id}>
                   <Pressable
                     onPress={() => openUpcoming(item)}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 10, paddingVertical: 8 }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 10, minHeight: 58 }}
                   >
                     <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: visual.iconBg, alignItems: "center", justifyContent: "center" }}>
                       <Ionicons name={visual.icon} size={21} color={visual.iconColor} />
@@ -240,11 +240,11 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: visual.pillBg }}>
                       <Ionicons name={visual.pillIcon} size={11} color={visual.pillColor} />
-                      <Text style={{ color: visual.pillColor, fontSize: mesh.font.nav, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
+                      <Text style={{ color: visual.pillColor, fontSize: 11, fontWeight: "700" }}>{lang === "vi" ? item.tag : item.tagEn}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={14} color={mesh.ink400} />
                   </Pressable>
-                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.045)", marginHorizontal: 8 }} /> : null}
+                  {index < upcomingItems.length - 1 ? <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.04)", marginHorizontal: 10 }} /> : null}
                 </View>
               );
               })}
