@@ -336,7 +336,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
       <View
         style={{
-          height: insets.top + 430,
+          height: insets.top + 335,
           overflow: "hidden",
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
@@ -386,41 +386,41 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           ]}
           smoothsColors
         />
-        <Image source={leafPng} resizeMode="contain" style={{ height: 260, left: -116, opacity: 0.14, position: "absolute", top: insets.top + 78, transform: [{ rotate: "10deg" }], width: 300 }} />
-        <Image source={leafPng} resizeMode="contain" style={{ height: 270, opacity: 0.16, position: "absolute", right: -120, top: insets.top + 72, transform: [{ rotate: "-12deg" }], width: 330 }} />
+        <Image source={leafPng} resizeMode="contain" style={{ height: 220, left: -100, opacity: 0.12, position: "absolute", top: insets.top + 60, transform: [{ rotate: "10deg" }], width: 260 }} />
+        <Image source={leafPng} resizeMode="contain" style={{ height: 230, opacity: 0.14, position: "absolute", right: -104, top: insets.top + 56, transform: [{ rotate: "-12deg" }], width: 290 }} />
 
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
-          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "800", letterSpacing: -0.2 }}>{t("contactProfile")}</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", letterSpacing: -0.1 }}>{t("contactProfile")}</Text>
           <HeaderCircleBtn icon="ellipsis-horizontal" />
         </View>
-        <View style={{ alignItems: "center", marginTop: 52 }}>
-          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={112} ringWidth={2} ringOpacity={0.75} gap={3.5} />
-          <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "800", letterSpacing: -0.7, marginTop: 22, textAlign: "center" }}>{contact.name}</Text>
-          <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 12 }}>
-            <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 10, width: 10 }} />
-            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "600" }}>{statusMeta?.name || contact.status || "-"}</Text>
+        <View style={{ alignItems: "center", marginTop: 18 }}>
+          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+          <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
+          <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
+            <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
+            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name || contact.status || "-"}</Text>
           </View>
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -48, paddingHorizontal: 16, position: "relative", zIndex: 2 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -22, paddingHorizontal: 16, position: "relative", zIndex: 2 }} bottom={100}>
         {deleteError ? (
           <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginTop: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
         ) : null}
 
-        <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 28, borderWidth: 1, elevation: 2, marginTop: 0, paddingHorizontal: 20, paddingVertical: 16, shadowColor: "#064532", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.06, shadowRadius: 24 }}>
+        <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, marginTop: 0, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
           <InfoRow icon="call-outline" label={t("phone")} value={contact.phone || "-"} />
           <InfoRow icon="mail-outline" label="Email" value={contact.email || "-"} />
           <InfoRow icon="location-outline" label={t("address")} value={contact.address || "-"} last />
         </MeshCard>
 
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 28, paddingBottom: 14 }}>
-          <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.5 }}>{t("timeline")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
+          <Text style={{ color: mesh.green800, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 28 }}>{t("timeline")}</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
           {tabs.map((item) => (
-            <MeshChip key={item.id} active={tab === item.id} onPress={() => setTab(item.id)} style={{ backgroundColor: tab === item.id ? mesh.green700 : "#FFFFFF", borderWidth: 1, borderColor: tab === item.id ? mesh.green700 : mesh.line }}>
+            <MeshChip key={item.id} active={tab === item.id} onPress={() => setTab(item.id)} style={{ backgroundColor: tab === item.id ? mesh.green700 : "#FFFFFF", borderColor: tab === item.id ? mesh.green700 : mesh.line, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8 }}>
               {item.label}
             </MeshChip>
           ))}
@@ -439,13 +439,13 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
                 <View style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: color, borderRadius: 17, borderWidth: 2, height: 34, justifyContent: "center", left: -46, position: "absolute", top: 2, width: 34, zIndex: 2 }}>
                   <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={15} color={color} />
                 </View>
-                <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.05)", borderRadius: 22, borderWidth: 1, elevation: 1, padding: 18, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.04, shadowRadius: 16 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={{ color, fontSize: 13, fontWeight: "800", letterSpacing: 0.8 }}>{item.label.toUpperCase()}</Text>
-                    <Text style={{ color: mesh.ink500, fontSize: 13 }}>{item.date}</Text>
+                <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.05)", borderRadius: 20, borderWidth: 1, elevation: 1, padding: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.035, shadowRadius: 12 }}>
+                  <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ color, fontSize: 12, fontWeight: "800", letterSpacing: 1.4 }}>{item.label.toUpperCase()}</Text>
+                    <Text style={{ color: mesh.ink500, fontSize: 13, fontWeight: "500" }}>{item.date}</Text>
                   </View>
-                  <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "700", marginTop: 10 }}>{item.title}</Text>
-                  <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 22, marginTop: 8 }}>{item.desc}</Text>
+                  <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "800", marginTop: 8 }}>{item.title}</Text>
+                  <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 6 }}>{item.desc}</Text>
                 </MeshCard>
               </View>
             );
@@ -469,13 +469,13 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
 function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; last?: boolean }) {
   return (
-    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 16, paddingVertical: 16 }}>
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 16, height: 52, justifyContent: "center", width: 52 }}>
-        <Ionicons name={icon} size={23} color={mesh.green700} />
+    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 14, paddingVertical: 13 }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.09)", borderRadius: 14, height: 44, justifyContent: "center", width: 44 }}>
+        <Ionicons name={icon} size={20} color={mesh.green700} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink500, fontSize: 15 }}>{label}</Text>
-        <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "700", marginTop: 5 }}>{value}</Text>
+        <Text style={{ color: mesh.ink500, fontSize: 13 }}>{label}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", marginTop: 3 }}>{value}</Text>
       </View>
     </View>
   );
