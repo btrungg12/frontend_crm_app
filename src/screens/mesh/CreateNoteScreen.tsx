@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,7 +9,7 @@ import { getContacts } from "../../api/contactApi";
 import { deleteNoteReminder, getNoteById, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
-import { contactById, Lang } from "../../mesh/meshData";
+import { Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -25,15 +25,14 @@ const titleLimit = 100;
 const contentLimit = 1000;
 const leaf2Png = require("../../../assets/leaf_2.png");
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+const WHEEL_ITEM_H = 44;
+
 type PickerContact = {
   id: string;
   name: string;
   status?: string;
-};
-
-type ReminderSelection = {
-  label: string;
-  remindAt: string;
 };
 
 type NoteEditData = {
@@ -45,6 +44,38 @@ type NoteEditData = {
   remindAt: string | null;
   title: string;
 };
+
+function defaultReminderDate(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(18, 0, 0, 0);
+  return d;
+}
+
+function formatReminderChip(date: Date, lang: Lang): string {
+  const days = lang === "vi"
+    ? ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]
+    : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = lang === "vi"
+    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = days[date.getDay()];
+  const d = date.getDate();
+  const m = months[date.getMonth()];
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${day}, ${d} ${m} · ${hh}:${mm}`;
+}
+
+function buildMonthCells(year: number, month: number): (number | null)[] {
+  const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = (firstDay + 6) % 7; // convert to Mon = 0
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < offset; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  return cells;
+}
 
 export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPerson }: Props) {
   const insets = useSafeAreaInsets();
@@ -60,9 +91,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactsError, setContactsError] = useState("");
-  const [reminderOpen, setReminderOpen] = useState(false);
-  const [reminder, setReminder] = useState<ReminderSelection | null>(null);
+  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+  const [reminderAt, setReminderAt] = useState<Date | null>(null);
   const [hadReminder, setHadReminder] = useState(false);
+  const [contentFocused, setContentFocused] = useState(false);
   const [personError, setPersonError] = useState(false);
   const [contentError, setContentError] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -94,10 +126,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         setPersonLabel(data.contactName);
         setPersonQuery(data.contactName);
         if (data.remindAt) {
-          setReminder({
-            label: new Date(data.remindAt).toLocaleString(),
-            remindAt: data.remindAt
-          });
+          setReminderAt(new Date(data.remindAt));
           setHadReminder(true);
         }
       })
@@ -133,7 +162,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     setTitle("");
     setContent("");
     if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); setPersonQuery(""); }
-    setReminder(null);
+    setReminderAt(null);
+    setContentFocused(false);
     setPersonError(false);
     setContentError(false);
     setSaveError("");
@@ -168,8 +198,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           title: title.trim() || undefined,
           content: content.trim()
         });
-        if (reminder) {
-          await upsertNoteReminder(noteId, { enabled: true, remindAt: reminder.remindAt });
+        if (reminderAt) {
+          await upsertNoteReminder(noteId, { enabled: true, remindAt: reminderAt.toISOString() });
         } else if (hadReminder) {
           await deleteNoteReminder(noteId);
         }
@@ -177,12 +207,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
       } else {
         await submitCreateNote({
           contactId: person || undefined,
-          // TODO: when backend supports quick-create by name, add:
-          // contactName: person ? undefined : (personLabel.trim() || personQuery.trim()) || undefined,
           content: content.trim(),
           interactionDate: new Date().toISOString(),
-          reminderEnabled: Boolean(reminder),
-          remindAt: reminder?.remindAt,
+          reminderEnabled: Boolean(reminderAt),
+          remindAt: reminderAt?.toISOString(),
           title: title.trim() || undefined
         });
         nav("notes");
@@ -225,8 +253,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     );
   }
 
+  const showBell = contentFocused || content.trim().length > 0 || reminderAt !== null;
+
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      {/* Gradient background */}
       <View
         pointerEvents="none"
         style={{
@@ -239,69 +270,39 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         }}
       >
         <MeshGradientView
-          style={{
-            bottom: 0,
-            left: 0,
-            position: "absolute",
-            right: 0,
-            top: 0
-          }}
+          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
           columns={4}
           rows={4}
           colors={[
-            "#064532",
-            "#0B573E",
-            "#1D704F",
-            "#2F805E",
-            "#DDEFE5",
-            "#EAF6EF",
-            "#BFDCCB",
-            "#74AE8D",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#F8FCF7",
-            "#EEF8F0",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF"
+            "#064532", "#0B573E", "#1D704F", "#2F805E",
+            "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
+            "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
+            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF"
           ]}
           points={[
-            [0, 0],
-            [0.35, 0],
-            [0.7, 0],
-            [1, 0],
-            [0, 0.36],
-            [0.35, 0.38],
-            [0.7, 0.34],
-            [1, 0.3],
-            [0, 0.66],
-            [0.35, 0.68],
-            [0.7, 0.72],
-            [1, 0.7],
-            [0, 1],
-            [0.35, 1],
-            [0.7, 1],
-            [1, 1]
+            [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+            [0, 0.36], [0.35, 0.38], [0.7, 0.34], [1, 0.3],
+            [0, 0.66], [0.35, 0.68], [0.7, 0.72], [1, 0.7],
+            [0, 1], [0.35, 1], [0.7, 1], [1, 1]
           ]}
           smoothsColors
         />
-
         <Image
           source={leaf2Png}
           resizeMode="contain"
           style={{
-            position: "absolute",
-            top: insets.top + 78,
-            right: -92,
-            width: 340,
             height: 250,
             opacity: 0.2,
-            transform: [{ rotate: "-6deg" }]
+            position: "absolute",
+            right: -92,
+            top: insets.top + 78,
+            transform: [{ rotate: "-6deg" }],
+            width: 340
           }}
         />
       </View>
 
+      {/* Top bar + title */}
       <View
         style={{
           left: 0,
@@ -335,6 +336,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         </View>
       </View>
 
+      {/* Form card */}
       <View
         style={{
           backgroundColor: "#FFFFFF",
@@ -361,100 +363,138 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <FieldLabel error={personError} first>
-          {t("person").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
-        </FieldLabel>
-        <PersonInlineInput
-          value={personQuery}
-          selectedPersonId={person}
-          contacts={
-            personQuery.trim().length > 0
-              ? apiContacts
-                  .filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase()))
-                  .slice(0, 4)
-              : []
-          }
-          focused={personFocused}
-          error={personError}
-          loading={contactsLoading}
-          onFocus={() => setPersonFocused(true)}
-          onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
-          onChangeText={(value) => {
-            setPersonQuery(value);
-            setPersonLabel(value);
-            setPerson(null);
-            setPersonError(false);
-          }}
-          onSelectTyped={() => {
-            setPersonLabel(personQuery.trim());
-            setPerson(null);
-            setPersonFocused(false);
-          }}
-          onSelectContact={(c) => {
-            setPerson(c.id);
-            setPersonLabel(c.name);
-            setPersonQuery(c.name);
-            setPersonError(false);
-            setPersonFocused(false);
-          }}
-        />
-        {personError ? <ErrorText>{isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}</ErrorText> : null}
+          {/* Person */}
+          <FieldLabel error={personError} first>
+            {t("person").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
+          </FieldLabel>
+          <PersonInlineInput
+            value={personQuery}
+            selectedPersonId={person}
+            contacts={
+              personQuery.trim().length > 0
+                ? apiContacts
+                    .filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase()))
+                    .slice(0, 4)
+                : []
+            }
+            focused={personFocused}
+            error={personError}
+            loading={contactsLoading}
+            onFocus={() => setPersonFocused(true)}
+            onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
+            onChangeText={(value) => {
+              setPersonQuery(value);
+              setPersonLabel(value);
+              setPerson(null);
+              setPersonError(false);
+            }}
+            onSelectTyped={() => {
+              setPersonLabel(personQuery.trim());
+              setPerson(null);
+              setPersonFocused(false);
+            }}
+            onSelectContact={(c) => {
+              setPerson(c.id);
+              setPersonLabel(c.name);
+              setPersonQuery(c.name);
+              setPersonError(false);
+              setPersonFocused(false);
+            }}
+          />
+          {personError ? <ErrorText>{isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}</ErrorText> : null}
 
-        <FieldLabel>
-          {t("noteTitle").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
-        </FieldLabel>
-        <InputCard
-          icon="document-text-outline"
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t("enterTitle")}
-          maxLength={titleLimit}
-          counter={`${title.length}/${titleLimit}`}
-        />
+          {/* Title */}
+          <FieldLabel>
+            {t("noteTitle").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
+          </FieldLabel>
+          <InputCard
+            icon="document-text-outline"
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t("enterTitle")}
+            maxLength={titleLimit}
+            counter={`${title.length}/${titleLimit}`}
+          />
 
-        <FieldLabel>
-          {t("noteContent").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
-        </FieldLabel>
-        <InputCard
-          icon="create-outline"
-          value={content}
-          onChangeText={(value) => {
-            setContent(value);
-            if (value.trim()) setContentError(false);
-          }}
-          placeholder={t("whatToWrite")}
-          maxLength={contentLimit}
-          counter={`${content.length}/${contentLimit}`}
-          multiline
-          error={contentError}
-        />
-        {contentError ? <ErrorText>{isVi ? "Nội dung là bắt buộc." : "Content is required."}</ErrorText> : null}
+          {/* Content — bell icon lives inside this box */}
+          <FieldLabel>
+            {t("noteContent").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
+          </FieldLabel>
+          <InputCard
+            icon="create-outline"
+            value={content}
+            onChangeText={(value) => {
+              setContent(value);
+              if (value.trim()) setContentError(false);
+            }}
+            onFocus={() => setContentFocused(true)}
+            onBlur={() => setContentFocused(false)}
+            placeholder={t("whatToWrite")}
+            maxLength={contentLimit}
+            counter={`${content.length}/${contentLimit}`}
+            multiline
+            error={contentError}
+            bellNode={
+              showBell ? (
+                <Pressable
+                  onPress={() => setReminderSheetOpen(true)}
+                  hitSlop={8}
+                  style={{
+                    alignItems: "center",
+                    backgroundColor: reminderAt ? mesh.green700 : "rgba(31,112,72,0.10)",
+                    borderRadius: 16,
+                    height: 32,
+                    justifyContent: "center",
+                    width: 32
+                  }}
+                >
+                  <Ionicons
+                    name="notifications-outline"
+                    size={16}
+                    color={reminderAt ? "#FFFFFF" : mesh.green700}
+                  />
+                </Pressable>
+              ) : undefined
+            }
+          />
+          {contentError ? <ErrorText>{isVi ? "Nội dung là bắt buộc." : "Content is required."}</ErrorText> : null}
 
-        <FieldLabel>
-          {t("reminder").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
-        </FieldLabel>
-        <ChoiceCard
-          icon="notifications-outline"
-          title={reminder?.label || t("addReminder")}
-          subtitle={reminder ? t("once") : t("reminderHint")}
-          onPress={() => setReminderOpen(true)}
-          trailing={
-            reminder ? (
-              <Pressable onPress={() => setReminder(null)} hitSlop={8}>
-                <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "800" }}>{t("clear")}</Text>
+          {/* Reminder chip — appears below content when a reminder is set */}
+          {reminderAt ? (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+              <Pressable
+                onPress={() => setReminderSheetOpen(true)}
+                style={{
+                  alignItems: "center",
+                  backgroundColor: "rgba(31,112,72,0.10)",
+                  borderRadius: 999,
+                  flexDirection: "row",
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7
+                }}
+              >
+                <Ionicons name="notifications-outline" size={14} color={mesh.green700} />
+                <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>
+                  {formatReminderChip(reminderAt, lang)}
+                </Text>
               </Pressable>
-            ) : undefined
-          }
-        />
+              <Pressable onPress={() => setReminderAt(null)} hitSlop={8} style={{ marginLeft: 6 }}>
+                <Ionicons name="close-circle" size={20} color={mesh.ink400} />
+              </Pressable>
+            </View>
+          ) : null}
 
-        <View style={{ marginTop: 20, borderRadius: 18, backgroundColor: "rgba(31,112,72,0.10)", paddingHorizontal: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <IconBox icon="bulb-outline" />
-          <Text style={{ flex: 1, color: mesh.green800, fontSize: 15, lineHeight: 24 }}>{t("noteHint").replace("\n", " ")}</Text>
-        </View>
-        {saveError ? <ErrorText>{saveError}</ErrorText> : null}
+          {/* Hint */}
+          <View style={{ marginTop: 20, borderRadius: 18, backgroundColor: "rgba(31,112,72,0.10)", paddingHorizontal: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <IconBox icon="bulb-outline" />
+            <Text style={{ flex: 1, color: mesh.green800, fontSize: 15, lineHeight: 24 }}>{t("noteHint").replace("\n", " ")}</Text>
+          </View>
+          {saveError ? <ErrorText>{saveError}</ErrorText> : null}
         </ScrollView>
       </View>
 
+      {/* Save button */}
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 4, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
         <Pressable disabled={saving} onPress={save} style={{ borderRadius: 28, opacity: saving ? 0.75 : 1, overflow: "hidden", ...mesh.shadow }}>
           <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
@@ -464,10 +504,20 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         </Pressable>
       </View>
 
-      <ReminderPicker open={reminderOpen} onClose={() => setReminderOpen(false)} onPick={setReminder} t={t} lang={lang} />
+      {/* Reminder date+time sheet */}
+      <ReminderDateTimeSheet
+        open={reminderSheetOpen}
+        onClose={() => setReminderSheetOpen(false)}
+        onConfirm={(date) => setReminderAt(date)}
+        value={reminderAt}
+        lang={lang}
+        t={t}
+      />
     </MeshScreen>
   );
 }
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 function FieldLabel({ children, error = false, first = false }: { children: ReactNode; error?: boolean; first?: boolean }) {
   return (
@@ -479,6 +529,87 @@ function FieldLabel({ children, error = false, first = false }: { children: Reac
 
 function ErrorText({ children }: { children: string }) {
   return <Text style={{ color: mesh.pink, fontSize: 12, fontWeight: "700", marginTop: 8 }}>{children}</Text>;
+}
+
+function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 16, height: 48, justifyContent: "center", width: 48 }}>
+      <Ionicons name={icon} size={24} color={mesh.green700} />
+    </View>
+  );
+}
+
+function InputCard({
+  bellNode,
+  counter,
+  error = false,
+  icon,
+  maxLength,
+  multiline = false,
+  onBlur,
+  onChangeText,
+  onFocus,
+  placeholder,
+  value
+}: {
+  bellNode?: ReactNode;
+  counter: string;
+  error?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  maxLength: number;
+  multiline?: boolean;
+  onBlur?: () => void;
+  onChangeText: (value: string) => void;
+  onFocus?: () => void;
+  placeholder: string;
+  value: string;
+}) {
+  const isEmptyMultiline = multiline && value.length === 0;
+
+  return (
+    <View
+      style={{
+        alignItems: multiline && !isEmptyMultiline ? "flex-start" : "center",
+        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
+        borderRadius: 20,
+        borderWidth: 1,
+        flexDirection: "row",
+        gap: 12,
+        minHeight: multiline ? 148 : 64,
+        paddingBottom: 20,
+        paddingHorizontal: 14,
+        paddingTop: multiline && !isEmptyMultiline ? 14 : 10
+      }}
+    >
+      <IconBox icon={icon} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        placeholderTextColor={mesh.ink400}
+        maxLength={maxLength}
+        multiline={multiline}
+        textAlignVertical={multiline && !isEmptyMultiline ? "top" : "center"}
+        style={{
+          color: mesh.ink900,
+          flex: 1,
+          fontSize: 14,
+          lineHeight: multiline ? 21 : undefined,
+          minHeight: multiline && !isEmptyMultiline ? 92 : 30,
+          padding: 0,
+          paddingRight: bellNode != null ? 40 : 0
+        }}
+      />
+      {/* Counter — absolute bottom-right */}
+      <Text style={{ bottom: 10, color: mesh.ink500, fontSize: 12, position: "absolute", right: 14 }}>{counter}</Text>
+      {/* Bell icon — absolute top-right, only when bellNode provided */}
+      {bellNode != null ? (
+        <View style={{ position: "absolute", right: 14, top: 10 }}>{bellNode}</View>
+      ) : null}
+    </View>
+  );
 }
 
 function PersonInlineInput({
@@ -553,7 +684,7 @@ function PersonInlineInput({
         ) : null}
       </View>
 
-      {/* Inline suggestion panel — sits in flow, pushes fields below */}
+      {/* Inline suggestion panel */}
       {showSuggestions ? (
         <View
           style={{
@@ -632,130 +763,290 @@ function PersonInlineInput({
   );
 }
 
-function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
-  return (
-    <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.10)" }}>
-      <Ionicons name={icon} size={24} color={mesh.green700} />
-    </View>
-  );
-}
+// ─── Wheel picker column ──────────────────────────────────────────────────────
 
-function ChoiceCard({
-  error = false,
-  icon,
-  left,
-  onPress,
-  subtitle,
-  title,
-  trailing
+function WheelColumn({
+  items,
+  onSelect,
+  scrollRef,
+  selectedIndex
 }: {
-  error?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  left?: ReactNode;
-  onPress: () => void;
-  subtitle?: string;
-  title: string;
-  trailing?: ReactNode;
+  items: string[];
+  onSelect: (index: number) => void;
+  scrollRef: { current: ScrollView | null };
+  selectedIndex: number;
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
-        borderRadius: 20,
-        borderWidth: 1,
-        flexDirection: "row",
-        gap: 12,
-        minHeight: 72,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        shadowColor: "#064532",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0,
-        shadowRadius: 10,
-        elevation: 0
-      }}
-    >
-      {left || <IconBox icon={icon} />}
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{title}</Text>
-        {subtitle ? <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginTop: 2 }}>{subtitle}</Text> : null}
-      </View>
-      {trailing || <Ionicons name="chevron-forward" size={20} color={mesh.ink400} />}
-    </Pressable>
-  );
-}
-
-function InputCard({
-  counter,
-  error = false,
-  icon,
-  maxLength,
-  multiline = false,
-  onChangeText,
-  placeholder,
-  value
-}: {
-  counter: string;
-  error?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  maxLength: number;
-  multiline?: boolean;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  value: string;
-}) {
-  const isEmptyMultiline = multiline && value.length === 0;
+  const wheelHeight = WHEEL_ITEM_H * 5;
 
   return (
-    <View
-      style={{
-        alignItems: multiline && !isEmptyMultiline ? "flex-start" : "center",
-        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
-        borderRadius: 20,
-        borderWidth: 1,
-        flexDirection: "row",
-        gap: 12,
-        minHeight: multiline ? 148 : 64,
-        paddingBottom: 20,
-        paddingHorizontal: 14,
-        paddingTop: multiline && !isEmptyMultiline ? 14 : 10
-      }}
-    >
-      <IconBox icon={icon} />
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={mesh.ink400}
-        maxLength={maxLength}
-        multiline={multiline}
-        textAlignVertical={multiline && !isEmptyMultiline ? "top" : "center"}
+    <View style={{ height: wheelHeight, overflow: "hidden", width: 72 }}>
+      {/* Centre-row highlight */}
+      <View
+        pointerEvents="none"
         style={{
-          color: mesh.ink900,
-          flex: 1,
-          fontSize: 14,
-          lineHeight: multiline ? 21 : undefined,
-          minHeight: multiline && !isEmptyMultiline ? 92 : 30,
-          padding: 0
+          backgroundColor: "rgba(31,112,72,0.10)",
+          borderRadius: 12,
+          height: WHEEL_ITEM_H,
+          left: 0,
+          position: "absolute",
+          right: 0,
+          top: WHEEL_ITEM_H * 2,
+          zIndex: 1
         }}
       />
-      <Text style={{ bottom: 10, color: mesh.ink500, fontSize: 12, position: "absolute", right: 14 }}>{counter}</Text>
+      <ScrollView
+        ref={scrollRef as any}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={WHEEL_ITEM_H}
+        decelerationRate="fast"
+        contentContainerStyle={{
+          paddingBottom: WHEEL_ITEM_H * 2,
+          paddingTop: WHEEL_ITEM_H * 2
+        }}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.y / WHEEL_ITEM_H);
+          onSelect(Math.max(0, Math.min(idx, items.length - 1)));
+        }}
+      >
+        {items.map((item, index) => (
+          <Pressable
+            key={item}
+            onPress={() => {
+              (scrollRef.current as any)?.scrollTo({ y: index * WHEEL_ITEM_H, animated: true });
+              onSelect(index);
+            }}
+            style={{ alignItems: "center", height: WHEEL_ITEM_H, justifyContent: "center" }}
+          >
+            <Text
+              style={{
+                color: index === selectedIndex ? mesh.green800 : mesh.ink300,
+                fontSize: index === selectedIndex ? 22 : 18,
+                fontWeight: index === selectedIndex ? "800" : "400"
+              }}
+            >
+              {item}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
-function LeafDecor() {
+// ─── Reminder date+time bottom sheet ─────────────────────────────────────────
+
+function ReminderDateTimeSheet({
+  lang,
+  onClose,
+  onConfirm,
+  open,
+  t,
+  value
+}: {
+  lang: Lang;
+  onClose: () => void;
+  onConfirm: (date: Date) => void;
+  open: boolean;
+  t: TFn;
+  value: Date | null;
+}) {
+  const isVi = lang === "vi";
+  const [current, setCurrent] = useState<Date>(() => value ?? defaultReminderDate());
+  const hourRef = useRef<ScrollView>(null);
+  const minuteRef = useRef<ScrollView>(null);
+
+  // Sync to incoming value each time the sheet opens
+  useEffect(() => {
+    if (!open) return;
+    const d = value ?? defaultReminderDate();
+    setCurrent(new Date(d));
+    const minuteIdx = Math.min(Math.round(d.getMinutes() / 5), MINUTES.length - 1);
+    setTimeout(() => {
+      hourRef.current?.scrollTo({ y: d.getHours() * WHEEL_ITEM_H, animated: false });
+      minuteRef.current?.scrollTo({ y: minuteIdx * WHEEL_ITEM_H, animated: false });
+    }, 80);
+  }, [open]);
+
+  const year = current.getFullYear();
+  const month = current.getMonth();
+  const selectedDay = current.getDate();
+  const cells = buildMonthCells(year, month);
+
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const todayDay = today.getDate();
+
+  const dayNames = isVi
+    ? ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+  const monthNames = isVi
+    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
+    : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  function prevMonth() {
+    const d = new Date(current);
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    setCurrent(d);
+  }
+
+  function nextMonth() {
+    const d = new Date(current);
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    setCurrent(d);
+  }
+
+  function selectDay(day: number) {
+    const d = new Date(current);
+    d.setDate(day);
+    setCurrent(d);
+  }
+
+  function handleConfirm() {
+    onConfirm(new Date(current));
+    onClose();
+  }
+
   return (
-    <View pointerEvents="none" style={{ bottom: -28, height: 160, opacity: 0.18, position: "absolute", right: -44, width: 200 }}>
-      <View style={{ backgroundColor: "#B9E3CB", borderBottomLeftRadius: 22, borderBottomRightRadius: 96, borderTopLeftRadius: 96, borderTopRightRadius: 22, height: 110, position: "absolute", right: 62, top: 24, transform: [{ rotate: "43deg" }], width: 64 }} />
-      <View style={{ backgroundColor: "#D9F0E0", borderBottomLeftRadius: 18, borderBottomRightRadius: 80, borderTopLeftRadius: 80, borderTopRightRadius: 18, height: 94, position: "absolute", right: 118, top: 72, transform: [{ rotate: "78deg" }], width: 54 }} />
-      <View style={{ backgroundColor: "#8FCDA7", borderBottomLeftRadius: 18, borderBottomRightRadius: 86, borderTopLeftRadius: 86, borderTopRightRadius: 18, height: 98, position: "absolute", right: 18, top: 88, transform: [{ rotate: "112deg" }], width: 56 }} />
-    </View>
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable
+        onPress={onClose}
+        style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}
+      >
+        <Pressable
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            paddingBottom: 32,
+            paddingHorizontal: 20,
+            paddingTop: 12
+          }}
+        >
+          {/* Handle bar */}
+          <View style={{ alignSelf: "center", backgroundColor: mesh.ink200, borderRadius: 2, height: 4, marginBottom: 18, width: 40 }} />
+
+          {/* Header */}
+          <View style={{ alignItems: "center", flexDirection: "row", marginBottom: 20 }}>
+            <View style={{ width: 36 }} />
+            <Text style={{ color: mesh.green800, flex: 1, fontSize: 17, fontWeight: "800", textAlign: "center" }}>
+              {isVi ? "Chọn ngày & giờ" : "Set reminder"}
+            </Text>
+            <Pressable
+              onPress={onClose}
+              style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}
+            >
+              <Ionicons name="close" size={18} color={mesh.ink700} />
+            </Pressable>
+          </View>
+
+          {/* Month navigation */}
+          <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
+            <Pressable onPress={prevMonth} hitSlop={10} style={{ padding: 4 }}>
+              <Ionicons name="chevron-back" size={20} color={mesh.green700} />
+            </Pressable>
+            <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+              {monthNames[month]} {year}
+            </Text>
+            <Pressable onPress={nextMonth} hitSlop={10} style={{ padding: 4 }}>
+              <Ionicons name="chevron-forward" size={20} color={mesh.green700} />
+            </Pressable>
+          </View>
+
+          {/* Day-name headers (Mon–Sun) */}
+          <View style={{ flexDirection: "row", marginBottom: 4 }}>
+            {dayNames.map((d) => (
+              <View key={d} style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}>
+                <Text style={{ color: mesh.ink400, fontSize: 11, fontWeight: "700" }}>{d}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Calendar grid */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 4 }}>
+            {cells.map((day, idx) => {
+              const isSelected = day === selectedDay;
+              const isToday = day !== null && day === todayDay && month === todayMonth && year === todayYear;
+              return (
+                <View key={idx} style={{ aspectRatio: 1, padding: 2, width: "14.28%" }}>
+                  {day !== null ? (
+                    <Pressable
+                      onPress={() => selectDay(day)}
+                      style={{
+                        alignItems: "center",
+                        backgroundColor: isSelected
+                          ? mesh.green700
+                          : isToday
+                          ? "rgba(31,112,72,0.10)"
+                          : "transparent",
+                        borderRadius: 999,
+                        flex: 1,
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: isSelected ? "#FFFFFF" : isToday ? mesh.green700 : mesh.ink900,
+                          fontSize: 13,
+                          fontWeight: isSelected || isToday ? "800" : "500"
+                        }}
+                      >
+                        {day}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View style={{ flex: 1 }} />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Divider */}
+          <View style={{ backgroundColor: mesh.line, height: 1, marginVertical: 14 }} />
+
+          {/* Time wheel picker */}
+          <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 4 }}>
+            <WheelColumn
+              items={HOURS}
+              selectedIndex={current.getHours()}
+              scrollRef={hourRef}
+              onSelect={(idx) => {
+                const d = new Date(current);
+                d.setHours(idx);
+                setCurrent(d);
+              }}
+            />
+            <Text style={{ color: mesh.ink900, fontSize: 26, fontWeight: "800", marginBottom: 2 }}>:</Text>
+            <WheelColumn
+              items={MINUTES}
+              selectedIndex={Math.min(Math.round(current.getMinutes() / 5), MINUTES.length - 1)}
+              scrollRef={minuteRef}
+              onSelect={(idx) => {
+                const d = new Date(current);
+                d.setMinutes(idx * 5);
+                setCurrent(d);
+              }}
+            />
+          </View>
+
+          {/* Confirm */}
+          <Pressable
+            onPress={handleConfirm}
+            style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 20, paddingVertical: 14 }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
+
+// ─── Data helpers ─────────────────────────────────────────────────────────────
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -763,17 +1054,13 @@ function asRecord(value: unknown) {
 
 function extractArray(response: unknown, key: string) {
   if (Array.isArray(response)) return response;
-
   const root = asRecord(response);
   if (!root) return [];
-
   if (Array.isArray(root[key])) return root[key];
   if (Array.isArray(root.data)) return root.data;
-
   const data = asRecord(root.data);
   if (data && Array.isArray(data[key])) return data[key];
   if (data && Array.isArray(data.items)) return data.items;
-
   return [];
 }
 
@@ -841,159 +1128,4 @@ function normalizePickerContact(value: unknown): PickerContact | null {
     name: nameValue,
     status: typeof statusValue === "string" ? statusValue : undefined
   };
-}
-
-function ReminderPicker({
-  open,
-  onClose,
-  onPick,
-  t,
-  lang
-}: {
-  open: boolean;
-  onClose: () => void;
-  onPick: (value: ReminderSelection) => void;
-  t: TFn;
-  lang: Lang;
-}) {
-  const [preset, setPreset] = useState("today");
-  const [time, setTime] = useState("18:00");
-  const [day, setDay] = useState(20);
-  const isVi = lang === "vi";
-  const presets = [
-    { id: "today", label: isVi ? "Hôm nay" : "Today" },
-    { id: "tomorrow", label: isVi ? "Ngày mai" : "Tomorrow" },
-    { id: "weekend", label: isVi ? "Cuối tuần này" : "This weekend" },
-    { id: "nextweek", label: isVi ? "Tuần sau" : "Next week" },
-    { id: "custom", label: isVi ? "Tùy chọn" : "Custom" }
-  ];
-  const slots = [
-    { id: "morning", label: isVi ? "Buổi sáng" : "Morning", value: "09:00" },
-    { id: "afternoon", label: isVi ? "Buổi chiều" : "Afternoon", value: "14:00" },
-    { id: "evening", label: isVi ? "Buổi tối" : "Evening", value: "18:00" }
-  ];
-  const days = Array.from({ length: 14 }, (_, index) => 17 + index);
-  const weekDays = isVi ? ["CN", "T2", "T3", "T4", "T5", "T6", "T7"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dateLabel = isVi ? `T${(day % 7) + 1}, ${String(day).padStart(2, "0")}/05` : `${weekDays[day % 7]}, ${String(day).padStart(2, "0")}/05`;
-
-  const save = () => {
-    const [hour = 18, minute = 0] = time.split(":").map((value) => Number(value));
-    const remindAt = new Date();
-    remindAt.setDate(day);
-    remindAt.setHours(hour, minute, 0, 0);
-
-    onPick({
-      label: `${time}, ${dateLabel}`,
-      remindAt: remindAt.toISOString()
-    });
-    onClose();
-  };
-
-  return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
-        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 18 }} />
-          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 18 }}>
-            <View style={{ width: 36 }} />
-            <Text style={{ flex: 1, textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800" }}>
-              {isVi ? "Khi nào nhắc bạn?" : "When should we remind you?"}
-            </Text>
-            <Pressable
-              onPress={onClose}
-              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: mesh.bgSubtle, alignItems: "center", justifyContent: "center" }}
-            >
-              <Ionicons name="close" size={18} color={mesh.ink700} />
-            </Pressable>
-          </View>
-
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
-            {presets.map((item) => {
-              const active = preset === item.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setPreset(item.id)}
-                  style={{
-                    borderRadius: 999,
-                    borderWidth: active ? 1.5 : 1,
-                    borderColor: active ? mesh.green700 : mesh.line,
-                    backgroundColor: active ? "rgba(31,112,72,0.08)" : "#FFFFFF",
-                    paddingHorizontal: 14,
-                    paddingVertical: 8
-                  }}
-                >
-                  <Text style={{ color: active ? mesh.green800 : mesh.ink700, fontSize: 13, fontWeight: "700" }}>{item.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <SheetLabel>{isVi ? "Chọn ngày" : "Pick date"}</SheetLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 6 }} style={{ marginBottom: 18 }}>
-            {days.map((item) => {
-              const active = item === day;
-              return (
-                <Pressable
-                  key={item}
-                  onPress={() => setDay(item)}
-                  style={{
-                    width: 48,
-                    borderRadius: 12,
-                    borderWidth: active ? 0 : 1,
-                    borderColor: mesh.line,
-                    backgroundColor: active ? mesh.green700 : "#FFFFFF",
-                    paddingVertical: 8,
-                    alignItems: "center"
-                  }}
-                >
-                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink500, fontSize: 10, fontWeight: "700", opacity: 0.85 }}>{weekDays[item % 7]}</Text>
-                  <Text style={{ color: active ? "#FFFFFF" : mesh.ink900, fontSize: 16, fontWeight: "800", marginTop: 2 }}>{item}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <SheetLabel>{isVi ? "Chọn giờ" : "Pick time"}</SheetLabel>
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
-            {slots.map((item) => {
-              const active = time === item.value;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setTime(item.value)}
-                  style={{
-                    flex: 1,
-                    borderRadius: 14,
-                    borderWidth: active ? 1.5 : 1,
-                    borderColor: active ? mesh.green700 : mesh.line,
-                    backgroundColor: active ? "rgba(31,112,72,0.06)" : "#FFFFFF",
-                    paddingVertical: 12,
-                    paddingHorizontal: 8,
-                    alignItems: "center"
-                  }}
-                >
-                  <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{item.label}</Text>
-                  <Text style={{ color: mesh.green800, fontSize: 16, fontWeight: "800", marginTop: 2 }}>{item.value}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: mesh.line, borderRadius: 14, paddingHorizontal: 14, marginBottom: 18, minHeight: 52 }}>
-            <Ionicons name="time-outline" size={18} color={mesh.ink500} />
-            <TextInput value={time} onChangeText={setTime} style={{ flex: 1, color: mesh.ink900, fontSize: 16, fontWeight: "500" }} />
-          </View>
-
-          <Pressable onPress={save} style={{ borderRadius: mesh.radiusLg, backgroundColor: mesh.green800, paddingVertical: 15, alignItems: "center" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function SheetLabel({ children }: { children: string }) {
-  return <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "800", marginBottom: 8 }}>{children}</Text>;
 }
