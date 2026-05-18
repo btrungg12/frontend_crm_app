@@ -7,7 +7,7 @@ import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../a
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { Avatar, BottomNav, ContactAvatarRow, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
+import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { getToken } from "../../storage/tokenStorage";
 
@@ -143,7 +143,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         if (!active) return;
 
         const recentContacts = extractArray(dashboardResponse, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-        const upcomingList = extractArray(dashboardResponse, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
+        const apiUpcoming = extractArray(dashboardResponse, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
+        const upcomingList = apiUpcoming.length > 0 ? apiUpcoming : mockUpcoming;
 
         setUserName(readUserName(profileResponse));
         setRecent(recentContacts.slice(0, 4));

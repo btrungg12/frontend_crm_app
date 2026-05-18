@@ -7,7 +7,7 @@ import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } 
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { changePassword, getProfile, updateProfile } from "../../api/userApi";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
-import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
+import { Contact, Lang, notifications as mockNotifications, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 type Props = {
@@ -188,11 +188,39 @@ export function NotificationsScreen({ t, lang, nav }: Props) {
       setLoading(true);
       setError("");
       const response = await getNotifications();
-      const normalized = extractArray(response, "notifications").map(normalizeNotification).filter(Boolean) as ApiNotificationItem[];
-      setItems(normalized);
+      const apiItems = extractArray(response, "notifications").map(normalizeNotification).filter(Boolean) as ApiNotificationItem[];
+      if (apiItems.length > 0) {
+        setItems(apiItems);
+      } else {
+        const fallback: ApiNotificationItem[] = mockNotifications.map((n, i) => ({
+          body: n.body,
+          bodyEn: n.bodyEn,
+          color: n.color,
+          icon: n.icon as keyof typeof Ionicons.glyphMap,
+          id: `mock-notif-${i}`,
+          section: n.section as ApiNotificationItem["section"],
+          time: n.time,
+          title: n.title,
+          titleEn: n.titleEn,
+          unread: n.unread
+        }));
+        setItems(fallback);
+      }
     } catch (err) {
-      setItems([]);
-      setError(errorMessage(err, "Cannot load notifications from API."));
+      const fallback: ApiNotificationItem[] = mockNotifications.map((n, i) => ({
+        body: n.body,
+        bodyEn: n.bodyEn,
+        color: n.color,
+        icon: n.icon as keyof typeof Ionicons.glyphMap,
+        id: `mock-notif-${i}`,
+        section: n.section as ApiNotificationItem["section"],
+        time: n.time,
+        title: n.title,
+        titleEn: n.titleEn,
+        unread: n.unread
+      }));
+      setItems(fallback);
+      setError("");
     } finally {
       setLoading(false);
     }
