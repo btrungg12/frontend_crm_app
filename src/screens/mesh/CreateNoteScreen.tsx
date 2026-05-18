@@ -28,6 +28,7 @@ const leaf2Png = require("../../../assets/leaf_2.png");
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 const WHEEL_ITEM_H = 44;
+const DAY_CELL_H = 38; // fixed row height — keeps 6-row grid stable across months
 
 type PickerContact = {
   id: string;
@@ -45,11 +46,19 @@ type NoteEditData = {
   title: string;
 };
 
+type Preset = { id: string; label: string; sublabel: string; date: Date };
+
+// ─── Helper functions ─────────────────────────────────────────────────────────
+
 function defaultReminderDate(): Date {
   const d = new Date();
   d.setDate(d.getDate() + 1);
-  d.setHours(18, 0, 0, 0);
+  d.setHours(9, 0, 0, 0);
   return d;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
 }
 
 function formatReminderChip(date: Date, lang: Lang): string {
@@ -59,29 +68,92 @@ function formatReminderChip(date: Date, lang: Lang): string {
   const months = lang === "vi"
     ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
     : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const day = days[date.getDay()];
-  const d = date.getDate();
-  const m = months[date.getMonth()];
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${day}, ${d} ${m} · ${hh}:${mm}`;
+  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} · ${hh}:${mm}`;
 }
 
+function formatMonthYear(year: number, month: number, lang: Lang): string {
+  const months = lang === "vi"
+    ? ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+       "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"]
+    : ["January", "February", "March", "April", "May", "June",
+       "July", "August", "September", "October", "November", "December"];
+  return `${months[month]} ${year}`;
+}
+
+/** Always returns exactly 42 cells (6 rows × 7 cols) so the calendar height never changes. */
 function buildMonthCells(year: number, month: number): (number | null)[] {
   const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const offset = (firstDay + 6) % 7; // convert to Mon = 0
+  const numDays = daysInMonth(year, month);
+  const offset = (firstDay + 6) % 7; // Mon = 0
   const cells: (number | null)[] = [];
   for (let i = 0; i < offset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  for (let d = 1; d <= numDays; d++) cells.push(d);
+  while (cells.length < 42) cells.push(null);
   return cells;
 }
+
+function getPresets(lang: Lang): Preset[] {
+  const isVi = lang === "vi";
+  const now = new Date();
+  const dow = now.getDay(); // 0 = Sun
+
+  const monthShort = isVi
+    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+
+  const daysToSat = dow === 6 ? 7 : (6 - dow + 7) % 7 || 7;
+  const saturday = new Date(now);
+  saturday.setDate(now.getDate() + daysToSat);
+  saturday.setHours(9, 0, 0, 0);
+
+  const daysToMon = dow === 1 ? 7 : (1 - dow + 7) % 7 || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + daysToMon);
+  monday.setHours(9, 0, 0, 0);
+
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 9, 0, 0, 0);
+
+  return [
+    {
+      id: "tomorrow",
+      label: isVi ? "Sáng ngày mai" : "Tomorrow morning",
+      sublabel: `${isVi ? "Ngày mai" : "Tomorrow"} · 09:00`,
+      date: tomorrow
+    },
+    {
+      id: "weekend",
+      label: isVi ? "Cuối tuần này" : "This weekend",
+      sublabel: `${isVi ? "Thứ 7" : "Saturday"} · 09:00`,
+      date: saturday
+    },
+    {
+      id: "nextweek",
+      label: isVi ? "Tuần sau" : "Next week",
+      sublabel: `${isVi ? "Thứ 2" : "Monday"} · 09:00`,
+      date: monday
+    },
+    {
+      id: "nextmonth",
+      label: isVi ? "Tháng sau" : "Next month",
+      sublabel: `1 ${monthShort[nextMonth.getMonth()]} · 09:00`,
+      date: nextMonth
+    }
+  ];
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPerson }: Props) {
   const insets = useSafeAreaInsets();
   const isVi = lang === "vi";
 
-  // Form states — start empty; edit mode fills via useEffect
+  // Form states
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [person, setPerson] = useState<string | null>(initialPerson || null);
@@ -91,10 +163,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactsError, setContactsError] = useState("");
-  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+
+  // Reminder sheet state: "none" | "preset" | "custom"
+  const [reminderSheet, setReminderSheet] = useState<"none" | "preset" | "custom">("none");
   const [reminderAt, setReminderAt] = useState<Date | null>(null);
   const [hadReminder, setHadReminder] = useState(false);
   const [contentFocused, setContentFocused] = useState(false);
+
+  // Validation / save
   const [personError, setPersonError] = useState(false);
   const [contentError, setContentError] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -102,14 +178,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [loadingNote, setLoadingNote] = useState(edit);
   const [loadError, setLoadError] = useState("");
 
-  // Load note data when in edit mode
+  // Load note in edit mode
   useEffect(() => {
     if (!edit) return;
-    if (!noteId) {
-      setLoadError("Missing note id");
-      setLoadingNote(false);
-      return;
-    }
+    if (!noteId) { setLoadError("Missing note id"); setLoadingNote(false); return; }
 
     let active = true;
     setLoadingNote(true);
@@ -130,16 +202,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           setHadReminder(true);
         }
       })
-      .catch((err) => {
-        if (!active) return;
-        setLoadError(err instanceof Error ? err.message : "Failed to load note.");
-      })
+      .catch((err) => { if (active) setLoadError(err instanceof Error ? err.message : "Failed to load note."); })
       .finally(() => { if (active) setLoadingNote(false); });
 
     return () => { active = false; };
   }, [edit, noteId]);
 
-  // Load contacts for inline suggestions on mount
+  // Load contacts on mount
   useEffect(() => {
     let active = true;
     setContactsLoading(true);
@@ -150,10 +219,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
         setApiContacts(normalized);
       })
-      .catch((err) => {
-        if (!active) return;
-        setContactsError(err instanceof Error ? err.message : "Cannot load contacts.");
-      })
+      .catch((err) => { if (active) setContactsError(err instanceof Error ? err.message : "Cannot load contacts."); })
       .finally(() => { if (active) setContactsLoading(false); });
     return () => { active = false; };
   }, []);
@@ -176,28 +242,16 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     setPersonError(missingPerson);
     setContentError(missingContent);
     setSaveError("");
-
     if (missingPerson || missingContent) return;
 
     try {
       setSaving(true);
       const token = await getToken();
-
-      if (!token) {
-        setSaveError("Please log in before saving notes.");
-        return;
-      }
+      if (!token) { setSaveError("Please log in before saving notes."); return; }
 
       if (edit) {
-        if (!noteId) {
-          setSaveError("Missing note id.");
-          return;
-        }
-        await updateNote(noteId, {
-          contactId: person,
-          title: title.trim() || undefined,
-          content: content.trim()
-        });
+        if (!noteId) { setSaveError("Missing note id."); return; }
+        await updateNote(noteId, { contactId: person, title: title.trim() || undefined, content: content.trim() });
         if (reminderAt) {
           await upsertNoteReminder(noteId, { enabled: true, remindAt: reminderAt.toISOString() });
         } else if (hadReminder) {
@@ -222,7 +276,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     }
   };
 
-  // Loading state while fetching note for edit
   if (loadingNote) {
     return (
       <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
@@ -233,19 +286,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     );
   }
 
-  // Error state (missing noteId or API failure in edit mode)
   if (loadError) {
     return (
       <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 }}>
           <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
-          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
-            {loadError}
-          </Text>
-          <Pressable
-            onPress={() => nav("notes")}
-            style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}
-          >
+          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>{loadError}</Text>
+          <Pressable onPress={() => nav("notes")} style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}>
             <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back to Notes</Text>
           </Pressable>
         </View>
@@ -257,22 +304,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      {/* Gradient background */}
-      <View
-        pointerEvents="none"
-        style={{
-          height: insets.top + 335,
-          left: 0,
-          overflow: "hidden",
-          position: "absolute",
-          right: 0,
-          top: 0
-        }}
-      >
+      {/* Mesh gradient background */}
+      <View pointerEvents="none" style={{ height: insets.top + 335, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 }}>
         <MeshGradientView
           style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
-          columns={4}
-          rows={4}
+          columns={4} rows={4}
           colors={[
             "#064532", "#0B573E", "#1D704F", "#2F805E",
             "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
@@ -288,32 +324,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           smoothsColors
         />
         <Image
-          source={leaf2Png}
-          resizeMode="contain"
-          style={{
-            height: 250,
-            opacity: 0.2,
-            position: "absolute",
-            right: -92,
-            top: insets.top + 78,
-            transform: [{ rotate: "-6deg" }],
-            width: 340
-          }}
+          source={leaf2Png} resizeMode="contain"
+          style={{ height: 250, opacity: 0.2, position: "absolute", right: -92, top: insets.top + 78, transform: [{ rotate: "-6deg" }], width: 340 }}
         />
       </View>
 
       {/* Top bar + title */}
-      <View
-        style={{
-          left: 0,
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 14,
-          position: "absolute",
-          right: 0,
-          top: 0,
-          zIndex: 3
-        }}
-      >
+      <View style={{ left: 0, paddingHorizontal: 20, paddingTop: insets.top + 14, position: "absolute", right: 0, top: 0, zIndex: 3 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Pressable
             onPress={() => edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard")}
@@ -325,7 +342,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>{t("clear")}</Text>
           </Pressable>
         </View>
-
         <View style={{ marginTop: 18, maxWidth: 320 }}>
           <Text style={{ color: "#064532", fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
             {edit ? t("editNote") : t("newNote")}
@@ -372,9 +388,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             selectedPersonId={person}
             contacts={
               personQuery.trim().length > 0
-                ? apiContacts
-                    .filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase()))
-                    .slice(0, 4)
+                ? apiContacts.filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase())).slice(0, 4)
                 : []
             }
             focused={personFocused}
@@ -382,24 +396,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             loading={contactsLoading}
             onFocus={() => setPersonFocused(true)}
             onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
-            onChangeText={(value) => {
-              setPersonQuery(value);
-              setPersonLabel(value);
-              setPerson(null);
-              setPersonError(false);
-            }}
-            onSelectTyped={() => {
-              setPersonLabel(personQuery.trim());
-              setPerson(null);
-              setPersonFocused(false);
-            }}
-            onSelectContact={(c) => {
-              setPerson(c.id);
-              setPersonLabel(c.name);
-              setPersonQuery(c.name);
-              setPersonError(false);
-              setPersonFocused(false);
-            }}
+            onChangeText={(value) => { setPersonQuery(value); setPersonLabel(value); setPerson(null); setPersonError(false); }}
+            onSelectTyped={() => { setPersonLabel(personQuery.trim()); setPerson(null); setPersonFocused(false); }}
+            onSelectContact={(c) => { setPerson(c.id); setPersonLabel(c.name); setPersonQuery(c.name); setPersonError(false); setPersonFocused(false); }}
           />
           {personError ? <ErrorText>{isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}</ErrorText> : null}
 
@@ -416,17 +415,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             counter={`${title.length}/${titleLimit}`}
           />
 
-          {/* Content — bell icon lives inside this box */}
+          {/* Content — bell icon is bottom-left inside this box */}
           <FieldLabel>
             {t("noteContent").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
           </FieldLabel>
           <InputCard
             icon="create-outline"
             value={content}
-            onChangeText={(value) => {
-              setContent(value);
-              if (value.trim()) setContentError(false);
-            }}
+            onChangeText={(value) => { setContent(value); if (value.trim()) setContentError(false); }}
             onFocus={() => setContentFocused(true)}
             onBlur={() => setContentFocused(false)}
             placeholder={t("whatToWrite")}
@@ -437,52 +433,53 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             bellNode={
               showBell ? (
                 <Pressable
-                  onPress={() => setReminderSheetOpen(true)}
+                  onPress={() => setReminderSheet("preset")}
                   hitSlop={8}
                   style={{
                     alignItems: "center",
-                    backgroundColor: reminderAt ? mesh.green700 : "rgba(31,112,72,0.10)",
+                    backgroundColor: reminderAt ? mesh.green700 : "rgba(31,112,72,0.08)",
                     borderRadius: 16,
                     height: 32,
                     justifyContent: "center",
                     width: 32
                   }}
                 >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={16}
-                    color={reminderAt ? "#FFFFFF" : mesh.green700}
-                  />
+                  <Ionicons name="notifications-outline" size={16} color={reminderAt ? "#FFFFFF" : mesh.green700} />
                 </Pressable>
               ) : undefined
             }
           />
           {contentError ? <ErrorText>{isVi ? "Nội dung là bắt buộc." : "Content is required."}</ErrorText> : null}
 
-          {/* Reminder chip — appears below content when a reminder is set */}
+          {/* Reminder chip — full-width row, appears below content when set */}
           {reminderAt ? (
-            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
-              <Pressable
-                onPress={() => setReminderSheetOpen(true)}
-                style={{
-                  alignItems: "center",
-                  backgroundColor: "rgba(31,112,72,0.10)",
-                  borderRadius: 999,
-                  flexDirection: "row",
-                  gap: 6,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7
-                }}
-              >
-                <Ionicons name="notifications-outline" size={14} color={mesh.green700} />
-                <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700" }}>
+            <Pressable
+              onPress={() => setReminderSheet("preset")}
+              style={{
+                alignItems: "center",
+                alignSelf: "stretch",
+                backgroundColor: "rgba(31,112,72,0.08)",
+                borderColor: "rgba(31,112,72,0.10)",
+                borderRadius: 18,
+                borderWidth: 1,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 8,
+                minHeight: 44,
+                paddingHorizontal: 14,
+                paddingVertical: 10
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                <Ionicons name="notifications-outline" size={16} color={mesh.green700} />
+                <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", flex: 1 }} numberOfLines={1}>
                   {formatReminderChip(reminderAt, lang)}
                 </Text>
-              </Pressable>
-              <Pressable onPress={() => setReminderAt(null)} hitSlop={8} style={{ marginLeft: 6 }}>
+              </View>
+              <Pressable onPress={() => setReminderAt(null)} hitSlop={8} style={{ marginLeft: 8 }}>
                 <Ionicons name="close-circle" size={20} color={mesh.ink400} />
               </Pressable>
-            </View>
+            </Pressable>
           ) : null}
 
           {/* Hint */}
@@ -504,20 +501,30 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         </Pressable>
       </View>
 
-      {/* Reminder date+time sheet */}
+      {/* Preset sheet → open first when bell/chip tapped */}
+      <ReminderPresetSheet
+        open={reminderSheet === "preset"}
+        value={reminderAt}
+        lang={lang}
+        onClose={() => setReminderSheet("none")}
+        onSelectPreset={(date) => { setReminderAt(date); setReminderSheet("none"); }}
+        onCustom={() => setReminderSheet("custom")}
+      />
+
+      {/* Custom date+time sheet */}
       <ReminderDateTimeSheet
-        open={reminderSheetOpen}
-        onClose={() => setReminderSheetOpen(false)}
-        onConfirm={(date) => setReminderAt(date)}
+        open={reminderSheet === "custom"}
         value={reminderAt}
         lang={lang}
         t={t}
+        onClose={() => setReminderSheet("none")}
+        onConfirm={(date) => { setReminderAt(date); setReminderSheet("none"); }}
       />
     </MeshScreen>
   );
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FieldLabel({ children, error = false, first = false }: { children: ReactNode; error?: boolean; first?: boolean }) {
   return (
@@ -598,32 +605,22 @@ function InputCard({
           fontSize: 14,
           lineHeight: multiline ? 21 : undefined,
           minHeight: multiline && !isEmptyMultiline ? 92 : 30,
-          padding: 0,
-          paddingRight: bellNode != null ? 40 : 0
+          padding: 0
         }}
       />
       {/* Counter — absolute bottom-right */}
       <Text style={{ bottom: 10, color: mesh.ink500, fontSize: 12, position: "absolute", right: 14 }}>{counter}</Text>
-      {/* Bell icon — absolute top-right, only when bellNode provided */}
+      {/* Bell — absolute bottom-left, inside the content padding zone */}
       {bellNode != null ? (
-        <View style={{ position: "absolute", right: 14, top: 10 }}>{bellNode}</View>
+        <View style={{ position: "absolute", left: 18, bottom: 12, zIndex: 2 }}>{bellNode}</View>
       ) : null}
     </View>
   );
 }
 
 function PersonInlineInput({
-  contacts,
-  error,
-  focused,
-  loading,
-  onBlur,
-  onChangeText,
-  onFocus,
-  onSelectContact,
-  onSelectTyped,
-  selectedPersonId,
-  value
+  contacts, error, focused, loading, onBlur, onChangeText, onFocus,
+  onSelectContact, onSelectTyped, selectedPersonId, value
 }: {
   contacts: PickerContact[];
   error: boolean;
@@ -639,42 +636,15 @@ function PersonInlineInput({
 }) {
   const trimmed = value.trim();
   const showSuggestions = focused && trimmed.length > 0;
-  const borderColor = error
-    ? "rgba(217,87,122,0.55)"
-    : focused
-    ? mesh.green700
-    : "rgba(6,69,50,0.10)";
+  const borderColor = error ? "rgba(217,87,122,0.55)" : focused ? mesh.green700 : "rgba(6,69,50,0.10)";
 
   return (
     <View>
-      {/* Text input row */}
-      <View
-        style={{
-          alignItems: "center",
-          backgroundColor: "#FFFFFF",
-          borderColor,
-          borderRadius: 20,
-          borderWidth: 1,
-          flexDirection: "row",
-          gap: 12,
-          minHeight: 64,
-          paddingHorizontal: 14,
-          paddingVertical: 10
-        }}
-      >
-        {trimmed || selectedPersonId ? (
-          <Avatar name={trimmed || "?"} size={40} />
-        ) : (
-          <IconBox icon="person-outline" />
-        )}
+      <View style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor, borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 }}>
+        {trimmed || selectedPersonId ? <Avatar name={trimmed || "?"} size={40} /> : <IconBox icon="person-outline" />}
         <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          placeholder="Type a person name..."
-          placeholderTextColor={mesh.ink400}
-          returnKeyType="done"
+          value={value} onChangeText={onChangeText} onFocus={onFocus} onBlur={onBlur}
+          placeholder="Type a person name..." placeholderTextColor={mesh.ink400} returnKeyType="done"
           style={{ color: mesh.ink900, flex: 1, fontSize: mesh.font.input, padding: 0 }}
         />
         {value.length > 0 ? (
@@ -684,36 +654,11 @@ function PersonInlineInput({
         ) : null}
       </View>
 
-      {/* Inline suggestion panel */}
       {showSuggestions ? (
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderColor: "rgba(6,69,50,0.08)",
-            borderRadius: 20,
-            borderWidth: 1,
-            elevation: 2,
-            marginTop: 8,
-            overflow: "hidden",
-            shadowColor: "#064532",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.06,
-            shadowRadius: 12
-          }}
-        >
-          {/* Row 0 — exactly what user typed */}
+        <View style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.08)", borderRadius: 20, borderWidth: 1, elevation: 2, marginTop: 8, overflow: "hidden", shadowColor: "#064532", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12 }}>
           <Pressable
             onPress={onSelectTyped}
-            style={{
-              alignItems: "center",
-              borderBottomWidth: contacts.length > 0 || loading ? 1 : 0,
-              borderColor: "rgba(6,69,50,0.06)",
-              flexDirection: "row",
-              gap: 12,
-              minHeight: 62,
-              paddingHorizontal: 12,
-              paddingVertical: 10
-            }}
+            style={{ alignItems: "center", borderBottomWidth: contacts.length > 0 || loading ? 1 : 0, borderColor: "rgba(6,69,50,0.06)", flexDirection: "row", gap: 12, minHeight: 62, paddingHorizontal: 12, paddingVertical: 10 }}
           >
             <Avatar name={trimmed} size={40} />
             <View style={{ flex: 1 }}>
@@ -722,36 +667,21 @@ function PersonInlineInput({
             <Ionicons name="return-down-back-outline" size={16} color={mesh.ink400} />
           </Pressable>
 
-          {/* Existing contact rows */}
           {contacts.map((contact, index) => (
             <Pressable
               key={contact.id}
               onPress={() => onSelectContact(contact)}
-              style={{
-                alignItems: "center",
-                borderBottomWidth: index < contacts.length - 1 ? 1 : 0,
-                borderColor: "rgba(6,69,50,0.06)",
-                flexDirection: "row",
-                gap: 12,
-                minHeight: 62,
-                paddingHorizontal: 12,
-                paddingVertical: 10
-              }}
+              style={{ alignItems: "center", borderBottomWidth: index < contacts.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.06)", flexDirection: "row", gap: 12, minHeight: 62, paddingHorizontal: 12, paddingVertical: 10 }}
             >
               <Avatar name={contact.name} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
-                {contact.status ? (
-                  <View style={{ marginTop: 3 }}>
-                    <StatusChip statusId={contact.status} />
-                  </View>
-                ) : null}
+                {contact.status ? <View style={{ marginTop: 3 }}><StatusChip statusId={contact.status} /></View> : null}
               </View>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
           ))}
 
-          {/* Loading spinner while contacts fetch */}
           {loading && contacts.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 12 }}>
               <ActivityIndicator size="small" color={mesh.green700} />
@@ -766,21 +696,27 @@ function PersonInlineInput({
 // ─── Wheel picker column ──────────────────────────────────────────────────────
 
 function WheelColumn({
+  fontSize = 18,
+  fontSizeSelected = 22,
   items,
   onSelect,
   scrollRef,
-  selectedIndex
+  selectedIndex,
+  width = 72
 }: {
+  fontSize?: number;
+  fontSizeSelected?: number;
   items: string[];
   onSelect: (index: number) => void;
   scrollRef: { current: ScrollView | null };
   selectedIndex: number;
+  width?: number;
 }) {
   const wheelHeight = WHEEL_ITEM_H * 5;
 
   return (
-    <View style={{ height: wheelHeight, overflow: "hidden", width: 72 }}>
-      {/* Centre-row highlight */}
+    <View style={{ height: wheelHeight, overflow: "hidden", width }}>
+      {/* Centre-row highlight strip */}
       <View
         pointerEvents="none"
         style={{
@@ -799,10 +735,7 @@ function WheelColumn({
         showsVerticalScrollIndicator={false}
         snapToInterval={WHEEL_ITEM_H}
         decelerationRate="fast"
-        contentContainerStyle={{
-          paddingBottom: WHEEL_ITEM_H * 2,
-          paddingTop: WHEEL_ITEM_H * 2
-        }}
+        contentContainerStyle={{ paddingBottom: WHEEL_ITEM_H * 2, paddingTop: WHEEL_ITEM_H * 2 }}
         onMomentumScrollEnd={(e) => {
           const idx = Math.round(e.nativeEvent.contentOffset.y / WHEEL_ITEM_H);
           onSelect(Math.max(0, Math.min(idx, items.length - 1)));
@@ -817,13 +750,11 @@ function WheelColumn({
             }}
             style={{ alignItems: "center", height: WHEEL_ITEM_H, justifyContent: "center" }}
           >
-            <Text
-              style={{
-                color: index === selectedIndex ? mesh.green800 : mesh.ink300,
-                fontSize: index === selectedIndex ? 22 : 18,
-                fontWeight: index === selectedIndex ? "800" : "400"
-              }}
-            >
+            <Text style={{
+              color: index === selectedIndex ? mesh.green800 : mesh.ink300,
+              fontSize: index === selectedIndex ? fontSizeSelected : fontSize,
+              fontWeight: index === selectedIndex ? "800" : "400"
+            }}>
               {item}
             </Text>
           </Pressable>
@@ -833,7 +764,176 @@ function WheelColumn({
   );
 }
 
-// ─── Reminder date+time bottom sheet ─────────────────────────────────────────
+// ─── Month/year wheel picker ──────────────────────────────────────────────────
+
+function MonthYearWheelPicker({
+  initialMonth,
+  initialYear,
+  lang,
+  onConfirm
+}: {
+  initialMonth: number;
+  initialYear: number;
+  lang: Lang;
+  onConfirm: (year: number, month: number) => void;
+}) {
+  const isVi = lang === "vi";
+  const [tempMonth, setTempMonth] = useState(initialMonth);
+  const [tempYear, setTempYear] = useState(initialYear);
+  const monthScrollRef = useRef<ScrollView>(null);
+  const yearScrollRef = useRef<ScrollView>(null);
+
+  const monthNames = isVi
+    ? ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+       "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"]
+    : ["January", "February", "March", "April", "May", "June",
+       "July", "August", "September", "October", "November", "December"];
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 12 }, (_, i) => currentYear - 1 + i);
+  const yearStrings = years.map(String);
+
+  useEffect(() => {
+    const yearIdx = years.indexOf(initialYear);
+    setTimeout(() => {
+      monthScrollRef.current?.scrollTo({ y: initialMonth * WHEEL_ITEM_H, animated: false });
+      if (yearIdx >= 0) yearScrollRef.current?.scrollTo({ y: yearIdx * WHEEL_ITEM_H, animated: false });
+    }, 80);
+  }, []);
+
+  return (
+    <View>
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
+          <Text style={{ color: mesh.green800, fontSize: 16, fontWeight: "800" }}>
+            {isVi ? "Chọn tháng/năm" : "Select month/year"}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => onConfirm(tempYear, tempMonth)}
+          style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}
+        >
+          <Ionicons name="checkmark" size={22} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
+      {/* Two-column wheel */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <WheelColumn
+          items={monthNames}
+          selectedIndex={tempMonth}
+          scrollRef={monthScrollRef}
+          onSelect={(idx) => setTempMonth(idx)}
+          width={152}
+          fontSize={14}
+          fontSizeSelected={16}
+        />
+        <WheelColumn
+          items={yearStrings}
+          selectedIndex={Math.max(0, years.indexOf(tempYear))}
+          scrollRef={yearScrollRef}
+          onSelect={(idx) => setTempYear(years[idx])}
+          width={84}
+          fontSize={16}
+          fontSizeSelected={20}
+        />
+      </View>
+    </View>
+  );
+}
+
+// ─── Reminder preset sheet ────────────────────────────────────────────────────
+
+function ReminderPresetSheet({
+  lang,
+  onClose,
+  onCustom,
+  onSelectPreset,
+  open,
+  value
+}: {
+  lang: Lang;
+  onClose: () => void;
+  onCustom: () => void;
+  onSelectPreset: (date: Date) => void;
+  open: boolean;
+  value: Date | null;
+}) {
+  const isVi = lang === "vi";
+  const presets = getPresets(lang);
+
+  return (
+    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
+        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
+          {/* Handle */}
+          <View style={{ alignSelf: "center", backgroundColor: mesh.ink200, borderRadius: 2, height: 4, marginBottom: 20, width: 40 }} />
+
+          {/* Title */}
+          <Text style={{ color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
+            {isVi ? "Thêm nhắc nhở" : "Add reminder"}
+          </Text>
+          <Text style={{ color: mesh.ink500, fontSize: 13, lineHeight: 19, marginBottom: 20 }}>
+            {isVi ? "Chọn thời gian có sẵn hoặc tùy chọn." : "Choose a preset or set a custom date and time."}
+          </Text>
+
+          {/* Preset rows */}
+          {presets.map((preset, index) => (
+            <Pressable
+              key={preset.id}
+              onPress={() => onSelectPreset(preset.date)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 14,
+                borderTopWidth: index === 0 ? 1 : 0,
+                borderBottomWidth: 1,
+                borderColor: "rgba(6,69,50,0.07)"
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{preset.label}</Text>
+                <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{preset.sublabel}</Text>
+              </View>
+              {/* Radio circle */}
+              <View style={{
+                width: 20, height: 20, borderRadius: 10,
+                borderWidth: 1.5,
+                borderColor: value && Math.abs(preset.date.getTime() - value.getTime()) < 5000 ? mesh.green700 : mesh.ink200,
+                backgroundColor: value && Math.abs(preset.date.getTime() - value.getTime()) < 5000 ? mesh.green700 : "transparent",
+                alignItems: "center", justifyContent: "center"
+              }}>
+                {value && Math.abs(preset.date.getTime() - value.getTime()) < 5000 ? (
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FFFFFF" }} />
+                ) : null}
+              </View>
+            </Pressable>
+          ))}
+
+          {/* Custom row */}
+          <Pressable
+            onPress={onCustom}
+            style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.07)" }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: mesh.green700, fontSize: 15, fontWeight: "700" }}>
+                {isVi ? "Tùy chọn ngày & giờ" : "Custom date & time"}
+              </Text>
+              <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>
+                {isVi ? "Chọn ngày và giờ bất kỳ" : "Pick any date and time"}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={mesh.ink400} />
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ─── Reminder date+time sheet ─────────────────────────────────────────────────
 
 function ReminderDateTimeSheet({
   lang,
@@ -852,14 +952,19 @@ function ReminderDateTimeSheet({
 }) {
   const isVi = lang === "vi";
   const [current, setCurrent] = useState<Date>(() => value ?? defaultReminderDate());
+  const [viewYear, setViewYear] = useState(current.getFullYear());
+  const [viewMonth, setViewMonth] = useState(current.getMonth());
+  const [monthYearOpen, setMonthYearOpen] = useState(false);
   const hourRef = useRef<ScrollView>(null);
   const minuteRef = useRef<ScrollView>(null);
 
-  // Sync to incoming value each time the sheet opens
   useEffect(() => {
     if (!open) return;
     const d = value ?? defaultReminderDate();
     setCurrent(new Date(d));
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth());
+    setMonthYearOpen(false);
     const minuteIdx = Math.min(Math.round(d.getMinutes() / 5), MINUTES.length - 1);
     setTimeout(() => {
       hourRef.current?.scrollTo({ y: d.getHours() * WHEEL_ITEM_H, animated: false });
@@ -867,42 +972,41 @@ function ReminderDateTimeSheet({
     }, 80);
   }, [open]);
 
-  const year = current.getFullYear();
-  const month = current.getMonth();
-  const selectedDay = current.getDate();
-  const cells = buildMonthCells(year, month);
-
+  const cells = buildMonthCells(viewYear, viewMonth);
   const today = new Date();
-  const todayYear = today.getFullYear();
-  const todayMonth = today.getMonth();
-  const todayDay = today.getDate();
 
-  const dayNames = isVi
-    ? ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
-    : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  // The selected day is highlighted only if viewYear/viewMonth match the selected date
+  const selDay = current.getFullYear() === viewYear && current.getMonth() === viewMonth
+    ? current.getDate() : -1;
 
-  const monthNames = isVi
-    ? ["Th1", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7", "Th8", "Th9", "Th10", "Th11", "Th12"]
-    : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-  function prevMonth() {
-    const d = new Date(current);
-    d.setDate(1);
-    d.setMonth(d.getMonth() - 1);
-    setCurrent(d);
+  function goPrevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
   }
 
-  function nextMonth() {
-    const d = new Date(current);
-    d.setDate(1);
-    d.setMonth(d.getMonth() + 1);
-    setCurrent(d);
+  function goNextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
   }
 
   function selectDay(day: number) {
     const d = new Date(current);
+    d.setFullYear(viewYear);
+    d.setMonth(viewMonth);
     d.setDate(day);
     setCurrent(d);
+  }
+
+  function handleConfirmMonthYear(year: number, month: number) {
+    const safeDay = Math.min(current.getDate(), daysInMonth(year, month));
+    const d = new Date(current);
+    d.setFullYear(year);
+    d.setMonth(month);
+    d.setDate(safeDay);
+    setCurrent(d);
+    setViewYear(year);
+    setViewMonth(month);
+    setMonthYearOpen(false);
   }
 
   function handleConfirm() {
@@ -910,136 +1014,129 @@ function ReminderDateTimeSheet({
     onClose();
   }
 
+  const dayNames = isVi
+    ? ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    : ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        onPress={onClose}
-        style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}
-      >
-        <Pressable
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            paddingBottom: 32,
-            paddingHorizontal: 20,
-            paddingTop: 12
-          }}
-        >
-          {/* Handle bar */}
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
+        <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}>
+          {/* Handle */}
           <View style={{ alignSelf: "center", backgroundColor: mesh.ink200, borderRadius: 2, height: 4, marginBottom: 18, width: 40 }} />
 
           {/* Header */}
-          <View style={{ alignItems: "center", flexDirection: "row", marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
             <View style={{ width: 36 }} />
             <Text style={{ color: mesh.green800, flex: 1, fontSize: 17, fontWeight: "800", textAlign: "center" }}>
-              {isVi ? "Chọn ngày & giờ" : "Set reminder"}
+              {isVi ? "Chọn ngày & giờ" : "Pick date & time"}
             </Text>
-            <Pressable
-              onPress={onClose}
-              style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}
-            >
+            <Pressable onPress={onClose} style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}>
               <Ionicons name="close" size={18} color={mesh.ink700} />
             </Pressable>
           </View>
 
-          {/* Month navigation */}
-          <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-            <Pressable onPress={prevMonth} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="chevron-back" size={20} color={mesh.green700} />
-            </Pressable>
-            <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
-              {monthNames[month]} {year}
-            </Text>
-            <Pressable onPress={nextMonth} hitSlop={10} style={{ padding: 4 }}>
-              <Ionicons name="chevron-forward" size={20} color={mesh.green700} />
-            </Pressable>
-          </View>
-
-          {/* Day-name headers (Mon–Sun) */}
-          <View style={{ flexDirection: "row", marginBottom: 4 }}>
-            {dayNames.map((d) => (
-              <View key={d} style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}>
-                <Text style={{ color: mesh.ink400, fontSize: 11, fontWeight: "700" }}>{d}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Calendar grid */}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 4 }}>
-            {cells.map((day, idx) => {
-              const isSelected = day === selectedDay;
-              const isToday = day !== null && day === todayDay && month === todayMonth && year === todayYear;
-              return (
-                <View key={idx} style={{ aspectRatio: 1, padding: 2, width: "14.28%" }}>
-                  {day !== null ? (
-                    <Pressable
-                      onPress={() => selectDay(day)}
-                      style={{
-                        alignItems: "center",
-                        backgroundColor: isSelected
-                          ? mesh.green700
-                          : isToday
-                          ? "rgba(31,112,72,0.10)"
-                          : "transparent",
-                        borderRadius: 999,
-                        flex: 1,
-                        justifyContent: "center"
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: isSelected ? "#FFFFFF" : isToday ? mesh.green700 : mesh.ink900,
-                          fontSize: 13,
-                          fontWeight: isSelected || isToday ? "800" : "500"
-                        }}
-                      >
-                        {day}
-                      </Text>
-                    </Pressable>
-                  ) : (
-                    <View style={{ flex: 1 }} />
-                  )}
+          {monthYearOpen ? (
+            /* Month/year wheel picker — replaces calendar+time area temporarily */
+            <MonthYearWheelPicker
+              initialMonth={viewMonth}
+              initialYear={viewYear}
+              lang={lang}
+              onConfirm={handleConfirmMonthYear}
+            />
+          ) : (
+            <>
+              {/* Fixed-height calendar navigation — arrows never move */}
+              <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 36, marginBottom: 10 }}>
+                {/* Tappable month/year label */}
+                <Pressable
+                  onPress={() => setMonthYearOpen(true)}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+                    {formatMonthYear(viewYear, viewMonth, lang)}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={mesh.green700} />
+                </Pressable>
+                {/* Prev / Next arrows */}
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  <Pressable onPress={goPrevMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", width: 36 }}>
+                    <Ionicons name="chevron-back" size={20} color={mesh.green700} />
+                  </Pressable>
+                  <Pressable onPress={goNextMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", width: 36 }}>
+                    <Ionicons name="chevron-forward" size={20} color={mesh.green700} />
+                  </Pressable>
                 </View>
-              );
-            })}
-          </View>
+              </View>
 
-          {/* Divider */}
-          <View style={{ backgroundColor: mesh.line, height: 1, marginVertical: 14 }} />
+              {/* Day-name headers */}
+              <View style={{ flexDirection: "row", marginBottom: 4 }}>
+                {dayNames.map((d) => (
+                  <View key={d} style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}>
+                    <Text style={{ color: mesh.ink400, fontSize: 11, fontWeight: "700" }}>{d}</Text>
+                  </View>
+                ))}
+              </View>
 
-          {/* Time wheel picker */}
-          <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 4 }}>
-            <WheelColumn
-              items={HOURS}
-              selectedIndex={current.getHours()}
-              scrollRef={hourRef}
-              onSelect={(idx) => {
-                const d = new Date(current);
-                d.setHours(idx);
-                setCurrent(d);
-              }}
-            />
-            <Text style={{ color: mesh.ink900, fontSize: 26, fontWeight: "800", marginBottom: 2 }}>:</Text>
-            <WheelColumn
-              items={MINUTES}
-              selectedIndex={Math.min(Math.round(current.getMinutes() / 5), MINUTES.length - 1)}
-              scrollRef={minuteRef}
-              onSelect={(idx) => {
-                const d = new Date(current);
-                d.setMinutes(idx * 5);
-                setCurrent(d);
-              }}
-            />
-          </View>
+              {/* Calendar grid — ALWAYS 6 rows × 7 cols (42 cells), height is fixed */}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", height: 6 * DAY_CELL_H, marginBottom: 4 }}>
+                {cells.map((day, idx) => {
+                  const isSelected = day === selDay;
+                  const isToday = day !== null && day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+                  return (
+                    <View key={idx} style={{ width: "14.28%", height: DAY_CELL_H, alignItems: "center", justifyContent: "center" }}>
+                      {day !== null ? (
+                        <Pressable
+                          onPress={() => selectDay(day)}
+                          style={{
+                            width: 32, height: 32, borderRadius: 16,
+                            alignItems: "center", justifyContent: "center",
+                            backgroundColor: isSelected ? mesh.green700 : isToday ? "rgba(31,112,72,0.10)" : "transparent"
+                          }}
+                        >
+                          <Text style={{
+                            color: isSelected ? "#FFFFFF" : isToday ? mesh.green700 : mesh.ink900,
+                            fontSize: 13,
+                            fontWeight: isSelected || isToday ? "800" : "500"
+                          }}>
+                            {day}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
 
-          {/* Confirm */}
-          <Pressable
-            onPress={handleConfirm}
-            style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 20, paddingVertical: 14 }}
-          >
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
-          </Pressable>
+              {/* Divider */}
+              <View style={{ backgroundColor: mesh.line, height: 1, marginVertical: 14 }} />
+
+              {/* Time wheel picker */}
+              <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 4 }}>
+                <WheelColumn
+                  items={HOURS}
+                  selectedIndex={current.getHours()}
+                  scrollRef={hourRef}
+                  onSelect={(idx) => { const d = new Date(current); d.setHours(idx); setCurrent(d); }}
+                />
+                <Text style={{ color: mesh.ink900, fontSize: 26, fontWeight: "800", marginBottom: 2 }}>:</Text>
+                <WheelColumn
+                  items={MINUTES}
+                  selectedIndex={Math.min(Math.round(current.getMinutes() / 5), MINUTES.length - 1)}
+                  scrollRef={minuteRef}
+                  onSelect={(idx) => { const d = new Date(current); d.setMinutes(idx * 5); setCurrent(d); }}
+                />
+              </View>
+
+              {/* Confirm */}
+              <Pressable
+                onPress={handleConfirm}
+                style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 20, paddingVertical: 14 }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
+              </Pressable>
+            </>
+          )}
         </Pressable>
       </Pressable>
     </Modal>
