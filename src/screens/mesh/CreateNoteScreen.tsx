@@ -7,7 +7,7 @@ import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Tex
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
-import { deleteNoteReminder, getNoteById, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
+import { deleteNoteReminder, getNote, getNoteById, getNotes, submitCreateNote, updateNote, upsertNoteReminder } from "../../api/noteApi";
 import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { Lang } from "../../mesh/meshData";
@@ -247,32 +247,59 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     let active = true;
     setLoadingNote(true);
     setLoadError("");
-    getNoteById(noteId)
+    const applyNoteData = (raw: unknown) => {
+      const data = normalizeEditNote(raw);
+      if (!data) { setLoadError("Note not found."); return; }
+      // content includes full text; title = first line
+      // Reconstruct composer: firstLine = title, bodyText = lines after first
+      if (data.title) {
+        setFirstLine(data.title);
+        // Strip first line from content if content starts with title
+        const afterTitle = data.content.startsWith(data.title)
+          ? data.content.slice(data.title.length).replace(/^\n/, "")
+          : data.content;
+        setBodyText(afterTitle);
+        if (afterTitle.trim()) setShowBody(true);
+      } else {
+        const lines = data.content.split("\n");
+        setFirstLine(lines[0] ?? "");
+        const bodyContent = lines.slice(1).join("\n");
+        setBodyText(bodyContent);
+        if (bodyContent.trim()) setShowBody(true);
+      }
+      setPerson(data.contactId);
+      setPersonLabel(data.contactName);
+      setPersonQuery(data.contactName);
+      if (data.remindAt) {
+        setReminderAt(new Date(data.remindAt));
+        setHadReminder(true);
+      }
+    };
+
+    getNote(noteId)
       .then((response) => {
         if (!active) return;
-        const data = normalizeEditNote(response);
-        if (!data) { setLoadError("Note not found."); return; }
-        // Split title/content back into the two-field composer
-        if (data.title) {
-          setFirstLine(data.title);
-          setBodyText(data.content);
-          if (data.content.trim()) setShowBody(true);
+        applyNoteData(response);
+      })
+      .catch(async (err) => {
+        if (!active) return;
+        // Fallback: if GET /api/notes/:id not implemented yet (returns HTML)
+        const msg = err instanceof Error ? err.message : String(err);
+        const isHtml = msg.includes("<!DOCTYPE") || msg.includes("<html") || msg.includes("Cannot GET");
+        if (isHtml || (err as { status?: number })?.status === 404) {
+          try {
+            const listResponse = await getNotes();
+            const found = extractArray(listResponse, "notes").find((raw: any) => (raw._id ?? raw.id) === noteId);
+            if (!active) return;
+            if (found) { applyNoteData(found); return; }
+            setLoadError("Note not found.");
+          } catch {
+            if (active) setLoadError("Cannot load note.");
+          }
         } else {
-          const lines = data.content.split("\n");
-          setFirstLine(lines[0] ?? "");
-          const bodyContent = lines.slice(1).join("\n");
-          setBodyText(bodyContent);
-          if (bodyContent.trim()) setShowBody(true);
-        }
-        setPerson(data.contactId);
-        setPersonLabel(data.contactName);
-        setPersonQuery(data.contactName);
-        if (data.remindAt) {
-          setReminderAt(new Date(data.remindAt));
-          setHadReminder(true);
+          setLoadError(msg || "Failed to load note.");
         }
       })
-      .catch((err) => { if (active) setLoadError(err instanceof Error ? err.message : "Failed to load note."); })
       .finally(() => { if (active) setLoadingNote(false); });
     return () => { active = false; };
   }, [edit, noteId]);
