@@ -18,6 +18,19 @@ const leafPng = require("../../../assets/leaf.png");
 // ─── CreateContactScreen helpers ─────────────────────────────────────────────
 
 const WHEEL_H = 44;
+
+const SHEET_FONT = {
+  action:             16,   // Cancel / Done
+  title:              18,   // Sheet title
+  input:              16,   // Event name input
+  label:              13,   // "Select date" label
+  preview:            14,   // Date preview chip
+  wheelNormal:        18,   // Day / year unselected
+  wheelSelected:      24,   // Day / year selected
+  wheelMonthNormal:   16,   // Month unselected
+  wheelMonthSelected: 18,   // Month selected
+} as const;
+
 const MONTHS_LONG = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -41,7 +54,9 @@ function formatDateShort(d: Date): string {
 
 function WheelCol({
   items, selectedIndex, onSelect,
-  width = 72, fontSize = 18, fontSizeSelected = 22,
+  width = 72,
+  fontSize     = SHEET_FONT.wheelNormal,
+  fontSizeSelected = SHEET_FONT.wheelSelected,
 }: {
   items: string[]; selectedIndex: number; onSelect: (i: number) => void;
   width?: number; fontSize?: number; fontSizeSelected?: number;
@@ -49,12 +64,17 @@ function WheelCol({
   const ref = useRef<ScrollView>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       ref.current?.scrollTo({ y: selectedIndex * WHEEL_H, animated: false });
     }, 60);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleScrollEnd = (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.y / WHEEL_H);
+    onSelect(Math.max(0, Math.min(idx, items.length - 1)));
+  };
 
   return (
     <View style={{ width, height: WHEEL_H * 5, overflow: "hidden" }}>
@@ -69,22 +89,26 @@ function WheelCol({
       />
       <ScrollView
         ref={ref}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         snapToInterval={WHEEL_H}
         decelerationRate="fast"
         contentContainerStyle={{ paddingVertical: WHEEL_H * 2 }}
-        onMomentumScrollEnd={(e) => {
-          const idx = Math.round(e.nativeEvent.contentOffset.y / WHEEL_H);
-          onSelect(Math.max(0, Math.min(idx, items.length - 1)));
-        }}
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
       >
         {items.map((item, i) => (
           <View key={i} style={{ height: WHEEL_H, justifyContent: "center", alignItems: "center" }}>
-            <Text style={{
-              fontSize: i === selectedIndex ? fontSizeSelected : fontSize,
-              fontWeight: i === selectedIndex ? "800" : "400",
-              color: i === selectedIndex ? mesh.green700 : mesh.ink400,
-            }}>{item}</Text>
+            <Text
+              maxFontSizeMultiplier={1.1}
+              style={{
+                fontSize:   i === selectedIndex ? fontSizeSelected : fontSize,
+                fontWeight: i === selectedIndex ? "800" : "400",
+                color:      i === selectedIndex ? mesh.green700 : mesh.ink400,
+              }}
+            >{item}</Text>
           </View>
         ))}
       </ScrollView>
@@ -115,9 +139,30 @@ function WheelDatePicker({ value, onChange }: { value: Date | null; onChange: (d
 
   return (
     <View style={{ flexDirection: "row", justifyContent: "center", gap: 4, paddingVertical: 8 }}>
-      <WheelCol items={days}        selectedIndex={Math.min(dayIdx, maxDay - 1)} onSelect={setDayIdx}   width={52} />
-      <WheelCol items={MONTHS_LONG} selectedIndex={monthIdx}                      onSelect={setMonthIdx} width={148} fontSize={13} fontSizeSelected={15} />
-      <WheelCol items={YEARS_ARR}   selectedIndex={yearIdx}                       onSelect={setYearIdx}  width={72} />
+      <WheelCol
+        items={days}
+        selectedIndex={Math.min(dayIdx, maxDay - 1)}
+        onSelect={setDayIdx}
+        width={52}
+        fontSize={SHEET_FONT.wheelNormal}
+        fontSizeSelected={SHEET_FONT.wheelSelected}
+      />
+      <WheelCol
+        items={MONTHS_LONG}
+        selectedIndex={monthIdx}
+        onSelect={setMonthIdx}
+        width={152}
+        fontSize={SHEET_FONT.wheelMonthNormal}
+        fontSizeSelected={SHEET_FONT.wheelMonthSelected}
+      />
+      <WheelCol
+        items={YEARS_ARR}
+        selectedIndex={yearIdx}
+        onSelect={setYearIdx}
+        width={76}
+        fontSize={SHEET_FONT.wheelNormal}
+        fontSizeSelected={SHEET_FONT.wheelSelected}
+      />
     </View>
   );
 }
@@ -1034,20 +1079,37 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
       {/* ── Date / special-day picker bottom sheet ── */}
       <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={cancelDatePicker}>
-        <Pressable onPress={cancelDatePicker} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
-          <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36 }}>
+        {/*
+          Backdrop is a separate absolute Pressable so it does NOT wrap the sheet.
+          The sheet itself is a plain View — nothing steals touch from the wheel ScrollViews.
+        */}
+        <View style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
+          <Pressable
+            onPress={cancelDatePicker}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36 }}>
             {/* Handle */}
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
             {/* Header row */}
             <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
-              <Pressable onPress={cancelDatePicker} hitSlop={8}>
-                <Text style={{ color: mesh.ink400, fontSize: 16, fontWeight: "600" }}>{t("cancel")}</Text>
+              <Pressable onPress={cancelDatePicker} hitSlop={10}>
+                <Text
+                  maxFontSizeMultiplier={1.1}
+                  style={{ color: mesh.ink400, fontSize: SHEET_FONT.action, fontWeight: "700" }}
+                >{t("cancel")}</Text>
               </Pressable>
-              <Text style={{ color: mesh.green800, fontSize: 18, fontWeight: "800" }}>
+              <Text
+                maxFontSizeMultiplier={1.1}
+                style={{ color: mesh.green800, fontSize: SHEET_FONT.title, fontWeight: "800" }}
+              >
                 {dateTarget?.kind === "birthday" ? t("birthday") : t("specialDay")}
               </Text>
-              <Pressable onPress={confirmDate} hitSlop={8}>
-                <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "800" }}>{t("done")}</Text>
+              <Pressable onPress={confirmDate} hitSlop={10}>
+                <Text
+                  maxFontSizeMultiplier={1.1}
+                  style={{ color: mesh.green700, fontSize: SHEET_FONT.action, fontWeight: "800" }}
+                >{t("done")}</Text>
               </Pressable>
             </View>
             {/* Event name input — only for special days */}
@@ -1059,11 +1121,13 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
                   placeholder={t("eventName")}
                   placeholderTextColor="#8C9691"
                   returnKeyType="done"
+                  maxFontSizeMultiplier={1.1}
                   style={{
                     height: 48, borderRadius: 16,
                     backgroundColor: "rgba(31,112,72,0.06)",
                     borderWidth: 1, borderColor: "rgba(31,112,72,0.14)",
-                    paddingHorizontal: 16, fontSize: 16, color: mesh.ink900, fontWeight: "600",
+                    paddingHorizontal: 16,
+                    fontSize: SHEET_FONT.input, color: mesh.ink900, fontWeight: "600",
                   }}
                 />
               </View>
@@ -1074,11 +1138,14 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             {pickerValue && (
               <View style={{ marginHorizontal: 20, marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9 }}>
                 <Ionicons name="calendar-outline" size={15} color={mesh.green700} />
-                <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{formatDateShort(pickerValue)}</Text>
+                <Text
+                  maxFontSizeMultiplier={1.1}
+                  style={{ color: mesh.green700, fontSize: SHEET_FONT.preview, fontWeight: "800" }}
+                >{formatDateShort(pickerValue)}</Text>
               </View>
             )}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </MeshScreen>
   );
