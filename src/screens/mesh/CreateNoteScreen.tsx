@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -262,6 +263,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const draftText   = [firstLine, bodyText].filter((s) => s.trim()).join("\n");
   const draftLength = draftText.length;
 
+  // Placeholder only shows when both fields are empty
+  const draftIsEmpty = firstLine.trim().length === 0 && bodyText.trim().length === 0;
+
   const clear = () => {
     setFirstLine("");
     setBodyText("");
@@ -378,17 +382,18 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <StatusBar style="light" />
 
-      {/* ── Full-screen light mesh background ── */}
+      {/* ── Full-screen mesh background — dark green top fading to white ── */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
         <MeshGradientView
           style={StyleSheet.absoluteFillObject}
           columns={4}
           rows={5}
           colors={[
-            "#DDF2E8", "#CFEBDC", "#EAF7EF", "#FFFFFF",
-            "#F7FCF8", "#EEF8F1", "#FFFFFF", "#F8FCF7",
-            "#FFFFFF", "#F8FCF7", "#F6FBF6", "#FFFFFF",
+            "#064532", "#0A5B40", "#168057", "#CDE9DA",
+            "#9FCDB8", "#DDF1E7", "#F4FBF7", "#FFFFFF",
+            "#F7FCF8", "#FFFFFF", "#FFFFFF", "#F8FCF7",
             "#FFFFFF", "#FFFFFF", "#F9FCF9", "#FFFFFF",
             "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
           ]}
@@ -403,8 +408,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         />
         <LinearGradient
           pointerEvents="none"
-          colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.60)", "rgba(255,255,255,0.84)"]}
-          locations={[0, 0.45, 1]}
+          colors={[
+            "rgba(255,255,255,0.00)",
+            "rgba(255,255,255,0.24)",
+            "rgba(255,255,255,0.72)",
+            "rgba(255,255,255,0.96)",
+          ]}
+          locations={[0, 0.22, 0.52, 1]}
           style={StyleSheet.absoluteFillObject}
         />
         <Image
@@ -416,7 +426,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             top: insets.top + 70,
             width: 290,
             height: 210,
-            opacity: 0.16,
+            opacity: 0.15,
             transform: [{ rotate: "-6deg" }],
           }}
         />
@@ -504,7 +514,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         {/* ── Note canvas ── */}
         <Pressable
           onPress={() => {
-            if (hasBody || showBody) bodyRef.current?.focus();
+            if (bodyText.trim().length > 0 || showBody) bodyRef.current?.focus();
             else firstLineRef.current?.focus();
           }}
           style={{
@@ -525,12 +535,16 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             elevation: 1,
           }}
         >
-          {/* First line: bold when filled, regular weight when empty (placeholder) */}
+          {/* First line: placeholder only shown when entire draft is empty */}
           <TextInput
             ref={firstLineRef}
             value={firstLine}
             onChangeText={handleFirstLineChange}
-            placeholder={isVi ? "Bạn muốn ghi nhớ điều gì?" : "What would you like to remember?"}
+            placeholder={
+              draftIsEmpty
+                ? (isVi ? "Bạn muốn ghi nhớ điều gì?" : "What would you like to remember?")
+                : ""
+            }
             placeholderTextColor={mesh.ink400}
             style={{
               color: mesh.ink900,
@@ -594,45 +608,38 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         <View style={{ marginHorizontal: 24, marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => setReminderSheet("preset")}
-            style={{
-              alignSelf: "flex-start",
-              minHeight: 42,
-              maxWidth: "82%",
-              borderRadius: 999,
-              paddingLeft: 8,
-              paddingRight: 15,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-              backgroundColor: reminderAt ? "rgba(31,112,72,0.055)" : "rgba(255,255,255,0.88)",
-              borderWidth: 1,
-              borderColor: reminderAt ? "rgba(31,112,72,0.10)" : "rgba(6,69,50,0.08)",
-              shadowColor: "#064532",
-              shadowOpacity: 0.018,
-              shadowRadius: 7,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 1,
-            }}
+            style={[styles.reminderChipBase, !reminderAt && styles.reminderChipEmpty]}
           >
-            <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)" }}>
-              <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
-            </View>
-            <Text numberOfLines={1} style={{ flexShrink: 1, color: mesh.green700, fontSize: 15, fontWeight: "700", letterSpacing: -0.1 }}>
-              {reminderLabel ?? (isVi ? "Nhắc nhở" : "Reminder")}
-            </Text>
+            {reminderAt ? (
+              <LinearGradient
+                colors={["rgba(238,250,242,0.98)", "rgba(219,244,232,0.96)", "rgba(245,252,247,0.98)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.reminderChipGradient}
+              >
+                <View style={styles.reminderIconCircle}>
+                  <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
+                </View>
+                <Text numberOfLines={1} style={styles.reminderText}>
+                  {reminderLabel}
+                </Text>
+              </LinearGradient>
+            ) : (
+              <View style={styles.reminderChipInner}>
+                <View style={styles.reminderIconCircle}>
+                  <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
+                </View>
+                <Text numberOfLines={1} style={styles.reminderText}>
+                  {isVi ? "Nhắc nhở" : "Reminder"}
+                </Text>
+              </View>
+            )}
           </Pressable>
           {reminderAt ? (
             <Pressable
               onPress={() => setReminderAt(null)}
               hitSlop={8}
-              style={{
-                width: 30, height: 30, borderRadius: 15,
-                alignItems: "center", justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.78)",
-                borderWidth: 1, borderColor: "rgba(6,69,50,0.06)",
-                shadowColor: "#064532", shadowOpacity: 0.012, shadowRadius: 5,
-                shadowOffset: { width: 0, height: 2 }, elevation: 1,
-              }}
+              style={styles.reminderClearButton}
             >
               <Ionicons name="close" size={15} color={mesh.ink500} />
             </Pressable>
@@ -737,8 +744,6 @@ function PersonPill({
   const trimmed = value.trim();
   // Dropdown only when existing contacts match — never show the raw typed name as an item
   const showSuggestions = focused && trimmed.length > 0 && (contacts.length > 0 || loading);
-  // Soft hint when user typed something but no contacts matched
-  const showNewContactHint = focused && trimmed.length > 0 && !loading && contacts.length === 0;
 
   const borderColor = error
     ? "rgba(217,87,122,0.55)"
@@ -857,28 +862,6 @@ function PersonPill({
         </View>
       ) : null}
 
-      {/* "New contact" hint — subtle, non-interactive, when no contacts match */}
-      {showNewContactHint ? (
-        <View
-          style={{
-            marginTop: 6,
-            borderRadius: 16,
-            backgroundColor: "rgba(255,255,255,0.72)",
-            borderWidth: 1,
-            borderColor: "rgba(6,69,50,0.06)",
-            paddingHorizontal: 12,
-            paddingVertical: 9,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 7,
-          }}
-        >
-          <Ionicons name="sparkles-outline" size={14} color={mesh.ink500} />
-          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 12, lineHeight: 16, fontWeight: "500" }}>
-            New contact will be created when saving.
-          </Text>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -1338,6 +1321,78 @@ function ReminderDateTimeSheet({
     </Modal>
   );
 }
+
+// ─── Reminder chip styles ─────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  reminderChipBase: {
+    alignSelf: "flex-start",
+    minHeight: 46,
+    maxWidth: "82%",
+    borderRadius: 999,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(31,112,72,0.10)",
+    shadowColor: "#064532",
+    shadowOpacity: 0.045,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+  reminderChipEmpty: {
+    backgroundColor: "rgba(255,255,255,0.88)",
+    shadowOpacity: 0.018,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
+  },
+  reminderChipGradient: {
+    minHeight: 46,
+    paddingLeft: 10,
+    paddingRight: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  reminderChipInner: {
+    minHeight: 46,
+    paddingLeft: 10,
+    paddingRight: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  reminderIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(31,112,72,0.08)",
+  },
+  reminderText: {
+    flexShrink: 1,
+    color: mesh.green700,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: -0.1,
+  },
+  reminderClearButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(6,69,50,0.06)",
+    shadowColor: "#064532",
+    shadowOpacity: 0.012,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+});
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
