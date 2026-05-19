@@ -111,11 +111,12 @@ export function StatusScreen({ t, nav }: Props) {
       <BottomNav
         active="status"
         t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "contacts") nav("contacts");
           else if (id === "notes") nav("notes");
-          else if (id === "fab") nav("createNote");
         }}
       />
     </MeshScreen>

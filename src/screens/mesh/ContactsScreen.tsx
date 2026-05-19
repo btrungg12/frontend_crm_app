@@ -355,10 +355,11 @@ export function ContactsScreen({ t, lang, nav }: Props) {
       <BottomNav
         active="contacts"
         t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "notes") nav("notes");
-          else if (id === "fab") nav("createNote");
           else if (id === "status") nav("status");
         }}
       />
@@ -1525,12 +1526,17 @@ export function ContactsEmptyScreen({ t, nav }: Props) {
           <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("addFirstContact")}</Text>
         </Pressable>
       </View>
-      <BottomNav active="contacts" t={t} onTab={(id) => {
-        if (id === "home") nav("dashboard");
-        else if (id === "notes") nav("notes");
-        else if (id === "fab") nav("createContact");
-        else if (id === "status") nav("status");
-      }} />
+      <BottomNav
+        active="contacts"
+        t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
+        onTab={(id) => {
+          if (id === "home") nav("dashboard");
+          else if (id === "notes") nav("notes");
+          else if (id === "status") nav("status");
+        }}
+      />
     </MeshScreen>
   );
 }

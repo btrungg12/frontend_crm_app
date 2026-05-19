@@ -417,11 +417,12 @@ export function NotesScreen({ t, lang: _lang, nav }: Props) {
       <BottomNav
         active="notes"
         t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
         onTab={(id) => {
-          if (id === "home")     nav("dashboard");
+          if (id === "home") nav("dashboard");
           else if (id === "contacts") nav("contacts");
-          else if (id === "fab") nav("createNote");
-          else if (id === "status")  nav("status");
+          else if (id === "status") nav("status");
         }}
       />
     </View>

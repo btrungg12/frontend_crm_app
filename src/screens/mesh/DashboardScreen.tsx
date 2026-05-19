@@ -323,8 +323,10 @@ export function DashboardScreen({ t, lang, nav }: Props) {
       <BottomNav
         active="home"
         t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
         onTab={(id) => {
-          if (id === "fab") nav("createNote");
+          if (id === "home") nav("dashboard");
           else if (id === "contacts") nav("contacts");
           else if (id === "notes") nav("notes");
           else if (id === "status") nav("status");

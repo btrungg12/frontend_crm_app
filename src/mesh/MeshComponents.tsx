@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { PropsWithChildren, useRef } from "react";
-import { Animated, Modal, Platform, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
+import { PropsWithChildren, useEffect, useRef, useState } from "react";
+import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBackground } from "../components/AppBackground";
@@ -294,11 +294,15 @@ export function BottomNavScrim({ color = "#FFFFFF" }: { color?: string }) {
 export function BottomNav({
   active,
   onTab,
+  onCreateContact,
+  onCreateNote,
   t,
   withFab = true
 }: {
   active: "home" | "contacts" | "notes" | "status";
   onTab: (id: string) => void;
+  onCreateContact?: () => void;
+  onCreateNote?: () => void;
   t: TFn;
   withFab?: boolean;
 }) {
@@ -306,103 +310,195 @@ export function BottomNav({
   const bottomOffset = Platform.OS === "ios"
     ? Math.max(insets.bottom - 6, 24)
     : 16;
+
+  const [dockOpen, setDockOpen] = useState(false);
+  const dockAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(dockAnim, {
+      toValue: dockOpen ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [dockOpen]);
+
+  const overlayOpacity = dockAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const dockTranslateY = dockAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
+  const dockScale      = dockAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] });
+  const plusRotate     = dockAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] });
+
   const triggerHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
+
   const tabs: Array<{ id: string; label?: string; icon?: keyof typeof Ionicons.glyphMap; activeIcon?: keyof typeof Ionicons.glyphMap }> = [
-    { id: "home", label: t("tabHome"), icon: "home-outline", activeIcon: "home" },
-    { id: "contacts", label: t("tabContacts"), icon: "people-outline", activeIcon: "people" },
+    { id: "home",     label: t("tabHome"),     icon: "home-outline",          activeIcon: "home"          },
+    { id: "contacts", label: t("tabContacts"), icon: "people-outline",        activeIcon: "people"        },
     { id: "fab" },
-    { id: "notes", label: t("tabNotes"), icon: "document-text-outline", activeIcon: "document-text" },
-    { id: "status", label: t("tabStatus"), icon: "pricetag-outline", activeIcon: "pricetag" }
+    { id: "notes",    label: t("tabNotes"),    icon: "document-text-outline", activeIcon: "document-text" },
+    { id: "status",   label: t("tabStatus"),   icon: "pricetag-outline",      activeIcon: "pricetag"      },
   ];
 
   return (
-    <View
-      style={{
-        position: "absolute",
-        left: 20,
-        right: 20,
-        bottom: bottomOffset,
-        minHeight: 78,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: "#FFFFFF",
-        borderRadius: 34,
-        borderWidth: 1,
-        borderColor: "rgba(6,69,50,0.08)",
-        shadowColor: "#064532",
-        shadowOpacity: 0.1,
-        shadowRadius: 22,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 8,
-        zIndex: 10,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-around"
-      }}
-    >
-      {tabs.map((tab) => {
-        if (tab.id === "fab") {
-          return withFab ? (
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
+
+      {/* ── Dim overlay — tap to close dock ── */}
+      <AnimatedPressable
+        pointerEvents={dockOpen ? "auto" : "none"}
+        onPress={() => setDockOpen(false)}
+        style={[
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: "rgba(8,32,22,0.18)", opacity: overlayOpacity, zIndex: 9 },
+        ]}
+      />
+
+      {/* ── Mini action dock — above FAB ── */}
+      {withFab ? (
+        <Animated.View
+          pointerEvents={dockOpen ? "auto" : "none"}
+          style={{
+            position: "absolute",
+            bottom: bottomOffset + 88,
+            alignSelf: "center",
+            zIndex: 12,
+            opacity: dockAnim,
+            transform: [{ translateY: dockTranslateY }, { scale: dockScale }],
+          }}
+        >
+          <View style={bnStyles.dock}>
+            <Pressable
+              accessibilityLabel="Create contact"
+              onPress={() => { triggerHaptic(); setDockOpen(false); onCreateContact ? onCreateContact() : onTab("createContact"); }}
+              style={bnStyles.dockBtn}
+            >
+              <Ionicons name="person-add-outline" size={22} color={mesh.green700} />
+            </Pressable>
+            <View style={bnStyles.dockDivider} />
+            <Pressable
+              accessibilityLabel="Create note"
+              onPress={() => { triggerHaptic(); setDockOpen(false); onCreateNote ? onCreateNote() : onTab("createNote"); }}
+              style={bnStyles.dockBtn}
+            >
+              <Ionicons name="document-text-outline" size={22} color={mesh.green700} />
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
+
+      {/* ── Nav bar ── */}
+      <View
+        style={{
+          position: "absolute",
+          left: 20,
+          right: 20,
+          bottom: bottomOffset,
+          minHeight: 78,
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 34,
+          borderWidth: 1,
+          borderColor: "rgba(6,69,50,0.08)",
+          shadowColor: "#064532",
+          shadowOpacity: 0.1,
+          shadowRadius: 22,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 8,
+          zIndex: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-around",
+        }}
+      >
+        {tabs.map((tab) => {
+          if (tab.id === "fab") {
+            return withFab ? (
+              <ScalePressable
+                key="fab"
+                activeScale={0.9}
+                onPress={() => { triggerHaptic(); setDockOpen((v) => !v); }}
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: mesh.green700,
+                  transform: [{ translateY: -16 }],
+                  shadowColor: mesh.green700,
+                  shadowOpacity: 0.24,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 10,
+                }}
+              >
+                <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
+                  <Ionicons name="add" size={28} color="#FFFFFF" />
+                </Animated.View>
+              </ScalePressable>
+            ) : (
+              <View key="fab" style={{ width: 56 }} />
+            );
+          }
+
+          const isActive = active === tab.id;
+          return (
             <ScalePressable
-              key="fab"
-              activeScale={0.9}
-              onPress={() => {
-                triggerHaptic();
-                onTab("fab");
-              }}
+              key={tab.id}
+              activeScale={0.94}
+              onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
               style={{
-                width: 60,
-                height: 60,
-                borderRadius: 30,
+                flex: 1,
                 alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: mesh.green700,
-                transform: [{ translateY: -16 }],
-                shadowColor: mesh.green700,
-                shadowOpacity: 0.24,
-                shadowRadius: 18,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 10
+                gap: 3,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                borderRadius: 18,
+                backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent",
               }}
             >
-              <Ionicons name="add" size={28} color="#FFFFFF" />
+              <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
+              <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: mesh.font.nav, fontWeight: isActive ? "700" : "500" }}>
+                {tab.label}
+              </Text>
             </ScalePressable>
-          ) : (
-            <View key="fab" style={{ width: 56 }} />
           );
-        }
-
-        const isActive = active === tab.id;
-        return (
-          <ScalePressable
-            key={tab.id}
-            activeScale={0.94}
-            onPress={() => {
-              triggerHaptic();
-              onTab(tab.id);
-            }}
-            style={{
-              flex: 1,
-              alignItems: "center",
-              gap: 3,
-              paddingHorizontal: 8,
-              paddingVertical: 6,
-              borderRadius: 18,
-              backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent"
-            }}
-          >
-            <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
-            <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: mesh.font.nav, fontWeight: isActive ? "700" : "500" }}>
-              {tab.label}
-            </Text>
-          </ScalePressable>
-        );
-      })}
+        })}
+      </View>
     </View>
   );
 }
+
+const bnStyles = StyleSheet.create({
+  dock: {
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderWidth: 1,
+    borderColor: "#E3EFE8",
+    shadowColor: "#064532",
+    shadowOpacity: 0.10,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
+  dockBtn: {
+    width: 56,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dockDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "rgba(6,69,50,0.10)",
+    marginHorizontal: 2,
+  },
+});
 
 export function ContactAvatarRow({ contact }: { contact: Contact }) {
   const status = statusById(contact.status);

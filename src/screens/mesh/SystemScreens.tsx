@@ -891,7 +891,15 @@ function EmptyShell({
           </Pressable>
         ) : null}
       </View>
-      {withTabs ? <BottomNav active={tab} t={t} onTab={(id) => nav(id === "fab" ? "createNote" : id === "home" ? "dashboard" : id)} /> : null}
+      {withTabs ? (
+        <BottomNav
+          active={tab}
+          t={t}
+          onCreateContact={() => nav("createContact")}
+          onCreateNote={() => nav("createNote")}
+          onTab={(id) => nav(id === "home" ? "dashboard" : id)}
+        />
+      ) : null}
     </MeshScreen>
   );
 }
@@ -1100,7 +1108,13 @@ export function NotesEmptyScreen({ t, nav }: Props) {
           <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "900" }}>{t("createFirstNote")}</Text>
         </Pressable>
       </View>
-      <BottomNav active="notes" t={t} onTab={(id) => nav(id === "fab" ? "createNote" : id === "home" ? "dashboard" : id)} />
+      <BottomNav
+        active="notes"
+        t={t}
+        onCreateContact={() => nav("createContact")}
+        onCreateNote={() => nav("createNote")}
+        onTab={(id) => nav(id === "home" ? "dashboard" : id)}
+      />
     </MeshScreen>
   );
 }
