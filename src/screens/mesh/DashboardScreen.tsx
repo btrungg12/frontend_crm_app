@@ -234,6 +234,53 @@ function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null
   } as Upcoming;
 }
 
+function buildSpecialDayTitle(occasionRaw: unknown, contactName: string, lang: Lang) {
+  const occasion = typeof occasionRaw === "string" ? occasionRaw.trim() : "";
+  const lower = occasion.toLowerCase();
+
+  const isBirthday =
+    lower.includes("birthday") ||
+    lower.includes("sinh nhật") ||
+    lower === "birthday";
+
+  const isAnniversary =
+    lower.includes("anniversary") ||
+    lower.includes("kỷ niệm") ||
+    lower.includes("ki niem");
+
+  const isGeneric =
+    !occasion ||
+    lower === "special day" ||
+    lower === "ngày đặc biệt" ||
+    lower === "ngay dac biet";
+
+  if (isBirthday) {
+    return {
+      title: contactName ? `Sinh nhật ${contactName}` : "Sinh nhật",
+      titleEn: contactName ? `${contactName}'s birthday` : "Birthday",
+    };
+  }
+
+  if (isAnniversary) {
+    return {
+      title: contactName ? `Kỷ niệm với ${contactName}` : "Kỷ niệm",
+      titleEn: contactName ? `Anniversary with ${contactName}` : "Anniversary",
+    };
+  }
+
+  if (isGeneric) {
+    return {
+      title: contactName ? `Ngày đặc biệt của ${contactName}` : "Ngày đặc biệt",
+      titleEn: contactName ? `Special day for ${contactName}` : "Special day",
+    };
+  }
+
+  return {
+    title: occasion,
+    titleEn: occasion,
+  };
+}
+
 function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | null {
   const item = asRecord(value);
   if (!item) return null;
@@ -245,27 +292,32 @@ function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | nu
   const contactName = String(
     contact?.name ??
     item.contactName ??
-    "Unknown person"
-  );
+    ""
+  ).trim();
 
-  const occasion = String(item.occasion ?? (lang === "vi" ? "Ngày đặc biệt" : "Special day"));
+  const occasionRaw =
+    item.title ??
+    item.occasion ??
+    item.name ??
+    item.label ??
+    item.type;
 
-  const occasionLower = occasion.toLowerCase();
+  const { title, titleEn } = buildSpecialDayTitle(occasionRaw, contactName, lang);
+
+  // Determine kind based on occasion
+  const occasion = typeof occasionRaw === "string" ? occasionRaw.toLowerCase() : "";
   const isBirthday =
-    occasionLower.includes("birthday") ||
-    occasionLower.includes("sinh nhật");
-
-  const titleVi = isBirthday ? `Sinh nhật ${contactName}` : occasion;
-  const titleEn = isBirthday ? `${contactName}'s birthday` : occasion;
+    occasion.includes("birthday") ||
+    occasion.includes("sinh nhật");
 
   return {
-    id: String(item.specialDayId ?? `${item.contactId ?? contactName}-${date.toISOString()}`),
+    id: String(item.specialDayId ?? item._id ?? item.id ?? `${item.contactId ?? contactName}-${date.toISOString()}`),
     icon: isBirthday ? "gift-outline" : "sparkles-outline",
     contactId: String(contact?._id ?? contact?.id ?? item.contactId ?? ""),
     kind: isBirthday ? "birthday" : "special",
-    title: titleVi,
+    title,
     titleEn,
-    sub: isBirthday ? contactName : contactName,
+    sub: contactName,
     subEn: contactName,
     time: "",
     tag: formatRelativeUpcomingTag(date, "vi" as Lang),
