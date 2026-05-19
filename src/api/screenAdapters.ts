@@ -1,4 +1,4 @@
-import type { Contact, Note, Status, Upcoming } from "../mesh/meshData";
+import type { Contact, ContactSpecialDay, Note, Status, Upcoming } from "../mesh/meshData";
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -78,8 +78,29 @@ export function normalizeApiContact(value: unknown): Contact | null {
   const rawLinks = Array.isArray(item.socialLinks) ? item.socialLinks : [];
   const socialLinks = rawLinks.filter((l): l is string => typeof l === "string" && l.trim().length > 0);
 
+  const avatarUrl = typeof item.avatarUrl === "string" && item.avatarUrl ? item.avatarUrl : undefined;
+
+  // Filter out meaningless default values for source
+  const sourceRaw = text(item.source);
+  const SOURCE_DEFAULTS = ["chưa phân loại", "chua phan loai", "unknown", "other", "none", ""];
+  const source = sourceRaw && !SOURCE_DEFAULTS.includes(sourceRaw.toLowerCase().trim())
+    ? sourceRaw : undefined;
+
+  // Extract specialDays array
+  const rawSpecialDays = Array.isArray(item.specialDays) ? item.specialDays : [];
+  const specialDays: ContactSpecialDay[] = rawSpecialDays.flatMap((sd: unknown): ContactSpecialDay[] => {
+    const r = asRecord(sd);
+    if (!r) return [];
+    const sdId   = text(r._id ?? r.id ?? String(Math.random()));
+    const sdName = text(r.name ?? r.occasion ?? r.title, "Special day");
+    const sdDate = typeof r.date === "string" ? r.date : "";
+    if (!sdDate) return [];
+    return [{ id: sdId, name: sdName, date: sdDate, repeatYearly: r.repeatYearly ? true : undefined }];
+  });
+
   return {
     address: text(item.address) || undefined,
+    avatarUrl,
     birthday,
     email: text(item.email) || undefined,
     id,
@@ -91,8 +112,9 @@ export function normalizeApiContact(value: unknown): Contact | null {
     reminderCount: numberValue(item.reminderCount ?? item.remindersCount),
     social: text(item.social) || undefined,
     socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
-    source: text(item.source) || undefined,
-    specialCount: numberValue(item.specialCount ?? item.specialDaysCount),
+    source,
+    specialCount: numberValue(item.specialCount ?? item.specialDaysCount ?? specialDays.length),
+    specialDays: specialDays.length > 0 ? specialDays : undefined,
     status
   };
 }

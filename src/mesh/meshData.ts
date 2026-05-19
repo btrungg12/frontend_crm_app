@@ -9,6 +9,13 @@ export type Status = {
   icon: string;
 };
 
+export type ContactSpecialDay = {
+  id: string;
+  name: string;
+  date: string;
+  repeatYearly?: boolean;
+};
+
 export type Contact = {
   id: string;
   name: string;
@@ -22,6 +29,8 @@ export type Contact = {
   social?: string;
   birthday?: string;
   socialLinks?: string[];
+  avatarUrl?: string;
+  specialDays?: ContactSpecialDay[];
   noteCount: number;
   reminderCount: number;
   specialCount: number;

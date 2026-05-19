@@ -825,7 +825,13 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
         <View style={{ alignItems: "center", marginTop: 18 }}>
-          <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+          {contact.avatarUrl ? (
+            <View style={{ width: 92, height: 92, borderRadius: 46, overflow: "hidden", borderWidth: 2.5, borderColor: "rgba(255,255,255,0.75)" }}>
+              <Image source={{ uri: contact.avatarUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+            </View>
+          ) : (
+            <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+          )}
           <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
           <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
             <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
@@ -843,10 +849,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         {(() => {
           type InfoField = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string };
           const fields: InfoField[] = [];
-          if (contact.phone)   fields.push({ icon: "call-outline",     label: t("phone"),   value: contact.phone });
-          if (contact.email)   fields.push({ icon: "mail-outline",     label: "Email",      value: contact.email });
-          if (contact.address) fields.push({ icon: "location-outline", label: t("address"), value: contact.address });
-          if (contact.source)  fields.push({ icon: "chatbubble-outline", label: t("howYouMet"), value: contact.source });
+          if (contact.phone)   fields.push({ icon: "call-outline",       label: t("phone"),      value: contact.phone });
+          if (contact.email)   fields.push({ icon: "mail-outline",       label: "Email",         value: contact.email });
+          if (contact.address) fields.push({ icon: "location-outline",   label: t("address"),    value: contact.address });
+          if (contact.source)  fields.push({ icon: "chatbubble-outline", label: t("howYouMet"),  value: contact.source });
           if (contact.birthday) {
             const d = new Date(contact.birthday);
             const formatted = isNaN(d.getTime())
@@ -854,18 +860,49 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
               : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
             fields.push({ icon: "gift-outline", label: t("birthday"), value: formatted });
           }
-          const socialDisplay = contact.socialLinks?.[0] || contact.social;
-          if (socialDisplay)   fields.push({ icon: "globe-outline", label: t("social"), value: socialDisplay });
+          // All social links as individual rows
+          const links = contact.socialLinks && contact.socialLinks.length > 0
+            ? contact.socialLinks
+            : contact.social ? [contact.social] : [];
+          links.forEach((link, i) => {
+            fields.push({ icon: "globe-outline", label: i === 0 ? t("social") : `${t("social")} ${i + 1}`, value: link });
+          });
 
           if (fields.length === 0) return null;
           return (
             <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, marginTop: 0, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
               {fields.map((f, i) => (
-                <InfoRow key={f.label} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} />
+                <InfoRow key={`${f.label}-${i}`} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} />
               ))}
             </MeshCard>
           );
         })()}
+
+        {/* Special Days section */}
+        {contact.specialDays && contact.specialDays.length > 0 && (
+          <>
+            <Text style={{ color: mesh.green800, fontSize: 17, fontWeight: "800", letterSpacing: -0.2, paddingHorizontal: 4, paddingTop: 20, paddingBottom: 10 }}>
+              {t("specialDay")}
+            </Text>
+            <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
+              {contact.specialDays.map((sd, i) => {
+                const d = new Date(sd.date);
+                const formatted = isNaN(d.getTime())
+                  ? sd.date
+                  : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                return (
+                  <InfoRow
+                    key={sd.id}
+                    icon="calendar-outline"
+                    label={sd.name}
+                    value={formatted}
+                    last={i === (contact.specialDays?.length ?? 0) - 1}
+                  />
+                );
+              })}
+            </MeshCard>
+          </>
+        )}
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
           <Text style={{ color: mesh.green800, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 28 }}>{t("timeline")}</Text>
