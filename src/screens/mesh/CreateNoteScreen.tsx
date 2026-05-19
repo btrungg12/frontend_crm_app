@@ -974,6 +974,7 @@ function ReminderDateTimeSheet({
   const [viewYear, setViewYear] = useState(current.getFullYear());
   const [viewMonth, setViewMonth] = useState(current.getMonth());
   const [monthYearOpen, setMonthYearOpen] = useState(false);
+  const [timeError, setTimeError] = useState("");
   const hourRef = useRef<ScrollView>(null);
   const minuteRef = useRef<ScrollView>(null);
 
@@ -984,6 +985,7 @@ function ReminderDateTimeSheet({
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
     setMonthYearOpen(false);
+    setTimeError("");
     const minuteIdx = Math.min(Math.round(d.getMinutes() / 5), MINUTES.length - 1);
     setTimeout(() => {
       hourRef.current?.scrollTo({ y: d.getHours() * WHEEL_ITEM_H, animated: false });
@@ -993,12 +995,17 @@ function ReminderDateTimeSheet({
 
   const cells = buildMonthCells(viewYear, viewMonth);
   const today = new Date();
+  // Midnight of today — days strictly before this are in the past
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const isOnCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
   // The selected day is highlighted only if viewYear/viewMonth match the selected date
   const selDay = current.getFullYear() === viewYear && current.getMonth() === viewMonth
     ? current.getDate() : -1;
 
   function goPrevMonth() {
+    // Block navigating to past months
+    if (isOnCurrentMonth) return;
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
     else setViewMonth(m => m - 1);
   }
@@ -1029,6 +1036,11 @@ function ReminderDateTimeSheet({
   }
 
   function handleConfirm() {
+    if (current.getTime() <= Date.now()) {
+      setTimeError(isVi ? "Thời gian nhắc nhở phải ở tương lai." : "Reminder time must be in the future.");
+      return;
+    }
+    setTimeError("");
     onConfirm(new Date(current));
     onClose();
   }
@@ -1079,7 +1091,7 @@ function ReminderDateTimeSheet({
                 </Pressable>
                 {/* Prev / Next arrows */}
                 <View style={{ flexDirection: "row", gap: 4 }}>
-                  <Pressable onPress={goPrevMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", width: 36 }}>
+                  <Pressable onPress={goPrevMonth} disabled={isOnCurrentMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", opacity: isOnCurrentMonth ? 0.25 : 1, width: 36 }}>
                     <Ionicons name="chevron-back" size={20} color={mesh.green700} />
                   </Pressable>
                   <Pressable onPress={goNextMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", width: 36 }}>
@@ -1102,14 +1114,17 @@ function ReminderDateTimeSheet({
                 {cells.map((day, idx) => {
                   const isSelected = day === selDay;
                   const isToday = day !== null && day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+                  const isPast = day !== null && new Date(viewYear, viewMonth, day).getTime() < todayStart.getTime();
                   return (
                     <View key={idx} style={{ width: "14.28%", height: DAY_CELL_H, alignItems: "center", justifyContent: "center" }}>
                       {day !== null ? (
                         <Pressable
-                          onPress={() => selectDay(day)}
+                          onPress={() => !isPast && selectDay(day)}
+                          disabled={isPast}
                           style={{
                             width: 32, height: 32, borderRadius: 16,
                             alignItems: "center", justifyContent: "center",
+                            opacity: isPast ? 0.28 : 1,
                             backgroundColor: isSelected ? mesh.green700 : isToday ? "rgba(31,112,72,0.10)" : "transparent"
                           }}
                         >
@@ -1147,10 +1162,18 @@ function ReminderDateTimeSheet({
                 />
               </View>
 
+              {/* Past-time error */}
+              {timeError ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, backgroundColor: "rgba(217,87,122,0.08)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
+                  <Ionicons name="alert-circle-outline" size={15} color={mesh.pink} />
+                  <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "600", flex: 1 }}>{timeError}</Text>
+                </View>
+              ) : null}
+
               {/* Confirm */}
               <Pressable
                 onPress={handleConfirm}
-                style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 20, paddingVertical: 14 }}
+                style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 14, paddingVertical: 14 }}
               >
                 <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "800" }}>{t("save")}</Text>
               </Pressable>
