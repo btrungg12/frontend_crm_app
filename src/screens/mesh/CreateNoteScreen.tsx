@@ -487,11 +487,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             setPerson(null);
             setPersonError(false);
           }}
-          onSelectTyped={() => {
-            setPersonLabel(personQuery.trim());
-            setPerson(null);
-            setPersonFocused(false);
-          }}
           onSelectContact={(c) => {
             setPerson(c.id);
             setPersonLabel(c.name);
@@ -600,34 +595,46 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           <Pressable
             onPress={() => setReminderSheet("preset")}
             style={{
+              alignSelf: "flex-start",
               minHeight: 42,
+              maxWidth: "82%",
               borderRadius: 999,
-              paddingHorizontal: 14,
+              paddingLeft: 8,
+              paddingRight: 15,
               flexDirection: "row",
               alignItems: "center",
-              gap: 8,
-              backgroundColor: reminderAt ? mesh.green700 : "rgba(255,255,255,0.88)",
+              gap: 10,
+              backgroundColor: reminderAt ? "rgba(31,112,72,0.055)" : "rgba(255,255,255,0.88)",
               borderWidth: 1,
-              borderColor: reminderAt ? mesh.green700 : "rgba(6,69,50,0.08)",
+              borderColor: reminderAt ? "rgba(31,112,72,0.10)" : "rgba(6,69,50,0.08)",
               shadowColor: "#064532",
-              shadowOpacity: 0.02,
-              shadowRadius: 6,
+              shadowOpacity: 0.018,
+              shadowRadius: 7,
               shadowOffset: { width: 0, height: 3 },
               elevation: 1,
             }}
           >
-            <Ionicons
-              name="notifications-outline"
-              size={16}
-              color={reminderAt ? "#FFFFFF" : mesh.green700}
-            />
-            <Text style={{ color: reminderAt ? "#FFFFFF" : mesh.green700, fontSize: 14, fontWeight: "700" }}>
+            <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)" }}>
+              <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
+            </View>
+            <Text numberOfLines={1} style={{ flexShrink: 1, color: mesh.green700, fontSize: 15, fontWeight: "700", letterSpacing: -0.1 }}>
               {reminderLabel ?? (isVi ? "Nhắc nhở" : "Reminder")}
             </Text>
           </Pressable>
           {reminderAt ? (
-            <Pressable onPress={() => setReminderAt(null)} hitSlop={8}>
-              <Ionicons name="close-circle" size={20} color={mesh.ink400} />
+            <Pressable
+              onPress={() => setReminderAt(null)}
+              hitSlop={8}
+              style={{
+                width: 30, height: 30, borderRadius: 15,
+                alignItems: "center", justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.78)",
+                borderWidth: 1, borderColor: "rgba(6,69,50,0.06)",
+                shadowColor: "#064532", shadowOpacity: 0.012, shadowRadius: 5,
+                shadowOffset: { width: 0, height: 2 }, elevation: 1,
+              }}
+            >
+              <Ionicons name="close" size={15} color={mesh.ink500} />
             </Pressable>
           ) : null}
         </View>
@@ -714,7 +721,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
 function PersonPill({
   contacts, error, focused, loading, onBlur, onChangeText, onFocus,
-  onSelectContact, onSelectTyped, selectedPersonId, value,
+  onSelectContact, selectedPersonId, value,
 }: {
   contacts: PickerContact[];
   error: boolean;
@@ -724,28 +731,32 @@ function PersonPill({
   onChangeText: (value: string) => void;
   onFocus: () => void;
   onSelectContact: (contact: PickerContact) => void;
-  onSelectTyped: () => void;
   selectedPersonId: string | null;
   value: string;
 }) {
   const trimmed = value.trim();
-  const showSuggestions = focused && trimmed.length > 0;
+  // Dropdown only when existing contacts match — never show the raw typed name as an item
+  const showSuggestions = focused && trimmed.length > 0 && (contacts.length > 0 || loading);
+  // Soft hint when user typed something but no contacts matched
+  const showNewContactHint = focused && trimmed.length > 0 && !loading && contacts.length === 0;
+
   const borderColor = error
     ? "rgba(217,87,122,0.55)"
     : focused ? mesh.green700
     : "rgba(6,69,50,0.08)";
 
   return (
-    <View style={{ marginLeft: 24, width: 228, zIndex: 20 }}>
+    <View style={{ marginLeft: 24, width: 248, zIndex: 20 }}>
       {/* Pill input */}
       <View
         style={{
-          minHeight: 52,
+          height: 52,
           borderRadius: 26,
           backgroundColor: "rgba(255,255,255,0.92)",
           borderWidth: 1,
           borderColor,
-          paddingHorizontal: 15,
+          paddingLeft: 15,
+          paddingRight: value.length > 0 ? 10 : 16,
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
@@ -758,7 +769,11 @@ function PersonPill({
       >
         {selectedPersonId
           ? <Avatar name={trimmed || "?"} size={32} />
-          : <Ionicons name="person-outline" size={18} color={mesh.green700} />
+          : (
+            <View style={{ width: 22, height: 22, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="person-outline" size={19} color={mesh.green700} />
+            </View>
+          )
         }
         <TextInput
           value={value}
@@ -768,7 +783,19 @@ function PersonPill({
           placeholder="Type a person name..."
           placeholderTextColor={mesh.ink400}
           returnKeyType="done"
-          style={{ color: mesh.ink900, flex: 1, fontSize: 16, fontWeight: "400", padding: 0 }}
+          style={{
+            flex: 1,
+            height: 52,
+            color: mesh.ink900,
+            fontSize: 16,
+            fontWeight: "400",
+            lineHeight: 22,
+            paddingTop: 0,
+            paddingBottom: 0,
+            paddingVertical: 0,
+            includeFontPadding: false,
+            textAlignVertical: "center",
+          } as any}
         />
         {value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} hitSlop={8}>
@@ -777,7 +804,7 @@ function PersonPill({
         ) : null}
       </View>
 
-      {/* Autocomplete dropdown */}
+      {/* Autocomplete dropdown — only real contacts, never raw typed name */}
       {showSuggestions ? (
         <View
           style={{
@@ -795,29 +822,6 @@ function PersonPill({
             zIndex: 20,
           }}
         >
-          {/* "Use typed name" row */}
-          <Pressable
-            onPress={onSelectTyped}
-            style={{
-              alignItems: "center",
-              borderBottomWidth: contacts.length > 0 || loading ? 1 : 0,
-              borderColor: "rgba(6,69,50,0.06)",
-              flexDirection: "row",
-              gap: 12,
-              minHeight: 58,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-            }}
-          >
-            <Avatar name={trimmed} size={36} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{trimmed}</Text>
-              <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>Use this name</Text>
-            </View>
-            <Ionicons name="return-down-back-outline" size={16} color={mesh.ink400} />
-          </Pressable>
-
-          {/* Existing contacts */}
           {contacts.map((contact, index) => (
             <Pressable
               key={contact.id}
@@ -828,12 +832,12 @@ function PersonPill({
                 borderColor: "rgba(6,69,50,0.06)",
                 flexDirection: "row",
                 gap: 12,
-                minHeight: 58,
+                minHeight: 56,
                 paddingHorizontal: 14,
                 paddingVertical: 10,
               }}
             >
-              <Avatar name={contact.name} size={36} />
+              <Avatar name={contact.name} size={34} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
                 {contact.status ? (
@@ -845,12 +849,34 @@ function PersonPill({
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
           ))}
-
           {loading && contacts.length === 0 ? (
             <View style={{ alignItems: "center", paddingVertical: 14 }}>
               <ActivityIndicator size="small" color={mesh.green700} />
             </View>
           ) : null}
+        </View>
+      ) : null}
+
+      {/* "New contact" hint — subtle, non-interactive, when no contacts match */}
+      {showNewContactHint ? (
+        <View
+          style={{
+            marginTop: 6,
+            borderRadius: 16,
+            backgroundColor: "rgba(255,255,255,0.72)",
+            borderWidth: 1,
+            borderColor: "rgba(6,69,50,0.06)",
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          <Ionicons name="sparkles-outline" size={14} color={mesh.ink500} />
+          <Text style={{ flex: 1, color: mesh.ink500, fontSize: 12, lineHeight: 16, fontWeight: "500" }}>
+            New contact will be created when saving.
+          </Text>
         </View>
       ) : null}
     </View>
