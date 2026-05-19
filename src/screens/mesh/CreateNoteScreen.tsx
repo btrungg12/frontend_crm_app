@@ -612,13 +612,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           >
             {reminderAt ? (
               <LinearGradient
-                colors={["rgba(238,250,242,0.98)", "rgba(219,244,232,0.96)", "rgba(245,252,247,0.98)"]}
+                colors={["rgba(255,255,255,0.98)", "rgba(231,247,238,0.68)", "rgba(250,254,251,0.98)"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.reminderChipGradient}
               >
                 <View style={styles.reminderIconCircle}>
-                  <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
+                  <Ionicons name="notifications-outline" size={14} color={mesh.green700} style={{ transform: [{ translateY: 0.5 }] }} />
                 </View>
                 <Text numberOfLines={1} style={styles.reminderText}>
                   {reminderLabel}
@@ -627,7 +627,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             ) : (
               <View style={styles.reminderChipInner}>
                 <View style={styles.reminderIconCircle}>
-                  <Ionicons name="notifications-outline" size={15} color={mesh.green700} />
+                  <Ionicons name="notifications-outline" size={14} color={mesh.green700} style={{ transform: [{ translateY: 0.5 }] }} />
                 </View>
                 <Text numberOfLines={1} style={styles.reminderText}>
                   {isVi ? "Nhắc nhở" : "Reminder"}
@@ -641,7 +641,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
               hitSlop={8}
               style={styles.reminderClearButton}
             >
-              <Ionicons name="close" size={15} color={mesh.ink500} />
+              <Ionicons name="close" size={14} color={mesh.ink500} />
             </Pressable>
           ) : null}
         </View>
@@ -773,10 +773,19 @@ function PersonPill({
         }}
       >
         {selectedPersonId
-          ? <Avatar name={trimmed || "?"} size={32} />
+          ? (
+            <View style={styles.personAvatarSlot}>
+              <Avatar name={trimmed || "?"} size={30} />
+            </View>
+          )
           : (
-            <View style={{ width: 22, height: 22, alignItems: "center", justifyContent: "center" }}>
-              <Ionicons name="person-outline" size={19} color={mesh.green700} />
+            <View style={styles.personIconSlot}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={mesh.green700}
+                style={styles.personIcon}
+              />
             </View>
           )
         }
@@ -794,7 +803,7 @@ function PersonPill({
             color: mesh.ink900,
             fontSize: 16,
             fontWeight: "400",
-            lineHeight: 22,
+            lineHeight: 23,
             paddingTop: 0,
             paddingBottom: 0,
             paddingVertical: 0,
@@ -1325,71 +1334,96 @@ function ReminderDateTimeSheet({
 // ─── Reminder chip styles ─────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // ── Person pill ──
+  personIconSlot: {
+    width: 24,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  personIcon: {
+    transform: [{ translateY: 1 }],
+  },
+  personAvatarSlot: {
+    width: 30,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  // ── Reminder chip ──
   reminderChipBase: {
     alignSelf: "flex-start",
-    minHeight: 46,
+    minHeight: 40,
     maxWidth: "82%",
     borderRadius: 999,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(31,112,72,0.10)",
+    borderColor: "rgba(31,112,72,0.065)",
     shadowColor: "#064532",
-    shadowOpacity: 0.045,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    shadowOpacity: 0.018,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   reminderChipEmpty: {
-    backgroundColor: "rgba(255,255,255,0.88)",
-    shadowOpacity: 0.018,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 3 },
+    backgroundColor: "rgba(255,255,255,0.84)",
+    borderColor: "rgba(6,69,50,0.065)",
+    shadowOpacity: 0.01,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
   reminderChipGradient: {
-    minHeight: 46,
-    paddingLeft: 10,
-    paddingRight: 16,
+    minHeight: 40,
+    paddingLeft: 8,
+    paddingRight: 13,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   reminderChipInner: {
-    minHeight: 46,
-    paddingLeft: 10,
-    paddingRight: 16,
+    minHeight: 40,
+    paddingLeft: 8,
+    paddingRight: 13,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   reminderIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(31,112,72,0.08)",
+    backgroundColor: "rgba(31,112,72,0.055)",
+    flexShrink: 0,
   },
   reminderText: {
     flexShrink: 1,
     color: mesh.green700,
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: -0.1,
-  },
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "600",
+    letterSpacing: -0.05,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  } as any,
   reminderClearButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.78)",
+    backgroundColor: "rgba(255,255,255,0.68)",
     borderWidth: 1,
-    borderColor: "rgba(6,69,50,0.06)",
+    borderColor: "rgba(6,69,50,0.045)",
     shadowColor: "#064532",
-    shadowOpacity: 0.012,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.006,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
 });
