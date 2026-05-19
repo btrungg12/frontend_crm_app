@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { getDashboard } from "../../api/dashboardApi";
-import { getUnreadCount } from "../../api/notificationApi";
-import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
+import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { GradientAvatar } from "../../components/GradientAvatar";
@@ -12,7 +11,7 @@ import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
-import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
+import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { getToken } from "../../storage/tokenStorage";
 
@@ -20,6 +19,13 @@ type Props = {
   t: TFn;
   lang: Lang;
   nav: NavFn;
+  refresh?: number;
+};
+
+type RecentActivityContact = Contact & {
+  activityAt?: Date;
+  activityLabel?: string;
+  activityType?: "note" | "contact";
 };
 
 function asRecord(value: unknown) {
@@ -37,12 +43,204 @@ function readUserName(value: unknown) {
   return typeof candidate === "string" && candidate.trim() ? candidate.trim() : "User";
 }
 
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== "string" && !(value instanceof Date)) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatTimeHHMM(date: Date, lang: Lang): string {
+  return date.toLocaleTimeString(lang === "vi" ? "vi-VN" : "en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatRelativeUpcomingTag(date: Date, lang: Lang): string {
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffMinutes = Math.max(0, Math.round(diffMs / 60000));
+  const diffHours = Math.round(diffMs / 3600000);
+
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startTarget = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const diffDays = Math.round((startTarget - startToday) / 86400000);
+
+  if (diffDays === 0 && diffMinutes < 60) {
+    return lang === "vi" ? `${diffMinutes} phút nữa` : `In ${diffMinutes} min`;
+  }
+
+  if (diffDays === 0 && diffHours < 24) {
+    return lang === "vi" ? `${Math.max(1, diffHours)} giờ nữa` : `In ${Math.max(1, diffHours)} hours`;
+  }
+
+  if (diffDays === 0) return lang === "vi" ? "Hôm nay" : "Today";
+  if (diffDays === 1) return lang === "vi" ? "Ngày mai" : "Tomorrow";
+
+  return lang === "vi" ? `${diffDays} ngày nữa` : `In ${diffDays} days`;
+}
+
+function formatRelativePast(date: Date, lang: Lang): string {
+  const now = new Date();
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMinutes < 1) return lang === "vi" ? "vừa xong" : "just now";
+  if (diffMinutes < 60) return lang === "vi" ? `${diffMinutes} phút trước` : `${diffMinutes}m ago`;
+  if (diffHours < 24) return lang === "vi" ? `${diffHours} giờ trước` : `${diffHours}h ago`;
+  if (diffDays < 7) return lang === "vi" ? `${diffDays} ngày trước` : `${diffDays}d ago`;
+
+  return date.toLocaleDateString(lang === "vi" ? "vi-VN" : "en-US", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 function formatCurrentDate(lang: Lang) {
   const locale = lang === "vi" ? "vi-VN" : "en-US";
   const date = new Date();
   const weekday = date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
   const month = date.toLocaleDateString(locale, { month: "short" });
   return `${weekday} ${date.getDate()} ${month}`;
+}
+
+function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const reminder = asRecord(item.reminder);
+  const enabled = reminder?.enabled !== false;
+  const remindAt = parseDate(reminder?.remindAt ?? item.remindAt ?? item.reminderAt);
+
+  if (!enabled || !remindAt) return null;
+
+  const contact = asRecord(item.contact);
+  const contactName = String(contact?.name ?? item.contactName ?? "Unknown person");
+
+  const title = String(
+    reminder?.content ??
+    item.title ??
+    item.content ??
+    (lang === "vi" ? "Nhắc nhở" : "Reminder")
+  );
+
+  return {
+    id: String(item._id ?? item.id ?? `${contactName}-${remindAt.toISOString()}`),
+    icon: "alarm-outline",
+    noteId: String(item._id ?? item.id ?? ""),
+    contactId: String(item.contactId ?? contact?._id ?? contact?.id ?? ""),
+    kind: "reminder",
+    title,
+    titleEn: title,
+    sub: contactName,
+    subEn: contactName,
+    time: formatTimeHHMM(remindAt, lang),
+    tag: formatRelativeUpcomingTag(remindAt, "vi" as Lang),
+    tagEn: formatRelativeUpcomingTag(remindAt, "en" as Lang),
+  };
+}
+
+function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const date = parseDate(item.date);
+  if (!date) return null;
+
+  const occasion = String(item.occasion ?? (lang === "vi" ? "Ngày đặc biệt" : "Special day"));
+  const contactName = String(item.contactName ?? "Unknown person");
+
+  const occasionLower = occasion.toLowerCase();
+  const isBirthday =
+    occasionLower.includes("birthday") ||
+    occasionLower.includes("sinh nhật");
+
+  const titleVi = isBirthday ? `Sinh nhật ${contactName}` : occasion;
+  const titleEn = isBirthday ? `${contactName}'s birthday` : occasion;
+
+  return {
+    id: String(item.specialDayId ?? `${item.contactId ?? contactName}-${date.toISOString()}`),
+    icon: isBirthday ? "gift-outline" : "sparkles-outline",
+    contactId: String(item.contactId ?? ""),
+    kind: isBirthday ? "birthday" : "special",
+    title: titleVi,
+    titleEn,
+    sub: isBirthday ? contactName : contactName,
+    subEn: contactName,
+    time: "",
+    tag: formatRelativeUpcomingTag(date, "vi" as Lang),
+    tagEn: formatRelativeUpcomingTag(date, "en" as Lang),
+  };
+}
+
+function getContactFromNote(noteValue: unknown): Contact | null {
+  const note = asRecord(noteValue);
+  if (!note) return null;
+
+  const contactRaw = asRecord(note.contact);
+  if (!contactRaw && !note.contactId) return null;
+
+  const id = String(contactRaw?._id ?? contactRaw?.id ?? note.contactId ?? "");
+  const name = String(contactRaw?.name ?? note.contactName ?? "Unknown person");
+
+  if (!id && !name) return null;
+
+  return {
+    id: id || name,
+    name,
+    phone: "",
+    email: "",
+    status: String(contactRaw?.statusId ?? contactRaw?.status ?? "other"),
+    avatarUrl: typeof contactRaw?.avatarUrl === "string" ? contactRaw.avatarUrl : undefined,
+  } as Contact;
+}
+
+function buildRecentActivityContacts(
+  recentNotesRaw: unknown[],
+  recentContactsRaw: unknown[],
+  lang: Lang
+): RecentActivityContact[] {
+  const byId = new Map<string, RecentActivityContact>();
+
+  function upsert(contact: Contact | null, activityAt: Date | null, activityType: "note" | "contact") {
+    if (!contact) return;
+    const key = contact.id || contact.name;
+    if (!key) return;
+
+    const previous = byId.get(key);
+    const previousTime = previous?.activityAt?.getTime() ?? 0;
+    const nextTime = activityAt?.getTime() ?? 0;
+
+    if (!previous || nextTime >= previousTime) {
+      byId.set(key, {
+        ...contact,
+        activityAt: activityAt ?? previous?.activityAt,
+        activityLabel: activityAt ? formatRelativePast(activityAt, lang) : "",
+        activityType,
+      });
+    }
+  }
+
+  recentNotesRaw.forEach((raw) => {
+    const note = asRecord(raw);
+    const contact = getContactFromNote(raw);
+    const activityAt = parseDate(note?.interactionDate ?? note?.createdAt ?? note?.updatedAt);
+    upsert(contact, activityAt, "note");
+  });
+
+  recentContactsRaw.forEach((raw) => {
+    const contact = normalizeApiContact(raw);
+    const rec = asRecord(raw);
+    const activityAt = parseDate(rec?.updatedAt ?? rec?.createdAt);
+    upsert(contact, activityAt, "contact");
+  });
+
+  return Array.from(byId.values())
+    .sort((a, b) => (b.activityAt?.getTime() ?? 0) - (a.activityAt?.getTime() ?? 0))
+    .slice(0, 4);
 }
 
 function upcomingSearchText(item: Upcoming) {
@@ -104,8 +302,8 @@ function upcomingSubtitle(item: Upcoming, lang: Lang) {
   return sub ? `${sub} · ${item.time}` : item.time;
 }
 
-export function DashboardScreen({ t, lang, nav }: Props) {
-  const [recent, setRecent] = useState<Contact[]>([]);
+export function DashboardScreen({ t, lang, nav, refresh }: Props) {
+  const [recent, setRecent] = useState<RecentActivityContact[]>([]);
   const [upcomingItems, setUpcomingItems] = useState<Upcoming[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,75 +312,89 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
 
   function openUpcoming(item: Upcoming) {
-    if (item.kind !== "reminder") return;
-
-    if (item.noteId) {
+    if (item.kind === "reminder" && item.noteId) {
       nav("noteDetail", { id: item.noteId });
       return;
     }
 
-    console.warn("Missing noteId for reminder upcoming", item);
+    if ((item.kind === "birthday" || item.kind === "special") && item.contactId) {
+      nav("contactDetail", { id: item.contactId });
+      return;
+    }
   }
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     let active = true;
 
-    async function loadDashboard() {
-      try {
-        setLoading(true);
-        setError("");
-        const token = await getToken();
+    try {
+      setLoading(true);
+      setError("");
+      const token = await getToken();
 
-        if (!token) {
-          if (!active) return;
-          setRecent([]);
-          setUpcomingItems([]);
-          setUserName("User");
-          setError("Please log in to view dashboard data.");
-          return;
-        }
-
-        const [dashboardResponse, profileResponse] = await Promise.all([
-          getDashboard(),
-          getProfile().catch(() => null)
-        ]);
-
-        // Fetch unread count separately — failure is non-fatal
-        getUnreadCount()
-          .then((res) => {
-            const raw = res && typeof res === "object" && "unreadCount" in (res as object)
-              ? (res as Record<string, unknown>).unreadCount
-              : res;
-            const count = typeof raw === "number" ? raw : 0;
-            if (active) setUnreadCount(count);
-          })
-          .catch(() => {});
-
-        if (!active) return;
-
-        const recentContacts = extractArray(dashboardResponse, "recentContacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-        const apiUpcoming = extractArray(dashboardResponse, "upcoming").map(normalizeApiUpcoming).filter(Boolean) as Upcoming[];
-        const upcomingList = apiUpcoming.length > 0 ? apiUpcoming : mockUpcoming;
-
-        setUserName(readUserName(profileResponse));
-        setRecent(recentContacts.slice(0, 4));
-        setUpcomingItems(upcomingList.slice(0, 4));
-      } catch (err) {
+      if (!token) {
         if (!active) return;
         setRecent([]);
         setUpcomingItems([]);
-        setError(err instanceof Error && err.message ? err.message : "Cannot load dashboard.");
-      } finally {
-        if (active) setLoading(false);
+        setUserName("User");
+        setError("Please log in to view dashboard data.");
+        return;
       }
+
+      const [dashboardResponse, profileResponse] = await Promise.all([
+        getDashboard(),
+        getProfile().catch(() => null)
+      ]);
+
+      if (!active) return;
+
+      const dashboardData = unwrapData(dashboardResponse);
+
+      const recentContactsRaw = extractArray(dashboardResponse, "recentContacts");
+      const recentNotesRaw = extractArray(dashboardResponse, "recentNotes");
+
+      const upcomingReminders = extractArray(dashboardResponse, "upcomingReminders")
+        .map((item) => normalizeDashboardReminder(item, lang))
+        .filter(Boolean) as Upcoming[];
+
+      const upcomingSpecialDays = extractArray(dashboardResponse, "upcomingSpecialDays")
+        .map((item) => normalizeDashboardSpecialDay(item, lang))
+        .filter(Boolean) as Upcoming[];
+
+      const apiUpcoming = [...upcomingReminders, ...upcomingSpecialDays]
+        .sort((a, b) => (a.tag && b.tag ? 0 : a.tag ? -1 : 1))
+        .slice(0, 4);
+
+      const activityContacts = buildRecentActivityContacts(
+        recentNotesRaw,
+        recentContactsRaw,
+        lang
+      );
+
+      const unreadRaw = dashboardData?.unreadNotificationCount;
+
+      setUserName(readUserName(profileResponse));
+      setUnreadCount(typeof unreadRaw === "number" ? unreadRaw : 0);
+      setRecent(activityContacts);
+      setUpcomingItems(apiUpcoming);
+    } catch (err) {
+      if (!active) return;
+      setRecent([]);
+      setUpcomingItems([]);
+      setError(err instanceof Error && err.message ? err.message : "Cannot load dashboard.");
+    } finally {
+      if (active) setLoading(false);
     }
+  }, [lang]);
 
+  useEffect(() => {
     loadDashboard();
+  }, [loadDashboard]);
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  useEffect(() => {
+    if (refresh) {
+      loadDashboard();
+    }
+  }, [refresh, loadDashboard]);
 
   return (
     <MeshScreen>
@@ -307,7 +519,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
                     {contact.name.split(" ").slice(-2).join(" ")}
                   </Text>
                   <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink400, fontSize: 10, lineHeight: 13 }}>
-                    2d ago
+                    {contact.activityLabel || ""}
                   </Text>
                 </Pressable>
               ))}
