@@ -310,6 +310,15 @@ export function BottomNav({
   const bottomOffset = Platform.OS === "ios"
     ? Math.max(insets.bottom - 6, 24)
     : 16;
+  const TAB_W = 68;
+  const FAB_SLOT_W = 86;
+  const navColors = {
+    primary: "#064E35",
+    inactive: "#5F6663",
+    navBg: "#FFFFFF",
+    navBorder: "#E8EFEA",
+    underline: "#0B6B48",
+  };
 
   const [dockOpen, setDockOpen] = useState(false);
   const dockAnim = useRef(new Animated.Value(0)).current;
@@ -338,6 +347,53 @@ export function BottomNav({
     { id: "notes",    label: t("tabNotes"),    icon: "document-text-outline", activeIcon: "document-text" },
     { id: "status",   label: t("tabStatus"),   icon: "pricetag-outline",      activeIcon: "pricetag"      },
   ];
+
+  const renderTabItem = (tab: (typeof tabs)[number]) => {
+    const isActive = active === tab.id;
+
+    return (
+      <ScalePressable
+        key={tab.id}
+        activeScale={0.94}
+        onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
+        style={{
+          width: TAB_W,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingVertical: 4,
+          backgroundColor: "transparent",
+        }}
+      >
+        <Ionicons
+          name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"}
+          size={22}
+          color={isActive ? navColors.primary : navColors.inactive}
+        />
+
+        <Text
+          style={{
+            marginTop: 3,
+            color: isActive ? navColors.primary : navColors.inactive,
+            fontSize: 12.5,
+            fontWeight: isActive ? "700" : "500",
+            lineHeight: 16,
+          }}
+        >
+          {tab.label}
+        </Text>
+
+        <View
+          style={{
+            width: 18,
+            height: 3,
+            borderRadius: 999,
+            backgroundColor: isActive ? navColors.underline : "transparent",
+            marginTop: 4,
+          }}
+        />
+      </ScalePressable>
+    );
+  };
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
@@ -389,80 +445,61 @@ export function BottomNav({
       <View
         style={{
           position: "absolute",
-          left: 20,
-          right: 20,
+          left: 24,
+          right: 24,
           bottom: bottomOffset,
-          minHeight: 78,
+          minHeight: 84,
           paddingVertical: 8,
-          paddingHorizontal: 12,
-          backgroundColor: "#FFFFFF",
-          borderRadius: 34,
+          paddingHorizontal: 10,
+          backgroundColor: navColors.navBg,
+          borderRadius: 36,
           borderWidth: 1,
-          borderColor: "rgba(6,69,50,0.08)",
-          shadowColor: "#064532",
-          shadowOpacity: 0.1,
-          shadowRadius: 22,
+          borderColor: navColors.navBorder,
+          shadowColor: "#0B2F20",
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
           shadowOffset: { width: 0, height: 8 },
           elevation: 8,
           zIndex: 10,
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-around",
+          justifyContent: "space-between",
         }}
       >
         {tabs.map((tab) => {
           if (tab.id === "fab") {
             return withFab ? (
-              <ScalePressable
-                key="fab"
-                activeScale={0.9}
-                onPress={() => { triggerHaptic(); setDockOpen((v) => !v); }}
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: mesh.green700,
-                  transform: [{ translateY: -16 }],
-                  shadowColor: mesh.green700,
-                  shadowOpacity: 0.24,
-                  shadowRadius: 18,
-                  shadowOffset: { width: 0, height: 8 },
-                  elevation: 10,
-                }}
-              >
-                <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
-                  <Ionicons name="add" size={28} color="#FFFFFF" />
-                </Animated.View>
-              </ScalePressable>
+              <View key="fab" style={{ width: FAB_SLOT_W, alignItems: "center" }}>
+                <View style={{ transform: [{ translateY: -20 }] }}>
+                  <ScalePressable
+                    activeScale={0.9}
+                    onPress={() => { triggerHaptic(); setDockOpen((v) => !v); }}
+                    style={{
+                      width: 76,
+                      height: 76,
+                      borderRadius: 38,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: navColors.primary,
+                      shadowColor: navColors.primary,
+                      shadowOpacity: 0.22,
+                      shadowRadius: 16,
+                      shadowOffset: { width: 0, height: 8 },
+                      elevation: 10,
+                    }}
+                  >
+                    <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
+                      <Ionicons name="add" size={34} color="#FFFFFF" />
+                    </Animated.View>
+                  </ScalePressable>
+                </View>
+              </View>
             ) : (
-              <View key="fab" style={{ width: 56 }} />
+              <View key="fab" style={{ width: FAB_SLOT_W }} />
             );
           }
 
-          const isActive = active === tab.id;
-          return (
-            <ScalePressable
-              key={tab.id}
-              activeScale={0.94}
-              onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                gap: 3,
-                paddingHorizontal: 8,
-                paddingVertical: 6,
-                borderRadius: 18,
-                backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent",
-              }}
-            >
-              <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
-              <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: mesh.font.nav, fontWeight: isActive ? "700" : "500" }}>
-                {tab.label}
-              </Text>
-            </ScalePressable>
-          );
+          return renderTabItem(tab);
         })}
       </View>
     </View>
