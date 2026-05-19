@@ -661,6 +661,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("all");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -821,7 +822,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
           <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", letterSpacing: -0.1 }}>{t("contactProfile")}</Text>
-          <HeaderCircleBtn icon="ellipsis-horizontal" />
+          <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
         <View style={{ alignItems: "center", marginTop: 18 }}>
           <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
@@ -838,11 +839,33 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginTop: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
         ) : null}
 
-        <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, marginTop: 0, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
-          <InfoRow icon="call-outline" label={t("phone")} value={contact.phone || "-"} />
-          <InfoRow icon="mail-outline" label="Email" value={contact.email || "-"} />
-          <InfoRow icon="location-outline" label={t("address")} value={contact.address || "-"} last />
-        </MeshCard>
+        {/* Dynamic info card — only renders rows for fields that have data */}
+        {(() => {
+          type InfoField = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string };
+          const fields: InfoField[] = [];
+          if (contact.phone)   fields.push({ icon: "call-outline",     label: t("phone"),   value: contact.phone });
+          if (contact.email)   fields.push({ icon: "mail-outline",     label: "Email",      value: contact.email });
+          if (contact.address) fields.push({ icon: "location-outline", label: t("address"), value: contact.address });
+          if (contact.source)  fields.push({ icon: "chatbubble-outline", label: t("howYouMet"), value: contact.source });
+          if (contact.birthday) {
+            const d = new Date(contact.birthday);
+            const formatted = isNaN(d.getTime())
+              ? contact.birthday
+              : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+            fields.push({ icon: "gift-outline", label: t("birthday"), value: formatted });
+          }
+          const socialDisplay = contact.socialLinks?.[0] || contact.social;
+          if (socialDisplay)   fields.push({ icon: "globe-outline", label: t("social"), value: socialDisplay });
+
+          if (fields.length === 0) return null;
+          return (
+            <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, marginTop: 0, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
+              {fields.map((f, i) => (
+                <InfoRow key={f.label} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} />
+              ))}
+            </MeshCard>
+          );
+        })()}
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
           <Text style={{ color: mesh.green800, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 28 }}>{t("timeline")}</Text>
@@ -881,6 +904,33 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           })}
         </View>
       </MeshScroll>
+      {/* ── More menu ── */}
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }} onPress={() => setMenuOpen(false)}>
+          <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: insets.bottom + 16, paddingTop: 8 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(6,69,50,0.15)", alignSelf: "center", marginBottom: 12 }} />
+            <Pressable
+              onPress={() => { setMenuOpen(false); if (contact) nav("editContact", { id: contact.id }); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.07)" }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(31,112,72,0.09)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="create-outline" size={20} color={mesh.green700} />
+              </View>
+              <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700" }}>{t("editContact")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setMenuOpen(false); setConfirmDelete(true); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 16 }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(220,38,38,0.08)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="trash-outline" size={20} color={mesh.pink} />
+              </View>
+              <Text style={{ color: mesh.pink, fontSize: 16, fontWeight: "700" }}>{t("delete")}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => {

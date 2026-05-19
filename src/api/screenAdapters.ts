@@ -72,17 +72,26 @@ export function normalizeApiContact(value: unknown): Contact | null {
   const statusRecord = asRecord(item.status);
   const status = text(item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status, "st-other");
 
+  const birthdayRaw = item.birthday;
+  const birthday = typeof birthdayRaw === "string" && birthdayRaw ? birthdayRaw : undefined;
+
+  const rawLinks = Array.isArray(item.socialLinks) ? item.socialLinks : [];
+  const socialLinks = rawLinks.filter((l): l is string => typeof l === "string" && l.trim().length > 0);
+
   return {
-    address: text(item.address),
-    email: text(item.email),
+    address: text(item.address) || undefined,
+    birthday,
+    email: text(item.email) || undefined,
     id,
     initials: initials(name),
     interactions: numberValue(item.interactions ?? item.interactionCount),
     name,
     noteCount: numberValue(item.noteCount ?? item.notesCount),
-    phone: text(item.phone),
+    phone: text(item.phone) || undefined,
     reminderCount: numberValue(item.reminderCount ?? item.remindersCount),
-    source: text(item.source),
+    social: text(item.social) || undefined,
+    socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
+    source: text(item.source) || undefined,
     specialCount: numberValue(item.specialCount ?? item.specialDaysCount),
     status
   };

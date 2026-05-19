@@ -20,6 +20,8 @@ export type Contact = {
   email?: string;
   address?: string;
   social?: string;
+  birthday?: string;
+  socialLinks?: string[];
   noteCount: number;
   reminderCount: number;
   specialCount: number;
