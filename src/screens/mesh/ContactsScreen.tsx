@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
@@ -170,11 +170,11 @@ function WheelDatePicker({ value, onChange }: { value: Date | null; onChange: (d
 // ── AdditionalRow ─────────────────────────────────────────────────────────────
 
 function AdditionalRow({
-  icon, label, value, onChangeText, multiline = false, onRemove, last = false,
+  icon, label, value, onChangeText, multiline = false, onRemove, onFocus, last = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value: string;
   onChangeText?: (v: string) => void; multiline?: boolean;
-  onRemove: () => void; last?: boolean;
+  onRemove: () => void; onFocus?: () => void; last?: boolean;
 }) {
   return (
     <View style={{
@@ -191,6 +191,7 @@ function AdditionalRow({
           value={value}
           onChangeText={onChangeText}
           multiline={multiline}
+          onFocus={onFocus}
           placeholder="—"
           placeholderTextColor="#8C9691"
           style={{ color: mesh.ink900, fontSize: 14 }}
@@ -746,6 +747,40 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const [saveError,        setSaveError]        = useState("");
 
   const addFieldRef = useRef<View>(null);
+  const scrollRef   = useRef<ScrollView>(null);
+  const rowYRef     = useRef<Record<string, number>>({});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // ── Keyboard awareness ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  // registerRow: call from onLayout of a View that wraps the field
+  const registerRow = (key: string) => (e: LayoutChangeEvent) => {
+    rowYRef.current[key] = e.nativeEvent.layout.y;
+  };
+
+  // scrollToRow: bring the field above the keyboard
+  const scrollToRow = (key: string) => {
+    setTimeout(() => {
+      const rowY = rowYRef.current[key];
+      if (typeof rowY !== "number") return;
+      // Additional rows are measured relative to the additional section container.
+      // Combine with section's position in the scroll content (+ approx section header offset).
+      const sectionY     = rowYRef.current["additionalSection"] ?? 0;
+      const SECTION_HEADER = 44; // outer padding (16) + title text+margin (~28)
+      const base   = sectionY + SECTION_HEADER + rowY;
+      const offset = key === "note" ? 130 : 90;
+      scrollRef.current?.scrollTo({ y: Math.max(0, base - offset), animated: true });
+    }, 260);
+  };
 
   // ── Popup positioning ──────────────────────────────────────────────────────
   const openPopup = () => {
@@ -935,120 +970,134 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         </View>
       </View>
 
-      {/* ── Scrollable form ── */}
-      <ScrollView
-        style={{ backgroundColor: "#F7FAF7", marginTop: -18 }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
-        keyboardShouldPersistTaps="handled"
+      {/* ── Scrollable form (keyboard-aware) ── */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
-        {saveError ? (
-          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
-            <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
-          </View>
-        ) : null}
-
-        {/* ── Basic info card (no title) ── */}
-        <FormSection>
-          <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
-          <FormRow icon="call-outline"   label={t("phone")}       value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
-          <FormRow icon="mail-outline"   label="Email"            value={email} onChangeText={setEmail} placeholder={t("enterEmail")} />
-          {/* Relationship / Status — inline dot + name + chevron */}
-          <Pressable
-            onPress={() => setStatusOpen(true)}
-            style={{ alignItems: "center", borderBottomWidth: 0, flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 14 }}
-          >
-            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-              <Ionicons name="people-outline" size={20} color={mesh.green700} />
+        <ScrollView
+          ref={scrollRef}
+          style={{ backgroundColor: "#F7FAF7", marginTop: -18 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 + keyboardHeight }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          {saveError ? (
+            <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+              <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
             </View>
-            <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", flex: 1 }}>{t("relationship")}</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentStatus?.color ?? mesh.ink300 }} />
-              <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "600" }}>{currentStatus?.name ?? ""}</Text>
-              <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
-            </View>
-          </Pressable>
-        </FormSection>
+          ) : null}
 
-        {/* ── Add field button ── */}
-        {availableFields.length > 0 && (
-          <View ref={addFieldRef} collapsable={false}>
-            <Pressable onPress={openPopup} style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4, paddingVertical: 6 }}>
-              <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 12, height: 32, justifyContent: "center", width: 32 }}>
-                <Ionicons name="add" size={18} color={mesh.green700} />
+          {/* ── Basic info card (no title) ── */}
+          <FormSection>
+            <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
+            <FormRow icon="call-outline"   label={t("phone")}       value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
+            <FormRow icon="mail-outline"   label="Email"            value={email} onChangeText={setEmail} placeholder={t("enterEmail")} />
+            {/* Relationship / Status — inline dot + name + chevron */}
+            <Pressable
+              onPress={() => setStatusOpen(true)}
+              style={{ alignItems: "center", borderBottomWidth: 0, flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 14 }}
+            >
+              <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+                <Ionicons name="people-outline" size={20} color={mesh.green700} />
               </View>
-              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField")}</Text>
+              <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", flex: 1 }}>{t("relationship")}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentStatus?.color ?? mesh.ink300 }} />
+                <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "600" }}>{currentStatus?.name ?? ""}</Text>
+                <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
+              </View>
             </Pressable>
-          </View>
-        )}
-
-        {/* ── Additional information (shown after fields are added) ── */}
-        {hasAdditional && (
-          <FormSection title={t("additionalInfo")}>
-            {/* Birthday row */}
-            {activeFields.includes("birthday") && (
-              <Pressable
-                onPress={() => openDatePicker({ kind: "birthday" })}
-                style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
-              >
-                <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-                  <Ionicons name="gift-outline" size={20} color={mesh.green700} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{t("birthday")}</Text>
-                  <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
-                    {birthday ? formatDateShort(birthday) : t("selectDate")}
-                  </Text>
-                </View>
-                <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
-                  <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
-                </Pressable>
-              </Pressable>
-            )}
-
-            {/* Text fields (howYouMet / address / social / note) */}
-            {(["howYouMet", "address", "social", "note"] as const).filter(f => activeFields.includes(f)).map((f, loopIdx, arr) => {
-              const fieldStateMap: Record<typeof f, [string, (v: string) => void]> = {
-                howYouMet: [howYouMet, setHowYouMet],
-                address:   [address,   setAddress],
-                social:    [social,    setSocial],
-                note:      [note,      setNote],
-              };
-              const [val, setter] = fieldStateMap[f];
-              const isLastText = loopIdx === arr.length - 1 && specialDays.length === 0;
-              return (
-                <AdditionalRow
-                  key={f}
-                  icon={fieldIcon[f] ?? "ellipsis-horizontal-outline"}
-                  label={fieldLabel[f] ?? f}
-                  value={val}
-                  onChangeText={setter}
-                  multiline={f === "note"}
-                  onRemove={() => removeField(f)}
-                  last={isLastText}
-                />
-              );
-            })}
-
-            {/* Special day rows */}
-            {specialDays.map((sd, i) => (
-              <SpecialDayRow
-                key={sd.id}
-                item={sd}
-                onPress={() => openDatePicker({ kind: "specialDay", index: i })}
-                onRemove={() => setSpecialDays(prev => prev.filter((_, j) => j !== i))}
-                last={i === specialDays.length - 1}
-                fallbackLabel={t("specialDay")}
-                selectDateLabel={t("selectDate")}
-              />
-            ))}
           </FormSection>
-        )}
 
-        <View style={{ marginBottom: 24, marginTop: 16 }}>
-          <TipCard>{t("canAddLater")}</TipCard>
-        </View>
-      </ScrollView>
+          {/* ── Add field button ── */}
+          {availableFields.length > 0 && (
+            <View ref={addFieldRef} collapsable={false}>
+              <Pressable onPress={openPopup} style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4, paddingVertical: 6 }}>
+                <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 12, height: 32, justifyContent: "center", width: 32 }}>
+                  <Ionicons name="add" size={18} color={mesh.green700} />
+                </View>
+                <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField")}</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* ── Additional information (shown after fields are added) ── */}
+          {hasAdditional && (
+            // onLayout gives this section's y relative to the ScrollView content
+            <View onLayout={registerRow("additionalSection")}>
+              <FormSection title={t("additionalInfo")}>
+                {/* Birthday row — tappable, no TextInput, no scrollToRow needed */}
+                {activeFields.includes("birthday") && (
+                  <Pressable
+                    onPress={() => openDatePicker({ kind: "birthday" })}
+                    style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
+                  >
+                    <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+                      <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{t("birthday")}</Text>
+                      <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
+                        {birthday ? formatDateShort(birthday) : t("selectDate")}
+                      </Text>
+                    </View>
+                    <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
+                      <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+                    </Pressable>
+                  </Pressable>
+                )}
+
+                {/* Text fields (howYouMet / address / social / note) */}
+                {(["howYouMet", "address", "social", "note"] as const).filter(f => activeFields.includes(f)).map((f, loopIdx, arr) => {
+                  const fieldStateMap: Record<typeof f, [string, (v: string) => void]> = {
+                    howYouMet: [howYouMet, setHowYouMet],
+                    address:   [address,   setAddress],
+                    social:    [social,    setSocial],
+                    note:      [note,      setNote],
+                  };
+                  const [val, setter] = fieldStateMap[f];
+                  const isLastText = loopIdx === arr.length - 1 && specialDays.length === 0;
+                  return (
+                    // onLayout gives this row's y relative to FormSection's inner container
+                    <View key={f} onLayout={registerRow(f)}>
+                      <AdditionalRow
+                        icon={fieldIcon[f] ?? "ellipsis-horizontal-outline"}
+                        label={fieldLabel[f] ?? f}
+                        value={val}
+                        onChangeText={setter}
+                        multiline={f === "note"}
+                        onRemove={() => removeField(f)}
+                        onFocus={() => scrollToRow(f)}
+                        last={isLastText}
+                      />
+                    </View>
+                  );
+                })}
+
+                {/* Special day rows */}
+                {specialDays.map((sd, i) => (
+                  <SpecialDayRow
+                    key={sd.id}
+                    item={sd}
+                    onPress={() => openDatePicker({ kind: "specialDay", index: i })}
+                    onRemove={() => setSpecialDays(prev => prev.filter((_, j) => j !== i))}
+                    last={i === specialDays.length - 1}
+                    fallbackLabel={t("specialDay")}
+                    selectDateLabel={t("selectDate")}
+                  />
+                ))}
+              </FormSection>
+            </View>
+          )}
+
+          <View style={{ marginBottom: 24, marginTop: 16 }}>
+            <TipCard>{t("canAddLater")}</TipCard>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* ── Status picker bottom sheet ── */}
       <StatusPicker open={statusOpen} value={status} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
@@ -1181,10 +1230,11 @@ function FormSection({ title, children }: { title?: string; children: ReactNode 
 }
 
 function FormRow({
-  icon, label, value, onChangeText, placeholder, last = false,
+  icon, label, value, onChangeText, placeholder, onFocus, last = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value: string;
-  onChangeText?: (value: string) => void; placeholder?: string; last?: boolean;
+  onChangeText?: (value: string) => void; placeholder?: string;
+  onFocus?: () => void; last?: boolean;
 }) {
   return (
     <View style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
@@ -1195,6 +1245,7 @@ function FormRow({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onFocus={onFocus}
         placeholder={placeholder}
         placeholderTextColor="#8C9691"
         style={{ color: mesh.ink900, flex: 1, fontSize: 14, textAlign: "right" }}
