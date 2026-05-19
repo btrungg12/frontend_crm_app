@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getContacts } from "../../api/contactApi";
@@ -21,14 +21,14 @@ type Props = {
   initialPerson?: string;
 };
 
-const titleLimit = 100;
-const contentLimit = 1000;
+const TITLE_MAX_LENGTH = 100;
+const CONTENT_MAX_LENGTH = 1000;
 const leaf2Png = require("../../../assets/leaf_2.png");
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 const WHEEL_ITEM_H = 44;
-const DAY_CELL_H = 38; // fixed row height — keeps 6-row grid stable across months
+const DAY_CELL_H = 38;
 
 type PickerContact = {
   id: string;
@@ -48,6 +48,8 @@ type NoteEditData = {
 
 type Preset = { id: string; label: string; sublabel: string; date: Date };
 
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
 function addDays(from: Date, days: number): Date {
   const d = new Date(from);
   d.setDate(d.getDate() + days);
@@ -62,8 +64,8 @@ function setTime(date: Date, hour: number, minute = 0): Date {
 
 function nextSaturday(from: Date): Date {
   const d = new Date(from);
-  const day = d.getDay(); // 0 = Sun, 6 = Sat
-  const diff = (6 - day + 7) % 7 || 7; // always move forward at least 1 day
+  const day = d.getDay();
+  const diff = (6 - day + 7) % 7 || 7;
   d.setDate(d.getDate() + diff);
   return d;
 }
@@ -80,8 +82,6 @@ function formatPresetDateTime(date: Date, lang: Lang): string {
   const mm = String(date.getMinutes()).padStart(2, "0");
   return `${weekdays[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} · ${hh}:${mm}`;
 }
-
-// ─── Helper functions ─────────────────────────────────────────────────────────
 
 function defaultReminderDate(): Date {
   const d = new Date();
@@ -115,11 +115,10 @@ function formatMonthYear(year: number, month: number, lang: Lang): string {
   return `${months[month]} ${year}`;
 }
 
-/** Always returns exactly 42 cells (6 rows × 7 cols) so the calendar height never changes. */
 function buildMonthCells(year: number, month: number): (number | null)[] {
-  const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+  const firstDay = new Date(year, month, 1).getDay();
   const numDays = daysInMonth(year, month);
-  const offset = (firstDay + 6) % 7; // Mon = 0
+  const offset = (firstDay + 6) % 7;
   const cells: (number | null)[] = [];
   for (let i = 0; i < offset; i++) cells.push(null);
   for (let d = 1; d <= numDays; d++) cells.push(d);
@@ -130,38 +129,38 @@ function buildMonthCells(year: number, month: number): (number | null)[] {
 function getPresets(lang: Lang): Preset[] {
   const isVi = lang === "vi";
   const now = new Date();
-
   const tomorrow  = setTime(addDays(now, 1),  9);
   const weekend   = setTime(nextSaturday(now), 9);
   const nextWeek  = setTime(addDays(now, 7),  9);
   const nextMonth = setTime(addDays(now, 31), 9);
-
   return [
-    {
-      id: "tomorrow",
-      label: isVi ? "Sáng mai" : "Tomorrow morning",
-      sublabel: formatPresetDateTime(tomorrow, lang),
-      date: tomorrow
-    },
-    {
-      id: "weekend",
-      label: isVi ? "Cuối tuần này" : "This weekend",
-      sublabel: formatPresetDateTime(weekend, lang),
-      date: weekend
-    },
-    {
-      id: "nextweek",
-      label: isVi ? "Tuần sau" : "Next week",
-      sublabel: formatPresetDateTime(nextWeek, lang),
-      date: nextWeek
-    },
-    {
-      id: "nextmonth",
-      label: isVi ? "Tháng sau" : "Next month",
-      sublabel: formatPresetDateTime(nextMonth, lang),
-      date: nextMonth
-    }
+    { id: "tomorrow",  label: isVi ? "Sáng mai"       : "Tomorrow morning", sublabel: formatPresetDateTime(tomorrow,  lang), date: tomorrow  },
+    { id: "weekend",   label: isVi ? "Cuối tuần này"  : "This weekend",     sublabel: formatPresetDateTime(weekend,   lang), date: weekend   },
+    { id: "nextweek",  label: isVi ? "Tuần sau"        : "Next week",        sublabel: formatPresetDateTime(nextWeek,  lang), date: nextWeek  },
+    { id: "nextmonth", label: isVi ? "Tháng sau"       : "Next month",       sublabel: formatPresetDateTime(nextMonth, lang), date: nextMonth },
   ];
+}
+
+// ─── Title / content parser ───────────────────────────────────────────────────
+
+function parseNoteDraftFromComposer(
+  firstLine: string,
+  bodyText: string
+): { title: string | null; content: string } {
+  const cleanFirst = firstLine.trim();
+  const cleanBody  = bodyText.trim();
+  const rawText    = [cleanFirst, cleanBody].filter(Boolean).join("\n");
+
+  if (!rawText) return { title: null, content: "" };
+
+  // Use first line as title only when it fits and body has content
+  const useAsTitle =
+    cleanFirst.length > 0 &&
+    cleanFirst.length <= TITLE_MAX_LENGTH &&
+    cleanBody.length > 0;
+
+  if (useAsTitle) return { title: cleanFirst, content: cleanBody };
+  return { title: null, content: rawText };
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -170,47 +169,54 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const insets = useSafeAreaInsets();
   const isVi = lang === "vi";
 
-  // Form states
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [person, setPerson] = useState<string | null>(initialPerson || null);
-  const [personLabel, setPersonLabel] = useState("");
-  const [personQuery, setPersonQuery] = useState("");
+  // ── Editor state
+  const [firstLine, setFirstLine] = useState("");
+  const [bodyText,  setBodyText]  = useState("");
+
+  // ── Person state
+  const [person,        setPerson]        = useState<string | null>(initialPerson || null);
+  const [personLabel,   setPersonLabel]   = useState("");
+  const [personQuery,   setPersonQuery]   = useState("");
   const [personFocused, setPersonFocused] = useState(false);
-  const [apiContacts, setApiContacts] = useState<PickerContact[]>([]);
+  const [apiContacts,   setApiContacts]   = useState<PickerContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
-  const [contactsError, setContactsError] = useState("");
 
-  // Reminder sheet state: "none" | "preset" | "custom"
+  // ── Reminder state
   const [reminderSheet, setReminderSheet] = useState<"none" | "preset" | "custom">("none");
-  const [reminderAt, setReminderAt] = useState<Date | null>(null);
-  const [hadReminder, setHadReminder] = useState(false);
-  const [contentFocused, setContentFocused] = useState(false);
+  const [reminderAt,    setReminderAt]    = useState<Date | null>(null);
+  const [hadReminder,   setHadReminder]   = useState(false);
 
-  // Validation / save
-  const [personError, setPersonError] = useState(false);
+  // ── UI state
+  const [personError,  setPersonError]  = useState(false);
   const [contentError, setContentError] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [loadingNote, setLoadingNote] = useState(edit);
-  const [loadError, setLoadError] = useState("");
+  const [saveError,    setSaveError]    = useState("");
+  const [saving,       setSaving]       = useState(false);
+  const [loadingNote,  setLoadingNote]  = useState(edit);
+  const [loadError,    setLoadError]    = useState("");
 
-  // Load note in edit mode
+  const bodyRef = useRef<TextInput>(null);
+
+  // Load existing note in edit mode
   useEffect(() => {
     if (!edit) return;
     if (!noteId) { setLoadError("Missing note id"); setLoadingNote(false); return; }
-
     let active = true;
     setLoadingNote(true);
     setLoadError("");
-
     getNoteById(noteId)
       .then((response) => {
         if (!active) return;
         const data = normalizeEditNote(response);
         if (!data) { setLoadError("Note not found."); return; }
-        setTitle(data.title);
-        setContent(data.content);
+        // Split title/content back into the two-field composer
+        if (data.title) {
+          setFirstLine(data.title);
+          setBodyText(data.content);
+        } else {
+          const lines = data.content.split("\n");
+          setFirstLine(lines[0] ?? "");
+          setBodyText(lines.slice(1).join("\n"));
+        }
         setPerson(data.contactId);
         setPersonLabel(data.contactName);
         setPersonQuery(data.contactName);
@@ -221,41 +227,46 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
       })
       .catch((err) => { if (active) setLoadError(err instanceof Error ? err.message : "Failed to load note."); })
       .finally(() => { if (active) setLoadingNote(false); });
-
     return () => { active = false; };
   }, [edit, noteId]);
 
-  // Load contacts on mount
+  // Load contacts for autocomplete
   useEffect(() => {
     let active = true;
     setContactsLoading(true);
-    setContactsError("");
     getContacts()
       .then((response) => {
         if (!active) return;
-        const normalized = extractArray(response, "contacts").map(normalizePickerContact).filter(Boolean) as PickerContact[];
+        const normalized = extractArray(response, "contacts")
+          .map(normalizePickerContact)
+          .filter(Boolean) as PickerContact[];
         setApiContacts(normalized);
       })
-      .catch((err) => { if (active) setContactsError(err instanceof Error ? err.message : "Cannot load contacts."); })
+      .catch(() => {})
       .finally(() => { if (active) setContactsLoading(false); });
     return () => { active = false; };
   }, []);
 
+  // Draft length for counter
+  const draftText   = [firstLine, bodyText].filter((s) => s.trim()).join("\n");
+  const draftLength = draftText.length;
+
   const clear = () => {
-    setTitle("");
-    setContent("");
+    setFirstLine("");
+    setBodyText("");
     if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); setPersonQuery(""); }
     setReminderAt(null);
-    setContentFocused(false);
     setPersonError(false);
     setContentError(false);
     setSaveError("");
   };
 
   const save = async () => {
-    const typedName = personLabel.trim() || personQuery.trim();
+    const typedName     = personLabel.trim() || personQuery.trim();
     const missingPerson = !person && typedName.length === 0;
-    const missingContent = content.trim().length === 0;
+    const { title, content } = parseNoteDraftFromComposer(firstLine, bodyText);
+    const missingContent = !content.trim();
+
     setPersonError(missingPerson);
     setContentError(missingContent);
     setSaveError("");
@@ -268,7 +279,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
       if (edit) {
         if (!noteId) { setSaveError("Missing note id."); return; }
-        await updateNote(noteId, { contactId: person, title: title.trim() || undefined, content: content.trim() });
+        await updateNote(noteId, { contactId: person, title: title || undefined, content });
         if (reminderAt) {
           await upsertNoteReminder(noteId, { enabled: true, remindAt: reminderAt.toISOString() });
         } else if (hadReminder) {
@@ -277,15 +288,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         nav("noteDetail", { id: noteId });
       } else {
         await submitCreateNote({
-          contactId: person || undefined,
-          newContactName: person ? undefined : (typedName || undefined),
-          content: content.trim(),
+          contactId:       person || undefined,
+          newContactName:  person ? undefined : (typedName || undefined),
+          content,
+          title:           title || undefined,
           interactionDate: new Date().toISOString(),
           reminderEnabled: Boolean(reminderAt),
-          remindAt: reminderAt?.toISOString(),
-          title: title.trim() || undefined
+          remindAt:        reminderAt?.toISOString(),
         });
-
         nav("notes");
       }
     } catch (err) {
@@ -294,6 +304,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
       setSaving(false);
     }
   };
+
+  // ── Loading / error states ────────────────────────────────────────────────────
 
   if (loadingNote) {
     return (
@@ -310,8 +322,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
       <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 }}>
           <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
-          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>{loadError}</Text>
-          <Pressable onPress={() => nav("notes")} style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}>
+          <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
+            {loadError}
+          </Text>
+          <Pressable
+            onPress={() => nav("notes")}
+            style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}
+          >
             <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back to Notes</Text>
           </Pressable>
         </View>
@@ -319,208 +336,309 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     );
   }
 
-  const showBell = contentFocused || content.trim().length > 0 || reminderAt !== null;
+  const reminderLabel = reminderAt ? formatReminderChip(reminderAt, lang) : null;
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      {/* Mesh gradient background */}
-      <View pointerEvents="none" style={{ height: insets.top + 335, left: 0, overflow: "hidden", position: "absolute", right: 0, top: 0 }}>
-        <MeshGradientView
-          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
-          columns={4} rows={4}
-          colors={[
-            "#064532", "#0B573E", "#1D704F", "#2F805E",
-            "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
-            "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
-            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF"
-          ]}
-          points={[
-            [0, 0], [0.35, 0], [0.7, 0], [1, 0],
-            [0, 0.36], [0.35, 0.38], [0.7, 0.34], [1, 0.3],
-            [0, 0.66], [0.35, 0.68], [0.7, 0.72], [1, 0.7],
-            [0, 1], [0.35, 1], [0.7, 1], [1, 1]
-          ]}
-          smoothsColors
-        />
-        <Image
-          source={leaf2Png} resizeMode="contain"
-          style={{ height: 250, opacity: 0.2, position: "absolute", right: -92, top: insets.top + 78, transform: [{ rotate: "-6deg" }], width: 340 }}
-        />
-      </View>
-
-      {/* Top bar + title */}
-      <View style={{ left: 0, paddingHorizontal: 20, paddingTop: insets.top + 14, position: "absolute", right: 0, top: 0, zIndex: 3 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Pressable
-            onPress={() => edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard")}
-            style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", ...mesh.shadow }}
-          >
-            <Ionicons name="chevron-back" size={24} color={mesh.green700} />
-          </Pressable>
-          <Pressable onPress={clear} hitSlop={10}>
-            <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>{t("clear")}</Text>
-          </Pressable>
-        </View>
-        <View style={{ marginTop: 18, maxWidth: 320 }}>
-          <Text style={{ color: "#064532", fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
-            {edit ? t("editNote") : t("newNote")}
-          </Text>
-          <Text style={{ color: "#5D6863", fontSize: 15, lineHeight: 22, marginTop: 6, maxWidth: 300 }}>
-            {edit ? "Update the details you want to remember." : "Capture something meaningful\nso you won't forget."}
-          </Text>
-        </View>
-      </View>
-
-      {/* Form card */}
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderColor: "rgba(6,69,50,0.06)",
-          borderRadius: 30,
-          borderWidth: 1,
-          bottom: insets.bottom + 88,
-          elevation: 3,
-          left: 18,
-          overflow: "hidden",
-          position: "absolute",
-          right: 18,
-          shadowColor: "#064532",
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.08,
-          shadowRadius: 24,
-          top: insets.top + 195,
-          zIndex: 2
-        }}
+      <ScrollView
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 80, paddingHorizontal: 16, paddingTop: 22 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Person */}
-          <FieldLabel error={personError} first>
-            {t("person").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
-          </FieldLabel>
-          <PersonInlineInput
-            value={personQuery}
-            selectedPersonId={person}
-            contacts={
-              personQuery.trim().length > 0
-                ? apiContacts.filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase())).slice(0, 4)
-                : []
-            }
-            focused={personFocused}
-            error={personError}
-            loading={contactsLoading}
-            onFocus={() => setPersonFocused(true)}
-            onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
-            onChangeText={(value) => { setPersonQuery(value); setPersonLabel(value); setPerson(null); setPersonError(false); }}
-            onSelectTyped={() => { setPersonLabel(personQuery.trim()); setPerson(null); setPersonFocused(false); }}
-            onSelectContact={(c) => { setPerson(c.id); setPersonLabel(c.name); setPersonQuery(c.name); setPersonError(false); setPersonFocused(false); }}
+        {/* ── Mesh gradient header ── */}
+        <View style={{ overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 24 }}>
+          <MeshGradientView
+            pointerEvents="none"
+            style={StyleSheet.absoluteFillObject}
+            columns={4}
+            rows={4}
+            colors={[
+              "#064532", "#0B573E", "#1D704F", "#2F805E",
+              "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
+              "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
+              "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+            ]}
+            points={[
+              [0, 0],    [0.35, 0],    [0.7, 0],    [1, 0],
+              [0, 0.36], [0.35, 0.38], [0.7, 0.34], [1, 0.3],
+              [0, 0.66], [0.35, 0.68], [0.7, 0.72], [1, 0.7],
+              [0, 1],    [0.35, 1],    [0.7, 1],    [1, 1],
+            ]}
+            smoothsColors
           />
-          {personError ? <ErrorText>{isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}</ErrorText> : null}
-
-          {/* Title */}
-          <FieldLabel>
-            {t("noteTitle").toUpperCase()} <Text style={{ color: mesh.ink500 }}>{t("optional").toUpperCase()}</Text>
-          </FieldLabel>
-          <InputCard
-            icon="document-text-outline"
-            value={title}
-            onChangeText={setTitle}
-            placeholder={t("enterTitle")}
-            maxLength={titleLimit}
-            counter={`${title.length}/${titleLimit}`}
+          <Image
+            source={leaf2Png}
+            resizeMode="contain"
+            style={{
+              height: 210,
+              opacity: 0.18,
+              position: "absolute",
+              right: -70,
+              top: insets.top + 36,
+              transform: [{ rotate: "-6deg" }],
+              width: 290,
+            }}
           />
 
-          {/* Content — bell icon is bottom-left inside this box */}
-          <FieldLabel>
-            {t("noteContent").toUpperCase()} <Text style={{ color: mesh.pink }}>*</Text>
-          </FieldLabel>
-          <InputCard
-            icon="create-outline"
-            value={content}
-            onChangeText={(value) => { setContent(value); if (value.trim()) setContentError(false); }}
-            onFocus={() => setContentFocused(true)}
-            onBlur={() => setContentFocused(false)}
-            placeholder={t("whatToWrite")}
-            maxLength={contentLimit}
-            counter={`${content.length}/${contentLimit}`}
-            multiline
-            error={contentError}
-            bellNode={
-              showBell ? (
-                <Pressable
-                  onPress={() => setReminderSheet("preset")}
-                  hitSlop={8}
-                  style={{
-                    alignItems: "center",
-                    backgroundColor: reminderAt ? mesh.green700 : "rgba(31,112,72,0.08)",
-                    borderRadius: 16,
-                    height: 32,
-                    justifyContent: "center",
-                    width: 32
-                  }}
-                >
-                  <Ionicons name="notifications-outline" size={16} color={reminderAt ? "#FFFFFF" : mesh.green700} />
-                </Pressable>
-              ) : undefined
-            }
-          />
-          {contentError ? <ErrorText>{isVi ? "Nội dung là bắt buộc." : "Content is required."}</ErrorText> : null}
-
-          {/* Reminder chip — full-width row, appears below content when set */}
-          {reminderAt ? (
+          {/* Top bar */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Pressable
-              onPress={() => setReminderSheet("preset")}
+              onPress={() => edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard")}
               style={{
-                alignItems: "center",
-                alignSelf: "stretch",
-                backgroundColor: "rgba(31,112,72,0.08)",
-                borderColor: "rgba(31,112,72,0.10)",
-                borderRadius: 18,
-                borderWidth: 1,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginTop: 8,
-                minHeight: 44,
-                paddingHorizontal: 14,
-                paddingVertical: 10
+                width: 46, height: 46, borderRadius: 23,
+                backgroundColor: "#FFFFFF",
+                alignItems: "center", justifyContent: "center",
+                ...mesh.shadow,
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-                <Ionicons name="notifications-outline" size={16} color={mesh.green700} />
-                <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", flex: 1 }} numberOfLines={1}>
-                  {formatReminderChip(reminderAt, lang)}
-                </Text>
-              </View>
-              <Pressable onPress={() => setReminderAt(null)} hitSlop={8} style={{ marginLeft: 8 }}>
-                <Ionicons name="close-circle" size={20} color={mesh.ink400} />
-              </Pressable>
+              <Ionicons name="chevron-back" size={24} color={mesh.green700} />
+            </Pressable>
+            <Pressable onPress={clear} hitSlop={10}>
+              <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>{t("clear")}</Text>
+            </Pressable>
+          </View>
+
+          {/* Title + subtitle */}
+          <View style={{ marginTop: 20 }}>
+            <Text style={{ color: "#064532", fontSize: 34, fontWeight: "800", letterSpacing: -0.8, lineHeight: 40 }}>
+              {edit ? t("editNote") : t("newNote")}
+            </Text>
+            <Text style={{ color: "#5D6863", fontSize: 15, lineHeight: 22, marginTop: 6, maxWidth: 300 }}>
+              {edit
+                ? "Update the details you want to remember."
+                : "Capture something meaningful\nso you won't forget."}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Person pill ── */}
+        <PersonPill
+          value={personQuery}
+          selectedPersonId={person}
+          contacts={
+            personQuery.trim().length > 0
+              ? apiContacts
+                  .filter((c) => c.name.toLowerCase().includes(personQuery.trim().toLowerCase()))
+                  .slice(0, 4)
+              : []
+          }
+          focused={personFocused}
+          error={personError}
+          loading={contactsLoading}
+          onFocus={() => setPersonFocused(true)}
+          onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
+          onChangeText={(v) => {
+            setPersonQuery(v);
+            setPersonLabel(v);
+            setPerson(null);
+            setPersonError(false);
+          }}
+          onSelectTyped={() => {
+            setPersonLabel(personQuery.trim());
+            setPerson(null);
+            setPersonFocused(false);
+          }}
+          onSelectContact={(c) => {
+            setPerson(c.id);
+            setPersonLabel(c.name);
+            setPersonQuery(c.name);
+            setPersonError(false);
+            setPersonFocused(false);
+          }}
+        />
+        {personError ? (
+          <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "600", marginHorizontal: 24, marginTop: 6 }}>
+            {isVi ? "Vui lòng nhập tên người." : "Please enter a person name."}
+          </Text>
+        ) : null}
+
+        {/* ── Note canvas ── */}
+        <Pressable
+          onPress={() => bodyRef.current?.focus()}
+          style={{
+            marginHorizontal: 16,
+            marginTop: 14,
+            minHeight: 360,
+            borderRadius: 30,
+            backgroundColor: "#FFFFFF",
+            borderWidth: 1,
+            borderColor: contentError ? "rgba(217,87,122,0.4)" : "rgba(6,69,50,0.08)",
+            paddingHorizontal: 22,
+            paddingTop: 22,
+            paddingBottom: 56,
+            shadowColor: "#064532",
+            shadowOpacity: 0.025,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 1,
+          }}
+        >
+          {/* First line — displayed as bold title-like text */}
+          <TextInput
+            value={firstLine}
+            onChangeText={(v) => {
+              setFirstLine(v);
+              if (v.trim() || bodyText.trim()) setContentError(false);
+            }}
+            placeholder={isVi ? "Bạn muốn ghi nhớ điều gì?" : "What would you like to remember?"}
+            placeholderTextColor={mesh.ink300}
+            style={{
+              color: mesh.green800,
+              fontSize: 24,
+              lineHeight: 32,
+              fontWeight: "800",
+              letterSpacing: -0.3,
+              padding: 0,
+              margin: 0,
+            }}
+            maxLength={300}
+            multiline
+          />
+
+          {/* Body text */}
+          <TextInput
+            ref={bodyRef}
+            value={bodyText}
+            onChangeText={(v) => {
+              setBodyText(v);
+              if (firstLine.trim() || v.trim()) setContentError(false);
+            }}
+            placeholder=""
+            placeholderTextColor={mesh.ink400}
+            style={{
+              marginTop: 12,
+              color: mesh.ink900,
+              fontSize: 16,
+              lineHeight: 26,
+              padding: 0,
+              margin: 0,
+              textAlignVertical: "top",
+              minHeight: 120,
+            }}
+            multiline
+            textAlignVertical="top"
+          />
+
+          {/* Counter footer */}
+          <View
+            style={{
+              position: "absolute",
+              left: 22,
+              right: 22,
+              bottom: 16,
+              borderTopWidth: 1,
+              borderTopColor: "rgba(6,69,50,0.07)",
+              paddingTop: 10,
+              alignItems: "flex-end",
+            }}
+          >
+            <Text style={{ color: mesh.ink400, fontSize: 13 }}>{draftLength}/{CONTENT_MAX_LENGTH}</Text>
+          </View>
+        </Pressable>
+        {contentError ? (
+          <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "600", marginHorizontal: 24, marginTop: 6 }}>
+            {isVi ? "Nội dung là bắt buộc." : "Content is required."}
+          </Text>
+        ) : null}
+
+        {/* ── Reminder chip ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            onPress={() => setReminderSheet("preset")}
+            style={{
+              minHeight: 42,
+              borderRadius: 999,
+              paddingHorizontal: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: reminderAt ? mesh.green700 : "rgba(255,255,255,0.88)",
+              borderWidth: 1,
+              borderColor: reminderAt ? mesh.green700 : "rgba(6,69,50,0.08)",
+              shadowColor: "#064532",
+              shadowOpacity: 0.02,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 1,
+            }}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={16}
+              color={reminderAt ? "#FFFFFF" : mesh.green700}
+            />
+            <Text style={{ color: reminderAt ? "#FFFFFF" : mesh.green700, fontSize: 14, fontWeight: "700" }}>
+              {reminderLabel ?? (isVi ? "Nhắc nhở" : "Reminder")}
+            </Text>
+          </Pressable>
+          {reminderAt ? (
+            <Pressable onPress={() => setReminderAt(null)} hitSlop={8}>
+              <Ionicons name="close-circle" size={20} color={mesh.ink400} />
             </Pressable>
           ) : null}
+        </View>
 
-          {/* Hint */}
-          <View style={{ marginTop: 20, borderRadius: 18, backgroundColor: "rgba(31,112,72,0.10)", paddingHorizontal: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <IconBox icon="bulb-outline" />
-            <Text style={{ flex: 1, color: mesh.green800, fontSize: 15, lineHeight: 24 }}>{t("noteHint").replace("\n", " ")}</Text>
+        {/* Save error */}
+        {saveError ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginHorizontal: 20,
+              marginTop: 14,
+              backgroundColor: "rgba(217,87,122,0.08)",
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+            }}
+          >
+            <Ionicons name="alert-circle-outline" size={15} color={mesh.pink} />
+            <Text style={{ color: mesh.pink, fontSize: 13, fontWeight: "600", flex: 1 }}>{saveError}</Text>
           </View>
-          {saveError ? <ErrorText>{saveError}</ErrorText> : null}
-        </ScrollView>
-      </View>
+        ) : null}
+      </ScrollView>
 
-      {/* Save button */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 4, backgroundColor: "rgba(255,255,255,0.94)", paddingHorizontal: 20, paddingTop: 8, paddingBottom: insets.bottom + 10, borderTopWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
-        <Pressable disabled={saving} onPress={save} style={{ borderRadius: 28, opacity: saving ? 0.75 : 1, overflow: "hidden", ...mesh.shadow }}>
-          <LinearGradient colors={[mesh.green800, mesh.green700, "#008A55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="save-outline" size={20} color="#FFFFFF" />}
-            <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>{saving ? "Saving..." : edit ? t("save") : t("saveNote")}</Text>
+      {/* ── Save button ── */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0, right: 0, bottom: 0,
+          zIndex: 4,
+          backgroundColor: "rgba(255,255,255,0.94)",
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 10,
+          borderTopWidth: 1,
+          borderColor: "rgba(6,69,50,0.06)",
+        }}
+      >
+        <Pressable
+          disabled={saving}
+          onPress={save}
+          style={{ borderRadius: 28, opacity: saving ? 0.75 : 1, overflow: "hidden" }}
+        >
+          <LinearGradient
+            colors={[mesh.green800, mesh.green700, "#008A55"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}
+          >
+            {saving
+              ? <ActivityIndicator color="#FFFFFF" size="small" />
+              : <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+            }
+            <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>
+              {saving ? "Saving..." : edit ? t("save") : t("saveNote")}
+            </Text>
           </LinearGradient>
         </Pressable>
       </View>
 
-      {/* Preset sheet → open first when bell/chip tapped */}
+      {/* ── Reminder sheets ── */}
       <ReminderPresetSheet
         open={reminderSheet === "preset"}
         value={reminderAt}
@@ -529,8 +647,6 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         onSelectPreset={(date) => { setReminderAt(date); setReminderSheet("none"); }}
         onCustom={() => setReminderSheet("custom")}
       />
-
-      {/* Custom date+time sheet */}
       <ReminderDateTimeSheet
         open={reminderSheet === "custom"}
         value={reminderAt}
@@ -543,103 +659,11 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── PersonPill ───────────────────────────────────────────────────────────────
 
-function FieldLabel({ children, error = false, first = false }: { children: ReactNode; error?: boolean; first?: boolean }) {
-  return (
-    <Text style={{ color: error ? mesh.pink : mesh.green700, fontSize: 12, fontWeight: "800", letterSpacing: 1.5, marginBottom: 8, marginTop: first ? 0 : 18 }}>
-      {children}
-    </Text>
-  );
-}
-
-function ErrorText({ children }: { children: string }) {
-  return <Text style={{ color: mesh.pink, fontSize: 12, fontWeight: "700", marginTop: 8 }}>{children}</Text>;
-}
-
-function IconBox({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
-  return (
-    <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 16, height: 48, justifyContent: "center", width: 48 }}>
-      <Ionicons name={icon} size={24} color={mesh.green700} />
-    </View>
-  );
-}
-
-function InputCard({
-  bellNode,
-  counter,
-  error = false,
-  icon,
-  maxLength,
-  multiline = false,
-  onBlur,
-  onChangeText,
-  onFocus,
-  placeholder,
-  value
-}: {
-  bellNode?: ReactNode;
-  counter: string;
-  error?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  maxLength: number;
-  multiline?: boolean;
-  onBlur?: () => void;
-  onChangeText: (value: string) => void;
-  onFocus?: () => void;
-  placeholder: string;
-  value: string;
-}) {
-  const isEmptyMultiline = multiline && value.length === 0;
-
-  return (
-    <View
-      style={{
-        alignItems: multiline && !isEmptyMultiline ? "flex-start" : "center",
-        borderColor: error ? "rgba(217,87,122,0.55)" : "rgba(6,69,50,0.10)",
-        borderRadius: 20,
-        borderWidth: 1,
-        flexDirection: "row",
-        gap: 12,
-        minHeight: multiline ? 148 : 64,
-        paddingBottom: 20,
-        paddingHorizontal: 14,
-        paddingTop: multiline && !isEmptyMultiline ? 14 : 10
-      }}
-    >
-      <IconBox icon={icon} />
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        placeholderTextColor={mesh.ink400}
-        maxLength={maxLength}
-        multiline={multiline}
-        textAlignVertical={multiline && !isEmptyMultiline ? "top" : "center"}
-        style={{
-          color: mesh.ink900,
-          flex: 1,
-          fontSize: 14,
-          lineHeight: multiline ? 21 : undefined,
-          minHeight: multiline && !isEmptyMultiline ? 92 : 30,
-          padding: 0
-        }}
-      />
-      {/* Counter — absolute bottom-right */}
-      <Text style={{ bottom: 10, color: mesh.ink500, fontSize: 12, position: "absolute", right: 14 }}>{counter}</Text>
-      {/* Bell — absolute bottom-left, inside the content padding zone */}
-      {bellNode != null ? (
-        <View style={{ position: "absolute", left: 18, bottom: 12, zIndex: 2 }}>{bellNode}</View>
-      ) : null}
-    </View>
-  );
-}
-
-function PersonInlineInput({
+function PersonPill({
   contacts, error, focused, loading, onBlur, onChangeText, onFocus,
-  onSelectContact, onSelectTyped, selectedPersonId, value
+  onSelectContact, onSelectTyped, selectedPersonId, value,
 }: {
   contacts: PickerContact[];
   error: boolean;
@@ -655,16 +679,45 @@ function PersonInlineInput({
 }) {
   const trimmed = value.trim();
   const showSuggestions = focused && trimmed.length > 0;
-  const borderColor = error ? "rgba(217,87,122,0.55)" : focused ? mesh.green700 : "rgba(6,69,50,0.10)";
+  const borderColor = error
+    ? "rgba(217,87,122,0.55)"
+    : focused ? mesh.green700
+    : "rgba(6,69,50,0.08)";
 
   return (
-    <View>
-      <View style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor, borderRadius: 20, borderWidth: 1, flexDirection: "row", gap: 12, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 }}>
-        {trimmed || selectedPersonId ? <Avatar name={trimmed || "?"} size={40} /> : <IconBox icon="person-outline" />}
+    <View style={{ marginHorizontal: 16 }}>
+      {/* Pill input */}
+      <View
+        style={{
+          minHeight: 54,
+          borderRadius: 27,
+          backgroundColor: "rgba(255,255,255,0.92)",
+          borderWidth: 1,
+          borderColor,
+          paddingHorizontal: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          shadowColor: "#064532",
+          shadowOpacity: 0.025,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 1,
+        }}
+      >
+        {trimmed || selectedPersonId
+          ? <Avatar name={trimmed || "?"} size={34} />
+          : <Ionicons name="person-outline" size={18} color={mesh.ink400} />
+        }
         <TextInput
-          value={value} onChangeText={onChangeText} onFocus={onFocus} onBlur={onBlur}
-          placeholder="Type a person name..." placeholderTextColor={mesh.ink400} returnKeyType="done"
-          style={{ color: mesh.ink900, flex: 1, fontSize: mesh.font.input, padding: 0 }}
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          placeholder="Type a person name..."
+          placeholderTextColor={mesh.ink400}
+          returnKeyType="done"
+          style={{ color: mesh.ink900, flex: 1, fontSize: 16, padding: 0 }}
         />
         {value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} hitSlop={8}>
@@ -673,36 +726,77 @@ function PersonInlineInput({
         ) : null}
       </View>
 
+      {/* Autocomplete dropdown */}
       {showSuggestions ? (
-        <View style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.08)", borderRadius: 20, borderWidth: 1, elevation: 2, marginTop: 8, overflow: "hidden", shadowColor: "#064532", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12 }}>
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(6,69,50,0.08)",
+            borderRadius: 20,
+            borderWidth: 1,
+            elevation: 4,
+            marginTop: 6,
+            overflow: "hidden",
+            shadowColor: "#064532",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.07,
+            shadowRadius: 14,
+            zIndex: 20,
+          }}
+        >
+          {/* "Use typed name" row */}
           <Pressable
             onPress={onSelectTyped}
-            style={{ alignItems: "center", borderBottomWidth: contacts.length > 0 || loading ? 1 : 0, borderColor: "rgba(6,69,50,0.06)", flexDirection: "row", gap: 12, minHeight: 62, paddingHorizontal: 12, paddingVertical: 10 }}
+            style={{
+              alignItems: "center",
+              borderBottomWidth: contacts.length > 0 || loading ? 1 : 0,
+              borderColor: "rgba(6,69,50,0.06)",
+              flexDirection: "row",
+              gap: 12,
+              minHeight: 58,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+            }}
           >
-            <Avatar name={trimmed} size={40} />
+            <Avatar name={trimmed} size={36} />
             <View style={{ flex: 1 }}>
               <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{trimmed}</Text>
+              <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>Use this name</Text>
             </View>
             <Ionicons name="return-down-back-outline" size={16} color={mesh.ink400} />
           </Pressable>
 
+          {/* Existing contacts */}
           {contacts.map((contact, index) => (
             <Pressable
               key={contact.id}
               onPress={() => onSelectContact(contact)}
-              style={{ alignItems: "center", borderBottomWidth: index < contacts.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.06)", flexDirection: "row", gap: 12, minHeight: 62, paddingHorizontal: 12, paddingVertical: 10 }}
+              style={{
+                alignItems: "center",
+                borderBottomWidth: index < contacts.length - 1 ? 1 : 0,
+                borderColor: "rgba(6,69,50,0.06)",
+                flexDirection: "row",
+                gap: 12,
+                minHeight: 58,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
             >
-              <Avatar name={contact.name} size={40} />
+              <Avatar name={contact.name} size={36} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{contact.name}</Text>
-                {contact.status ? <View style={{ marginTop: 3 }}><StatusChip statusId={contact.status} /></View> : null}
+                {contact.status ? (
+                  <View style={{ marginTop: 3 }}>
+                    <StatusChip statusId={contact.status} />
+                  </View>
+                ) : null}
               </View>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
           ))}
 
           {loading && contacts.length === 0 ? (
-            <View style={{ alignItems: "center", paddingVertical: 12 }}>
+            <View style={{ alignItems: "center", paddingVertical: 14 }}>
               <ActivityIndicator size="small" color={mesh.green700} />
             </View>
           ) : null}
@@ -822,7 +916,6 @@ function MonthYearWheelPicker({
 
   return (
     <View>
-      {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
@@ -838,7 +931,6 @@ function MonthYearWheelPicker({
         </Pressable>
       </View>
 
-      {/* Two-column wheel */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
         <WheelColumn
           items={monthNames}
@@ -887,10 +979,8 @@ function ReminderPresetSheet({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
         <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
-          {/* Handle */}
           <View style={{ alignSelf: "center", backgroundColor: mesh.ink200, borderRadius: 2, height: 4, marginBottom: 20, width: 40 }} />
 
-          {/* Title */}
           <Text style={{ color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 4 }}>
             {isVi ? "Thêm nhắc nhở" : "Add reminder"}
           </Text>
@@ -898,7 +988,6 @@ function ReminderPresetSheet({
             {isVi ? "Chọn thời gian có sẵn hoặc tùy chọn." : "Choose a preset or set a custom date and time."}
           </Text>
 
-          {/* Preset rows */}
           {presets.map((preset, index) => (
             <Pressable
               key={preset.id}
@@ -916,7 +1005,6 @@ function ReminderPresetSheet({
                 <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>{preset.label}</Text>
                 <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 2 }}>{preset.sublabel}</Text>
               </View>
-              {/* Radio circle */}
               <View style={{
                 width: 20, height: 20, borderRadius: 10,
                 borderWidth: 1.5,
@@ -931,7 +1019,6 @@ function ReminderPresetSheet({
             </Pressable>
           ))}
 
-          {/* Custom row */}
           <Pressable
             onPress={onCustom}
             style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.07)" }}
@@ -995,16 +1082,13 @@ function ReminderDateTimeSheet({
 
   const cells = buildMonthCells(viewYear, viewMonth);
   const today = new Date();
-  // Midnight of today — days strictly before this are in the past
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const isOnCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
-  // The selected day is highlighted only if viewYear/viewMonth match the selected date
   const selDay = current.getFullYear() === viewYear && current.getMonth() === viewMonth
     ? current.getDate() : -1;
 
   function goPrevMonth() {
-    // Block navigating to past months
     if (isOnCurrentMonth) return;
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
     else setViewMonth(m => m - 1);
@@ -1053,22 +1137,22 @@ function ReminderDateTimeSheet({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
         <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}>
-          {/* Handle */}
           <View style={{ alignSelf: "center", backgroundColor: mesh.ink200, borderRadius: 2, height: 4, marginBottom: 18, width: 40 }} />
 
-          {/* Header */}
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
             <View style={{ width: 36 }} />
             <Text style={{ color: mesh.green800, flex: 1, fontSize: 17, fontWeight: "800", textAlign: "center" }}>
               {isVi ? "Chọn ngày & giờ" : "Pick date & time"}
             </Text>
-            <Pressable onPress={onClose} style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}>
+            <Pressable
+              onPress={onClose}
+              style={{ alignItems: "center", backgroundColor: mesh.bgSubtle, borderRadius: 18, height: 36, justifyContent: "center", width: 36 }}
+            >
               <Ionicons name="close" size={18} color={mesh.ink700} />
             </Pressable>
           </View>
 
           {monthYearOpen ? (
-            /* Month/year wheel picker — replaces calendar+time area temporarily */
             <MonthYearWheelPicker
               initialMonth={viewMonth}
               initialYear={viewYear}
@@ -1077,21 +1161,20 @@ function ReminderDateTimeSheet({
             />
           ) : (
             <>
-              {/* Fixed-height calendar navigation — arrows never move */}
               <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 36, marginBottom: 10 }}>
-                {/* Tappable month/year label */}
-                <Pressable
-                  onPress={() => setMonthYearOpen(true)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-                >
+                <Pressable onPress={() => setMonthYearOpen(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
                     {formatMonthYear(viewYear, viewMonth, lang)}
                   </Text>
                   <Ionicons name="chevron-down" size={16} color={mesh.green700} />
                 </Pressable>
-                {/* Prev / Next arrows */}
                 <View style={{ flexDirection: "row", gap: 4 }}>
-                  <Pressable onPress={goPrevMonth} disabled={isOnCurrentMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", opacity: isOnCurrentMonth ? 0.25 : 1, width: 36 }}>
+                  <Pressable
+                    onPress={goPrevMonth}
+                    disabled={isOnCurrentMonth}
+                    hitSlop={10}
+                    style={{ alignItems: "center", height: 36, justifyContent: "center", opacity: isOnCurrentMonth ? 0.25 : 1, width: 36 }}
+                  >
                     <Ionicons name="chevron-back" size={20} color={mesh.green700} />
                   </Pressable>
                   <Pressable onPress={goNextMonth} hitSlop={10} style={{ alignItems: "center", height: 36, justifyContent: "center", width: 36 }}>
@@ -1100,7 +1183,6 @@ function ReminderDateTimeSheet({
                 </View>
               </View>
 
-              {/* Day-name headers */}
               <View style={{ flexDirection: "row", marginBottom: 4 }}>
                 {dayNames.map((d) => (
                   <View key={d} style={{ alignItems: "center", flex: 1, paddingVertical: 4 }}>
@@ -1109,7 +1191,6 @@ function ReminderDateTimeSheet({
                 ))}
               </View>
 
-              {/* Calendar grid — ALWAYS 6 rows × 7 cols (42 cells), height is fixed */}
               <View style={{ flexDirection: "row", flexWrap: "wrap", height: 6 * DAY_CELL_H, marginBottom: 4 }}>
                 {cells.map((day, idx) => {
                   const isSelected = day === selDay;
@@ -1142,10 +1223,8 @@ function ReminderDateTimeSheet({
                 })}
               </View>
 
-              {/* Divider */}
               <View style={{ backgroundColor: mesh.line, height: 1, marginVertical: 14 }} />
 
-              {/* Time wheel picker */}
               <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 4 }}>
                 <WheelColumn
                   items={HOURS}
@@ -1162,7 +1241,6 @@ function ReminderDateTimeSheet({
                 />
               </View>
 
-              {/* Past-time error */}
               {timeError ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14, backgroundColor: "rgba(217,87,122,0.08)", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
                   <Ionicons name="alert-circle-outline" size={15} color={mesh.pink} />
@@ -1170,7 +1248,6 @@ function ReminderDateTimeSheet({
                 </View>
               ) : null}
 
-              {/* Confirm */}
               <Pressable
                 onPress={handleConfirm}
                 style={{ alignItems: "center", backgroundColor: mesh.green700, borderRadius: 24, marginTop: 14, paddingVertical: 14 }}
@@ -1255,16 +1332,16 @@ function normalizePickerContact(value: unknown): PickerContact | null {
   const item = asRecord(value);
   if (!item) return null;
 
-  const idValue = item._id ?? item.id;
+  const idValue   = item._id ?? item.id;
   const nameValue = item.name ?? item.fullName;
   const statusRecord = asRecord(item.status);
-  const statusValue = item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status;
+  const statusValue  = item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status;
 
   if (typeof idValue !== "string" || typeof nameValue !== "string") return null;
 
   return {
-    id: idValue,
-    name: nameValue,
-    status: typeof statusValue === "string" ? statusValue : undefined
+    id:     idValue,
+    name:   nameValue,
+    status: typeof statusValue === "string" ? statusValue : undefined,
   };
 }
