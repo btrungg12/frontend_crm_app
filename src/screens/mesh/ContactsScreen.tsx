@@ -179,15 +179,15 @@ function AdditionalRow({
 }) {
   return (
     <View style={{
-      borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
+      borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.055)",
       flexDirection: "row", alignItems: "flex-start",
-      gap: 12, paddingHorizontal: 12, paddingVertical: 12,
+      gap: 12, paddingHorizontal: 14, paddingVertical: 10,
     }}>
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42, flexShrink: 0 }}>
-        <Ionicons name={icon} size={20} color={mesh.green700} />
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.055)", borderRadius: 13, height: 38, justifyContent: "center", width: 38, flexShrink: 0, marginTop: 2 }}>
+        <Ionicons name={icon} size={18} color={mesh.green700} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{label}</Text>
+        <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "600", marginBottom: 2 }}>{label}</Text>
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -195,11 +195,11 @@ function AdditionalRow({
           onFocus={onFocus}
           placeholder="—"
           placeholderTextColor="#8C9691"
-          style={{ color: mesh.ink900, fontSize: 14 }}
+          style={{ color: mesh.ink900, fontSize: 14, fontWeight: "400" }}
         />
       </View>
-      <Pressable onPress={onRemove} hitSlop={8} style={{ paddingTop: 11 }}>
-        <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+      <Pressable onPress={onRemove} hitSlop={8} style={{ paddingTop: 10 }}>
+        <Ionicons name="close-circle-outline" size={18} color={mesh.ink300} />
       </Pressable>
     </View>
   );
@@ -217,13 +217,13 @@ function SpecialDayRow({
     <Pressable
       onPress={onPress}
       style={{
-        borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
+        borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.055)",
         flexDirection: "row", alignItems: "center",
-        gap: 12, paddingHorizontal: 12, paddingVertical: 12,
+        gap: 12, paddingHorizontal: 14, paddingVertical: 10,
       }}
     >
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42, flexShrink: 0 }}>
-        <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.055)", borderRadius: 13, height: 38, justifyContent: "center", width: 38, flexShrink: 0 }}>
+        <Ionicons name="calendar-outline" size={18} color={mesh.green700} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>
@@ -234,7 +234,7 @@ function SpecialDayRow({
         </Text>
       </View>
       <Pressable onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+        <Ionicons name="close-circle-outline" size={18} color={mesh.ink300} />
       </Pressable>
     </Pressable>
   );
@@ -1142,7 +1142,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               placeholder={t("enterName")}
               onChangeText={setName}
             />
-            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.055)", marginLeft: 70 }} />
             <ContactFieldRow
               icon="call-outline"
               label={t("phone")}
@@ -1151,7 +1151,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               onChangeText={setPhone}
               keyboardType="phone-pad"
             />
-            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.055)", marginLeft: 70 }} />
             <ContactFieldRow
               icon="mail-outline"
               label="Email"
@@ -1161,7 +1161,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.055)", marginLeft: 70 }} />
             <ContactFieldPickerRow
               icon="people-outline"
               label={t("relationship")}
@@ -1204,19 +1204,19 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
                 {activeFields.includes("birthday") && (
                   <Pressable
                     onPress={() => openDatePicker({ kind: "birthday" })}
-                    style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
+                    style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.055)", flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 10 }}
                   >
-                    <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-                      <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+                    <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.055)", borderRadius: 13, height: 38, justifyContent: "center", width: 38 }}>
+                      <Ionicons name="gift-outline" size={18} color={mesh.green700} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{t("birthday")}</Text>
+                      <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "600", marginBottom: 2 }}>{t("birthday")}</Text>
                       <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
                         {birthday ? formatDateShort(birthday) : t("selectDate")}
                       </Text>
                     </View>
                     <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
-                      <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+                      <Ionicons name="close-circle-outline" size={18} color={mesh.ink300} />
                     </Pressable>
                   </Pressable>
                 )}
@@ -1263,66 +1263,68 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             </View>
           )}
 
-          <View style={{ marginHorizontal: 16, marginBottom: 24, marginTop: 16 }}>
-            <TipCard>{t("canAddLater")}</TipCard>
-          </View>
+          {!addFieldOpen ? (
+            <View style={{ marginHorizontal: 16, marginBottom: 24, marginTop: 16 }}>
+              <TipCard>{t("canAddLater")}</TipCard>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* ── Status picker bottom sheet ── */}
       <StatusPicker open={statusOpen} value={status} statuses={pickerStatuses} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
 
-      {/* ── Add field popup — transparent modal, anchored below button ── */}
+      {/* ── Add field popup — transparent modal, anchored ABOVE the button ── */}
       <Modal visible={addFieldOpen} transparent animationType="none" onRequestClose={() => setAddFieldOpen(false)}>
         <Pressable style={{ flex: 1 }} onPress={() => setAddFieldOpen(false)}>
           <View style={{
             position: "absolute",
-            top: popupY,
+            top: Math.max(insets.top + 12, popupY - 8 - availableFields.length * 46 - 16),
             left: popupX,
             width: 260,
             borderRadius: 18,
-            backgroundColor: "#FFFFFF",
+            backgroundColor: "rgba(255,255,255,0.98)",
             borderWidth: 1,
-            borderColor: "rgba(6,69,50,0.08)",
+            borderColor: "rgba(6,69,50,0.07)",
             paddingVertical: 8,
             shadowColor: "#064532",
-            shadowOpacity: 0.10,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 12,
+            shadowOpacity: 0.075,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 8,
           }}>
-            {/* Arrow notch pointing up at the button */}
-            <View style={{
-              position: "absolute",
-              top: -8,
-              left: 28,
-              width: 16,
-              height: 16,
-              backgroundColor: "#FFFFFF",
-              transform: [{ rotate: "45deg" }],
-              borderLeftWidth: 1,
-              borderTopWidth: 1,
-              borderColor: "rgba(6,69,50,0.08)",
-            }} />
             {availableFields.map((f, i) => (
               <Pressable
                 key={`${f.key}-${i}`}
                 onPress={() => handleAddField(f.key)}
                 style={{
-                  minHeight: 48,
+                  minHeight: 46,
                   flexDirection: "row",
                   alignItems: "center",
                   paddingHorizontal: 14,
                   borderBottomWidth: i < availableFields.length - 1 ? 1 : 0,
-                  borderColor: "rgba(6,69,50,0.07)",
+                  borderColor: "rgba(6,69,50,0.055)",
                 }}
               >
                 <View style={{ width: 30, alignItems: "center", marginRight: 10 }}>
-                  <Ionicons name={f.icon} size={18} color={mesh.green700} />
+                  <Ionicons name={f.icon} size={17} color={mesh.green700} />
                 </View>
                 <Text style={{ flex: 1, color: mesh.ink700, fontSize: 15, fontWeight: "700" }}>{f.label}</Text>
               </Pressable>
             ))}
+            {/* Arrow notch — bottom of popup, pointing DOWN toward the Add field button */}
+            <View style={{
+              position: "absolute",
+              bottom: -8,
+              left: 28,
+              width: 16,
+              height: 16,
+              backgroundColor: "rgba(255,255,255,0.98)",
+              transform: [{ rotate: "45deg" }],
+              borderRightWidth: 1,
+              borderBottomWidth: 1,
+              borderColor: "rgba(6,69,50,0.07)",
+            }} />
           </View>
         </Pressable>
       </Modal>
@@ -1394,11 +1396,11 @@ function ContactFieldRow({
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
 }) {
   return (
-    <View style={{ minHeight: 66, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}>
-      <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)", marginRight: 14 }}>
-        <Ionicons name={icon} size={20} color={mesh.green700} />
+    <View style={{ minHeight: 62, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}>
+      <View style={{ width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.055)", marginRight: 14 }}>
+        <Ionicons name={icon} size={18} color={mesh.green700} />
       </View>
-      <Text style={{ width: 140, color: mesh.green800, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{label}</Text>
+      <Text style={{ width: 138, color: mesh.green800, fontSize: 15, fontWeight: "700" }} numberOfLines={1}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -1427,12 +1429,12 @@ function ContactFieldPickerRow({
   return (
     <Pressable
       onPress={onPress}
-      style={{ minHeight: 66, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}
+      style={{ minHeight: 62, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}
     >
-      <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)", marginRight: 14 }}>
-        <Ionicons name={icon} size={20} color={mesh.green700} />
+      <View style={{ width: 38, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.055)", marginRight: 14 }}>
+        <Ionicons name={icon} size={18} color={mesh.green700} />
       </View>
-      <Text style={{ width: 140, color: mesh.green800, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{label}</Text>
+      <Text style={{ width: 138, color: mesh.green800, fontSize: 15, fontWeight: "700" }} numberOfLines={1}>{label}</Text>
       <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
         {statusColor ? (
           <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: statusColor }} />
@@ -1452,25 +1454,25 @@ function FormSection({ title, children }: { title?: string; children: ReactNode 
   return (
     <View
       style={{
-        backgroundColor: "#FFFFFF",
-        borderColor: "rgba(6,69,50,0.06)",
-        borderRadius: 24,
+        backgroundColor: "rgba(255,255,255,0.90)",
+        borderColor: "rgba(6,69,50,0.055)",
+        borderRadius: 28,
         borderWidth: 1,
-        elevation: 2,
+        elevation: 1,
         marginTop: 16,
-        padding: 16,
+        overflow: "hidden",
         shadowColor: "#064532",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.05,
-        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.018,
+        shadowRadius: 10,
       }}
     >
       {title ? (
-        <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>
+        <Text style={{ color: mesh.green800, fontSize: 12, fontWeight: "800", letterSpacing: 1, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8 }}>
           {title.toUpperCase()}
         </Text>
       ) : null}
-      <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>
+      <View style={{ overflow: "hidden" }}>
         {children}
       </View>
     </View>
