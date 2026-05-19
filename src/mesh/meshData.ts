@@ -245,7 +245,15 @@ const STRINGS = {
     signOut: "Sign out",
     noNotesTitle: "No notes yet",
     noNotesDesc: "Capture thoughts, reminders, and important details about people.",
-    createFirstNote: "Create first note"
+    createFirstNote: "Create first note",
+    addField: "Add field",
+    birthday: "Birthday",
+    howYouMet: "How you met",
+    specialDay: "Special day",
+    done: "Done",
+    eventName: "Event name",
+    selectDate: "Select date",
+    additionalInfo: "Additional information"
   },
   vi: {
     save: "Lưu",
@@ -377,7 +385,15 @@ const STRINGS = {
     filterAll: "Tất cả",
     filterReminder: "Nhắc nhở",
     filterSpecial: "Dịp đặc biệt",
-    settings: "Cài đặt"
+    settings: "Cài đặt",
+    addField: "Thêm trường",
+    birthday: "Sinh nhật",
+    howYouMet: "Bạn quen như thế nào",
+    specialDay: "Ngày đặc biệt",
+    done: "Xong",
+    eventName: "Tên sự kiện",
+    selectDate: "Chọn ngày",
+    additionalInfo: "Thông tin bổ sung"
   }
 } as const;
 

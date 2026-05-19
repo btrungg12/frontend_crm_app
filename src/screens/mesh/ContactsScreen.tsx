@@ -26,7 +26,8 @@ const YEARS_ARR = Array.from({ length: 100 }, (_, i) => String(new Date().getFul
 
 type SpecialDay = { id: string; title: string; date: Date | null };
 type DateTarget  = { kind: "birthday" } | { kind: "specialDay"; index: number };
-type AddField    = "birthday" | "howYouMet" | "address" | "social" | "note";
+// "specialDay" in AddField means it appears in the popup menu but is handled separately (not added to activeFields)
+type AddField    = "birthday" | "howYouMet" | "specialDay" | "address" | "social" | "note";
 
 function daysInMonth(month: number, year: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -160,39 +161,35 @@ function AdditionalRow({
 // ── SpecialDayRow ─────────────────────────────────────────────────────────────
 
 function SpecialDayRow({
-  item, onChangeTitle, onPressDate, onRemove, last = false,
+  item, onPress, onRemove, last = false, fallbackLabel, selectDateLabel,
 }: {
-  item: SpecialDay; onChangeTitle: (v: string) => void;
-  onPressDate: () => void; onRemove: () => void; last?: boolean;
+  item: SpecialDay; onPress: () => void; onRemove: () => void;
+  last?: boolean; fallbackLabel: string; selectDateLabel: string;
 }) {
   return (
-    <View style={{
-      borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
-      flexDirection: "row", alignItems: "center",
-      gap: 8, paddingHorizontal: 12, paddingVertical: 12,
-    }}>
+    <Pressable
+      onPress={onPress}
+      style={{
+        borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
+        flexDirection: "row", alignItems: "center",
+        gap: 12, paddingHorizontal: 12, paddingVertical: 12,
+      }}
+    >
       <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42, flexShrink: 0 }}>
-        <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+        <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
       </View>
       <View style={{ flex: 1 }}>
-        <TextInput
-          value={item.title}
-          onChangeText={onChangeTitle}
-          placeholder="Event name"
-          placeholderTextColor="#8C9691"
-          style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700", marginBottom: 4 }}
-        />
-        <Pressable onPress={onPressDate} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Ionicons name="calendar-outline" size={13} color={mesh.ink500} />
-          <Text style={{ color: item.date ? mesh.green700 : mesh.ink400, fontSize: 12 }}>
-            {item.date ? formatDateShort(item.date) : "Set date"}
-          </Text>
-        </Pressable>
+        <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>
+          {item.title || fallbackLabel}
+        </Text>
+        <Text style={{ color: item.date ? mesh.green700 : mesh.ink400, fontSize: 12, marginTop: 2 }}>
+          {item.date ? formatDateShort(item.date) : selectDateLabel}
+        </Text>
       </View>
       <Pressable onPress={onRemove} hitSlop={8}>
         <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
       </Pressable>
-    </View>
+    </Pressable>
   );
 }
 
@@ -675,13 +672,15 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const [email,  setEmail]  = useState(existing?.email || "");
   const [status, setStatus] = useState(existing?.status || "st-close");
 
-  // ── Additional fields ──────────────────────────────────────────────────────
-  const [birthday,      setBirthday]      = useState<Date | null>(null);
-  const [howYouMet,     setHowYouMet]     = useState("");
-  const [address,       setAddress]       = useState("");
-  const [social,        setSocial]        = useState("");
-  const [note,          setNote]          = useState("");
-  const [activeFields,  setActiveFields]  = useState<AddField[]>([]);
+  // ── Additional text fields (unique ones) ───────────────────────────────────
+  const [birthday,     setBirthday]     = useState<Date | null>(null);
+  const [howYouMet,    setHowYouMet]    = useState("");
+  const [address,      setAddress]      = useState("");
+  const [social,       setSocial]       = useState("");
+  const [note,         setNote]         = useState("");
+  // "specialDay" never goes into activeFields; it's tracked in specialDays[]
+  type UniqueField = Exclude<AddField, "specialDay">;
+  const [activeFields, setActiveFields] = useState<UniqueField[]>([]);
 
   // ── Special days ───────────────────────────────────────────────────────────
   const [specialDays, setSpecialDays] = useState<SpecialDay[]>([]);
@@ -690,14 +689,16 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  const [statusOpen,     setStatusOpen]     = useState(false);
-  const [addFieldOpen,   setAddFieldOpen]   = useState(false);
-  const [popupBtm,       setPopupBtm]       = useState(0);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [dateTarget,     setDateTarget]     = useState<DateTarget | null>(null);
-  const [pickerValue,    setPickerValue]    = useState<Date | null>(null);
-  const [saving,         setSaving]         = useState(false);
-  const [saveError,      setSaveError]      = useState("");
+  const [statusOpen,       setStatusOpen]       = useState(false);
+  const [addFieldOpen,     setAddFieldOpen]     = useState(false);
+  const [popupBtm,         setPopupBtm]         = useState(0);
+  const [datePickerOpen,   setDatePickerOpen]   = useState(false);
+  const [dateTarget,       setDateTarget]       = useState<DateTarget | null>(null);
+  const [pickerValue,      setPickerValue]      = useState<Date | null>(null);
+  const [pickerEventName,  setPickerEventName]  = useState("");
+  const [datePickerIsNew,  setDatePickerIsNew]  = useState(false);
+  const [saving,           setSaving]           = useState(false);
+  const [saveError,        setSaveError]        = useState("");
 
   const addFieldRef = useRef<View>(null);
 
@@ -709,27 +710,58 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     });
   };
 
-  const addField    = (f: AddField) => { setActiveFields(prev => [...prev, f]); setAddFieldOpen(false); };
-  const removeField = (f: AddField) =>   setActiveFields(prev => prev.filter(x => x !== f));
+  const removeField = (f: UniqueField) => setActiveFields(prev => prev.filter(x => x !== f));
+
+  // ── Add field / special day handling ──────────────────────────────────────
+  const handleAddField = (f: AddField) => {
+    setAddFieldOpen(false);
+    if (f === "specialDay") {
+      const newIdx = specialDays.length; // capture before state update
+      setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }]);
+      setDateTarget({ kind: "specialDay", index: newIdx });
+      setPickerValue(null);
+      setPickerEventName("");
+      setDatePickerIsNew(true);
+      setDatePickerOpen(true);
+    } else {
+      setActiveFields(prev => [...prev, f as UniqueField]);
+    }
+  };
 
   // ── Date picker ────────────────────────────────────────────────────────────
   const openDatePicker = (target: DateTarget) => {
     setDateTarget(target);
-    setPickerValue(
-      target.kind === "birthday"
-        ? birthday
-        : (specialDays[(target as { kind: "specialDay"; index: number }).index]?.date ?? null)
-    );
+    if (target.kind === "birthday") {
+      setPickerValue(birthday);
+      setPickerEventName("");
+    } else {
+      const sd = specialDays[(target as { kind: "specialDay"; index: number }).index];
+      setPickerValue(sd?.date ?? null);
+      setPickerEventName(sd?.title ?? "");
+    }
+    setDatePickerIsNew(false);
     setDatePickerOpen(true);
   };
 
-  const confirmDate = (d: Date) => {
+  const cancelDatePicker = () => {
+    // If user cancels a brand-new special day, remove it
+    if (datePickerIsNew && dateTarget?.kind === "specialDay") {
+      const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
+      setSpecialDays(prev => prev.filter((_, i) => i !== idx));
+    }
+    setDatePickerOpen(false);
+  };
+
+  const confirmDate = () => {
     if (!dateTarget) return;
+    const finalDate = pickerValue ?? new Date();
     if (dateTarget.kind === "birthday") {
-      setBirthday(d);
+      setBirthday(finalDate);
     } else {
       const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
-      setSpecialDays(prev => prev.map((sd, i) => i === idx ? { ...sd, date: d } : sd));
+      setSpecialDays(prev =>
+        prev.map((sd, i) => i === idx ? { ...sd, title: pickerEventName, date: finalDate } : sd)
+      );
     }
     setDatePickerOpen(false);
   };
@@ -755,14 +787,14 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     try {
       const payload: Record<string, unknown> = {
         name:      name.trim(),
-        phone:     phone.trim()    || undefined,
-        email:     email.trim()    || undefined,
-        statusId:  status          || undefined,
-        birthday:  birthday        ? birthday.toISOString()  : undefined,
-        howYouMet: howYouMet.trim()|| undefined,
-        address:   address.trim()  || undefined,
-        social:    social.trim()   || undefined,
-        note:      note.trim()     || undefined,
+        phone:     phone.trim()     || undefined,
+        email:     email.trim()     || undefined,
+        statusId:  status           || undefined,
+        birthday:  birthday         ? birthday.toISOString() : undefined,
+        howYouMet: howYouMet.trim() || undefined,
+        address:   address.trim()   || undefined,
+        social:    social.trim()    || undefined,
+        note:      note.trim()      || undefined,
       };
       if (edit && contactId) {
         await updateContact(contactId, payload);
@@ -778,24 +810,33 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     }
   };
 
-  // ── Available "Add field" options (exclude already-added) ──────────────────
+  // ── Field meta (popup menu options) ───────────────────────────────────────
   const fieldMeta: { key: AddField; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-    { key: "birthday",  icon: "gift-outline",           label: t("birthday")  || "Birthday"     },
-    { key: "howYouMet", icon: "chatbubble-outline",     label: t("howYouMet") || "How you met"  },
-    { key: "address",   icon: "location-outline",       label: t("address")   || "Address"      },
-    { key: "social",    icon: "globe-outline",          label: t("social")    || "Social"       },
-    { key: "note",      icon: "document-text-outline",  label: t("moreNote")  || "Note"         },
+    { key: "birthday",   icon: "gift-outline",          label: t("birthday")   },
+    { key: "howYouMet",  icon: "chatbubble-outline",    label: t("howYouMet")  },
+    { key: "specialDay", icon: "calendar-outline",      label: t("specialDay") },
+    { key: "address",    icon: "location-outline",      label: t("address")    },
+    { key: "social",     icon: "globe-outline",         label: t("social")     },
+    { key: "note",       icon: "document-text-outline", label: t("moreNote")   },
   ];
-  const availableFields = fieldMeta.filter(f => !activeFields.includes(f.key));
+  // specialDay is always available (multiple allowed); unique fields hidden once added
+  const availableFields = fieldMeta.filter(f =>
+    f.key === "specialDay" || !activeFields.includes(f.key as UniqueField)
+  );
 
-  const fieldIcon:  Record<AddField, keyof typeof Ionicons.glyphMap> = Object.fromEntries(fieldMeta.map(f => [f.key, f.icon]))  as Record<AddField, keyof typeof Ionicons.glyphMap>;
-  const fieldLabel: Record<AddField, string>                         = Object.fromEntries(fieldMeta.map(f => [f.key, f.label])) as Record<AddField, string>;
+  const fieldIcon:  Partial<Record<AddField, keyof typeof Ionicons.glyphMap>> = Object.fromEntries(fieldMeta.map(f => [f.key, f.icon]));
+  const fieldLabel: Partial<Record<AddField, string>>                         = Object.fromEntries(fieldMeta.map(f => [f.key, f.label]));
+
+  const hasAdditional = activeFields.length > 0 || specialDays.length > 0;
+
+  // Current status for relationship row
+  const currentStatus = statusById(status);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <MeshScreen>
       {/* ── Hero header ── */}
-      <View style={{ height: insets.top + 280, overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, position: "relative" }}>
+      <View style={{ height: insets.top + 276, overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, position: "relative" }}>
         <MeshGradientView
           pointerEvents="none"
           style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
@@ -807,7 +848,9 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         {/* Top nav row */}
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
-          <Text style={{ color: "#064532", fontSize: 18, fontWeight: "800", letterSpacing: -0.2 }}>{edit ? t("editContact") : t("createContact")}</Text>
+          <Text style={{ color: "#064532", fontSize: 18, fontWeight: "800", letterSpacing: -0.2 }}>
+            {edit ? t("editContact") : t("createContact")}
+          </Text>
           <Pressable
             onPress={handleSave}
             disabled={saving}
@@ -823,18 +866,27 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>}
           </Pressable>
         </View>
+
         {/* Avatar */}
         <View style={{ alignItems: "center", marginTop: 18 }}>
           <Pressable onPress={pickAvatar} style={{ position: "relative" }}>
-            {avatarUri
-              ? <Image source={{ uri: avatarUri }} style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#FFFFFF" }} />
-              : <Avatar name={existing?.name || name || "?"} size={100} />
-            }
+            {avatarUri ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#FFFFFF" }}
+              />
+            ) : name.trim() ? (
+              <Avatar name={name.trim()} size={100} />
+            ) : (
+              <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(31,112,72,0.10)", borderWidth: 3, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="person-outline" size={44} color={mesh.green700} />
+              </View>
+            )}
             <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 16, borderWidth: 3, bottom: 0, height: 32, justifyContent: "center", position: "absolute", right: 0, width: 32 }}>
               <Ionicons name="camera-outline" size={15} color="#FFFFFF" />
             </View>
           </Pressable>
-          <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", marginTop: 8 }}>{t("addAvatar") || "Add photo"}</Text>
+          <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", marginTop: 8 }}>{t("addAvatar")}</Text>
         </View>
       </View>
 
@@ -845,116 +897,108 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         keyboardShouldPersistTaps="handled"
       >
         {saveError ? (
-          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, marginBottom: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
             <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
           </View>
         ) : null}
 
-        {/* ── Basic Information ── */}
-        <FormSection title={t("basicInfo")}>
+        {/* ── Basic info card (no title) ── */}
+        <FormSection>
           <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
           <FormRow icon="call-outline"   label={t("phone")}       value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
           <FormRow icon="mail-outline"   label="Email"            value={email} onChangeText={setEmail} placeholder={t("enterEmail")} />
-          {/* Relationship / Status */}
+          {/* Relationship / Status — inline dot + name + chevron */}
           <Pressable
             onPress={() => setStatusOpen(true)}
-            style={{
-              alignItems: "center",
-              borderBottomWidth: activeFields.length > 0 ? 1 : 0,
-              borderColor: "rgba(6,69,50,0.08)",
-              flexDirection: "row", gap: 12,
-              paddingHorizontal: 12, paddingVertical: 12,
-            }}
+            style={{ alignItems: "center", borderBottomWidth: 0, flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 14 }}
           >
             <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
               <Ionicons name="people-outline" size={20} color={mesh.green700} />
             </View>
             <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", flex: 1 }}>{t("relationship")}</Text>
-            <StatusChip statusId={status} />
-            <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentStatus?.color ?? mesh.ink300 }} />
+              <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "600" }}>{currentStatus?.name ?? ""}</Text>
+              <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
+            </View>
           </Pressable>
-          {/* Active additional fields */}
-          {activeFields.map((f, i) => {
-            const isLast = i === activeFields.length - 1;
-            if (f === "birthday") {
-              return (
-                <Pressable
-                  key="birthday"
-                  onPress={() => openDatePicker({ kind: "birthday" })}
-                  style={{ alignItems: "center", borderBottomWidth: isLast ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
-                >
-                  <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-                    <Ionicons name="gift-outline" size={20} color={mesh.green700} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{fieldLabel.birthday}</Text>
-                    <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
-                      {birthday ? formatDateShort(birthday) : "Tap to set"}
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
-                    <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
-                  </Pressable>
-                </Pressable>
-              );
-            }
-            const fieldState: Record<Exclude<AddField, "birthday">, [string, (v: string) => void]> = {
-              howYouMet: [howYouMet, setHowYouMet],
-              address:   [address,   setAddress],
-              social:    [social,    setSocial],
-              note:      [note,      setNote],
-            };
-            const [val, setter] = fieldState[f as Exclude<AddField, "birthday">];
-            return (
-              <AdditionalRow
-                key={f}
-                icon={fieldIcon[f]}
-                label={fieldLabel[f]}
-                value={val}
-                onChangeText={setter}
-                multiline={f === "note"}
-                onRemove={() => removeField(f)}
-                last={isLast}
-              />
-            );
-          })}
         </FormSection>
 
-        {/* ── Add field row ── */}
+        {/* ── Add field button ── */}
         {availableFields.length > 0 && (
           <View ref={addFieldRef} collapsable={false}>
             <Pressable onPress={openPopup} style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4, paddingVertical: 6 }}>
               <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 12, height: 32, justifyContent: "center", width: 32 }}>
                 <Ionicons name="add" size={18} color={mesh.green700} />
               </View>
-              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField") || "Add field"}</Text>
+              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField")}</Text>
             </Pressable>
           </View>
         )}
 
-        {/* ── Special Days ── */}
-        <FormSection title={t("specialDays")}>
-          {specialDays.map((sd, i) => (
-            <SpecialDayRow
-              key={sd.id}
-              item={sd}
-              onChangeTitle={(v) => setSpecialDays(prev => prev.map((s, j) => j === i ? { ...s, title: v } : s))}
-              onPressDate={() => openDatePicker({ kind: "specialDay", index: i })}
-              onRemove={() => setSpecialDays(prev => prev.filter((_, j) => j !== i))}
-              last={false}
-            />
-          ))}
-          <Pressable
-            onPress={() => setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }])}
-            style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
-          >
-            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-              <Ionicons name="add-circle-outline" size={20} color={mesh.green700} />
-            </View>
-            <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addSpecialDay") || "Add special day"}</Text>
-          </Pressable>
-        </FormSection>
+        {/* ── Additional information (shown after fields are added) ── */}
+        {hasAdditional && (
+          <FormSection title={t("additionalInfo")}>
+            {/* Birthday row */}
+            {activeFields.includes("birthday") && (
+              <Pressable
+                onPress={() => openDatePicker({ kind: "birthday" })}
+                style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
+              >
+                <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+                  <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{t("birthday")}</Text>
+                  <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
+                    {birthday ? formatDateShort(birthday) : t("selectDate")}
+                  </Text>
+                </View>
+                <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
+                  <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+                </Pressable>
+              </Pressable>
+            )}
+
+            {/* Text fields (howYouMet / address / social / note) */}
+            {(["howYouMet", "address", "social", "note"] as const).filter(f => activeFields.includes(f)).map((f, loopIdx, arr) => {
+              const fieldStateMap: Record<typeof f, [string, (v: string) => void]> = {
+                howYouMet: [howYouMet, setHowYouMet],
+                address:   [address,   setAddress],
+                social:    [social,    setSocial],
+                note:      [note,      setNote],
+              };
+              const [val, setter] = fieldStateMap[f];
+              const isLastText = loopIdx === arr.length - 1 && specialDays.length === 0;
+              return (
+                <AdditionalRow
+                  key={f}
+                  icon={fieldIcon[f] ?? "ellipsis-horizontal-outline"}
+                  label={fieldLabel[f] ?? f}
+                  value={val}
+                  onChangeText={setter}
+                  multiline={f === "note"}
+                  onRemove={() => removeField(f)}
+                  last={isLastText}
+                />
+              );
+            })}
+
+            {/* Special day rows */}
+            {specialDays.map((sd, i) => (
+              <SpecialDayRow
+                key={sd.id}
+                item={sd}
+                onPress={() => openDatePicker({ kind: "specialDay", index: i })}
+                onRemove={() => setSpecialDays(prev => prev.filter((_, j) => j !== i))}
+                last={i === specialDays.length - 1}
+                fallbackLabel={t("specialDay")}
+                selectDateLabel={t("selectDate")}
+              />
+            ))}
+          </FormSection>
+        )}
 
         <View style={{ marginBottom: 24, marginTop: 16 }}>
           <TipCard>{t("canAddLater")}</TipCard>
@@ -971,13 +1015,13 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             position: "absolute", left: 20, right: 20, bottom: popupBtm,
             backgroundColor: "#FFFFFF",
             borderRadius: 18, borderWidth: 1, borderColor: "rgba(6,69,50,0.10)",
-            shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24,
+            shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 24,
             elevation: 8, paddingVertical: 6,
           }}>
             {availableFields.map((f, i) => (
               <Pressable
-                key={f.key}
-                onPress={() => addField(f.key)}
+                key={`${f.key}-${i}`}
+                onPress={() => handleAddField(f.key)}
                 style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < availableFields.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.06)" }}
               >
                 <Ionicons name={f.icon} size={18} color={mesh.green700} />
@@ -988,23 +1032,51 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         </Pressable>
       </Modal>
 
-      {/* ── Date picker bottom sheet ── */}
-      <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={() => setDatePickerOpen(false)}>
-        <Pressable onPress={() => setDatePickerOpen(false)} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
-          <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
+      {/* ── Date / special-day picker bottom sheet ── */}
+      <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={cancelDatePicker}>
+        <Pressable onPress={cancelDatePicker} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
+          <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36 }}>
+            {/* Handle */}
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
+            {/* Header row */}
             <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
-              <Pressable onPress={() => setDatePickerOpen(false)}>
-                <Text style={{ color: mesh.ink500, fontSize: 16, fontWeight: "600" }}>{t("cancel") || "Cancel"}</Text>
+              <Pressable onPress={cancelDatePicker} hitSlop={8}>
+                <Text style={{ color: mesh.ink400, fontSize: 16, fontWeight: "600" }}>{t("cancel")}</Text>
               </Pressable>
-              <Text style={{ color: mesh.green800, fontSize: 17, fontWeight: "800" }}>
-                {dateTarget?.kind === "birthday" ? (t("birthday") || "Birthday") : (t("specialDay") || "Special day")}
+              <Text style={{ color: mesh.green800, fontSize: 18, fontWeight: "800" }}>
+                {dateTarget?.kind === "birthday" ? t("birthday") : t("specialDay")}
               </Text>
-              <Pressable onPress={() => confirmDate(pickerValue ?? new Date())}>
-                <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "800" }}>{t("done") || "Done"}</Text>
+              <Pressable onPress={confirmDate} hitSlop={8}>
+                <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "800" }}>{t("done")}</Text>
               </Pressable>
             </View>
+            {/* Event name input — only for special days */}
+            {dateTarget?.kind === "specialDay" && (
+              <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
+                <TextInput
+                  value={pickerEventName}
+                  onChangeText={setPickerEventName}
+                  placeholder={t("eventName")}
+                  placeholderTextColor="#8C9691"
+                  returnKeyType="done"
+                  style={{
+                    height: 48, borderRadius: 16,
+                    backgroundColor: "rgba(31,112,72,0.06)",
+                    borderWidth: 1, borderColor: "rgba(31,112,72,0.14)",
+                    paddingHorizontal: 16, fontSize: 16, color: mesh.ink900, fontWeight: "600",
+                  }}
+                />
+              </View>
+            )}
+            {/* Wheel picker */}
             <WheelDatePicker value={pickerValue} onChange={setPickerValue} />
+            {/* Selected date preview chip */}
+            {pickerValue && (
+              <View style={{ marginHorizontal: 20, marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9 }}>
+                <Ionicons name="calendar-outline" size={15} color={mesh.green700} />
+                <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{formatDateShort(pickerValue)}</Text>
+              </View>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -1012,7 +1084,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   );
 }
 
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
+function FormSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <View
       style={{
@@ -1029,9 +1101,11 @@ function FormSection({ title, children }: { title: string; children: ReactNode }
         shadowRadius: 20,
       }}
     >
-      <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>
-        {title.toUpperCase()}
-      </Text>
+      {title ? (
+        <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>
+          {title.toUpperCase()}
+        </Text>
+      ) : null}
       <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>
         {children}
       </View>
