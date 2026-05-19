@@ -286,7 +286,8 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const rowLayouts = useRef<Record<string, number>>({});
+  const scrollContainerRef = useRef<View>(null);
+  const rowRefs = useRef<Record<string, View | null>>({});
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<{ id?: string; name?: string } | null>(null);
   const sourceContacts = apiContacts;
@@ -320,6 +321,8 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
 
   useEffect(() => {
     if (highlightId || highlightName) {
+      // Reset filter to "all" so newly created contact is visible
+      setFilter("all");
       setPendingHighlight({ id: highlightId, name: highlightName });
     }
   }, [highlightId, highlightName, refresh]);
@@ -345,28 +348,59 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
   useEffect(() => {
     if (!targetContact) return;
 
-    const timer = setTimeout(() => {
-      const y = rowLayouts.current[targetContact.id];
+    let cancelled = false;
+    let attempts = 0;
 
-      if (typeof y === "number") {
-        scrollRef.current?.scrollTo({
-          y: Math.max(0, y - 120),
-          animated: true,
-        });
+    const highlightAndScroll = () => {
+      if (cancelled) return;
 
-        setActiveHighlightId(targetContact.id);
+      const rowRef = rowRefs.current[targetContact.id];
 
-        setTimeout(() => {
-          setActiveHighlightId((current) =>
-            current === targetContact.id ? null : current
-          );
-        }, HIGHLIGHT_MS);
+      if (rowRef && scrollContainerRef.current) {
+        rowRef.measureLayout(
+          scrollContainerRef.current,
+          (_x, y) => {
+            if (cancelled) return;
 
-        setPendingHighlight(null);
+            scrollRef.current?.scrollTo({
+              y: Math.max(0, y - 120),
+              animated: true,
+            });
+
+            setActiveHighlightId(targetContact.id);
+
+            setTimeout(() => {
+              setActiveHighlightId((current) =>
+                current === targetContact.id ? null : current
+              );
+            }, HIGHLIGHT_MS);
+
+            setPendingHighlight(null);
+          },
+          () => {
+            // measureLayout failed, retry
+            if (attempts < 10) {
+              attempts += 1;
+              setTimeout(highlightAndScroll, 120);
+            }
+          }
+        );
+        return;
       }
-    }, 300);
 
-    return () => clearTimeout(timer);
+      // Row ref or container not ready, retry
+      if (attempts < 10) {
+        attempts += 1;
+        setTimeout(highlightAndScroll, 120);
+      }
+    };
+
+    const timer = setTimeout(highlightAndScroll, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [targetContact]);
 
 
@@ -417,7 +451,11 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+        <View
+          ref={scrollContainerRef}
+          collapsable={false}
+          style={{ paddingHorizontal: 20, paddingTop: 8 }}
+        >
           {loading ? (
             <InlineState label="Loading contacts..." loading />
           ) : error ? (
@@ -432,10 +470,9 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
                 return (
                 <Pressable
                   key={contact.id}
+                  ref={(ref) => { rowRefs.current[contact.id] = ref as unknown as View | null; }}
+                  collapsable={false}
                   onPress={() => nav("contactDetail", { id: contact.id })}
-                  onLayout={(e) => {
-                    rowLayouts.current[contact.id] = e.nativeEvent.layout.y;
-                  }}
                   style={[
                     {
                       flexDirection: "row",
