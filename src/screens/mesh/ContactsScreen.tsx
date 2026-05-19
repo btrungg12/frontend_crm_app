@@ -893,9 +893,9 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   // ── Field meta (popup menu options) ───────────────────────────────────────
   const fieldMeta: { key: AddField; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { key: "birthday",   icon: "gift-outline",          label: t("birthday")   },
-    { key: "howYouMet",  icon: "chatbubble-outline",    label: t("howYouMet")  },
-    { key: "specialDay", icon: "calendar-outline",      label: t("specialDay") },
     { key: "address",    icon: "location-outline",      label: t("address")    },
+    { key: "specialDay", icon: "calendar-outline",      label: t("specialDay") },
+    { key: "howYouMet",  icon: "chatbubble-outline",    label: t("howYouMet")  },
     { key: "social",     icon: "globe-outline",         label: t("social")     },
     { key: "note",       icon: "document-text-outline", label: t("moreNote")   },
   ];
