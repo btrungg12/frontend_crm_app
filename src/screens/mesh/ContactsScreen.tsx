@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
@@ -754,7 +754,8 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   // ── UI state ───────────────────────────────────────────────────────────────
   const [statusOpen,       setStatusOpen]       = useState(false);
   const [addFieldOpen,     setAddFieldOpen]     = useState(false);
-  const [popupBtm,         setPopupBtm]         = useState(0);
+  const [popupY,           setPopupY]           = useState(0);
+  const [popupX,           setPopupX]           = useState(0);
   const [datePickerOpen,   setDatePickerOpen]   = useState(false);
   const [dateTarget,       setDateTarget]       = useState<DateTarget | null>(null);
   const [pickerValue,      setPickerValue]      = useState<Date | null>(null);
@@ -790,10 +791,8 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     setTimeout(() => {
       const rowY = rowYRef.current[key];
       if (typeof rowY !== "number") return;
-      // Additional rows are measured relative to the additional section container.
-      // Combine with section's position in the scroll content (+ approx section header offset).
       const sectionY     = rowYRef.current["additionalSection"] ?? 0;
-      const SECTION_HEADER = 44; // outer padding (16) + title text+margin (~28)
+      const SECTION_HEADER = 44;
       const base   = sectionY + SECTION_HEADER + rowY;
       const offset = key === "note" ? 130 : 90;
       scrollRef.current?.scrollTo({ y: Math.max(0, base - offset), animated: true });
@@ -847,7 +846,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
           setSpecialDays(
             item.specialDays.map((sd: unknown, i: number) => {
               const r = asRec(sd);
-              // Backend field is "occasion", fallback to "name" for safety
               const title = typeof r?.occasion === "string" ? r.occasion
                           : typeof r?.name     === "string" ? r.name
                           : "";
@@ -867,10 +865,11 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [edit, contactId]);
 
-  // ── Popup positioning ──────────────────────────────────────────────────────
+  // ── Popup positioning — measured below the Add field button ───────────────
   const openPopup = () => {
-    addFieldRef.current?.measureInWindow((_x, y) => {
-      setPopupBtm(Dimensions.get("window").height - y + 8);
+    addFieldRef.current?.measureInWindow((x, y, _w, h) => {
+      setPopupY(y + h + 8);
+      setPopupX(x);
       setAddFieldOpen(true);
     });
   };
@@ -881,7 +880,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const handleAddField = (f: AddField) => {
     setAddFieldOpen(false);
     if (f === "specialDay") {
-      const newIdx = specialDays.length; // capture before state update
+      const newIdx = specialDays.length;
       setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }]);
       setDateTarget({ kind: "specialDay", index: newIdx });
       setPickerValue(null);
@@ -909,7 +908,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   };
 
   const cancelDatePicker = () => {
-    // If user cancels a brand-new special day, remove it
     if (datePickerIsNew && dateTarget?.kind === "specialDay") {
       const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
       setSpecialDays(prev => prev.filter((_, i) => i !== idx));
@@ -950,8 +948,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     setSaveError("");
     setSaving(true);
     try {
-      // Only send statusId when it's a real MongoDB ObjectId (24-char hex).
-      // Mock IDs like "st-close" would cause a backend 500 error.
       const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
 
       const payload: Record<string, unknown> = {
@@ -960,16 +956,11 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         email:    email.trim()     || undefined,
         statusId: status && isMongoId(status) ? status : undefined,
         birthday: birthday         ? birthday.toISOString() : undefined,
-        // "source" is the API field name for how you met
         source:   howYouMet.trim() || undefined,
         address:  address.trim()   || undefined,
-        // API expects an array; we store a single link in the UI
         socialLinks: social.trim() ? [social.trim()] : undefined,
-        // "note" is not a contact field — notes are created via the Notes API
       };
 
-      // Special days — only include ones that have a date set
-      // Backend field: "occasion" (not "name")
       const specialDaysPayload = specialDays
         .filter((sd) => sd.date !== null)
         .map((sd) => ({
@@ -1004,7 +995,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     { key: "social",     icon: "globe-outline",         label: t("social")     },
     { key: "note",       icon: "document-text-outline", label: t("moreNote")   },
   ];
-  // specialDay is always available (multiple allowed); unique fields hidden once added
   const availableFields = fieldMeta.filter(f =>
     f.key === "specialDay" || !activeFields.includes(f.key as UniqueField)
   );
@@ -1014,7 +1004,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
   const hasAdditional = activeFields.length > 0 || specialDays.length > 0;
 
-  // Current status for relationship row — look up in API statuses first, fallback to mock
   const currentStatus = status
     ? (pickerStatuses.find((s) => s.id === status) ?? statusById(status))
     : null;
@@ -1022,7 +1011,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loadingEdit) {
     return (
-      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <MeshScreen style={{ backgroundColor: "#F7FBF6" }}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: insets.top }}>
           <ActivityIndicator size="large" color={mesh.green700} />
         </View>
@@ -1031,31 +1020,58 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   }
 
   return (
-    <MeshScreen>
-      {/* ── Hero header ── */}
-      <View style={{ height: insets.top + 276, overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, position: "relative" }}>
-        <MeshGradientView
-          pointerEvents="none"
-          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
-          columns={4} rows={4}
-          colors={["#064532","#0B573E","#1D704F","#2F805E","#DDEFE5","#EAF6EF","#BFDCCB","#74AE8D","#FFFFFF","#FFFFFF","#F8FCF7","#EEF8F0","#FFFFFF","#FFFFFF","#FFFFFF","#FFFFFF"]}
-          points={[[0,0],[0.35,0],[0.7,0],[1,0],[0,0.3],[0.35,0.34],[0.7,0.32],[1,0.28],[0,0.6],[0.35,0.64],[0.7,0.68],[1,0.64],[0,1],[0.35,1],[0.7,1],[1,1]]}
-          smoothsColors
-        />
-        {/* Top nav row */}
-        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
+    <MeshScreen style={{ backgroundColor: "#F7FBF6" }}>
+
+      {/* ── Single full-screen light mesh background ── */}
+      <MeshGradientView
+        pointerEvents="none"
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        columns={4} rows={4}
+        colors={[
+          "#DFF0E8","#E8F5EE","#F2FAF5","#F7FBF6",
+          "#E8F5EE","#EEF8F2","#F4FAF7","#F8FCF9",
+          "#F2FAF5","#F5FBF7","#F8FCFA","#FAFDFB",
+          "#F7FBF6","#F9FCF8","#FAFDFB","#FCFEFB",
+        ]}
+        points={[[0,0],[0.35,0],[0.7,0],[1,0],[0,0.28],[0.35,0.34],[0.7,0.32],[1,0.28],[0,0.62],[0.35,0.66],[0.7,0.7],[1,0.68],[0,1],[0.35,1],[0.7,1],[1,1]]}
+        smoothsColors
+      />
+
+      {/* Leaf decoration — top-right, very subtle */}
+      <Image
+        source={leafPng}
+        resizeMode="contain"
+        style={{ height: 280, opacity: 0.065, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320 }}
+      />
+
+      {/* ── Top bar ── */}
+      <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
-          <Text style={{ color: "#064532", fontSize: 18, fontWeight: "800", letterSpacing: -0.2 }}>
+          <Text
+            numberOfLines={1}
+            style={{ position: "absolute", left: 96, right: 96, textAlign: "center", color: mesh.green800, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}
+          >
             {edit ? t("editContact") : t("createContact")}
           </Text>
           <Pressable
             onPress={handleSave}
             disabled={saving}
             style={{
-              alignItems: "center", backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
-              borderRadius: 999, elevation: 3, flexDirection: "row", gap: 6, justifyContent: "center",
-              minWidth: 72, paddingHorizontal: 18, paddingVertical: 10,
-              shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16,
+              alignItems: "center",
+              backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
+              borderRadius: 999,
+              elevation: 3,
+              flexDirection: "row",
+              gap: 6,
+              justifyContent: "center",
+              minWidth: 72,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              shadowColor: "#064532",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16,
             }}
           >
             {saving
@@ -1063,78 +1079,117 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
               : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>}
           </Pressable>
         </View>
-
-        {/* Avatar */}
-        <View style={{ alignItems: "center", marginTop: 18 }}>
-          <Pressable onPress={pickAvatar} style={{ position: "relative" }}>
-            {avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#FFFFFF" }}
-              />
-            ) : name.trim() ? (
-              <Avatar name={name.trim()} size={100} />
-            ) : (
-              <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(31,112,72,0.10)", borderWidth: 3, borderColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-                <Ionicons name="person-outline" size={44} color={mesh.green700} />
-              </View>
-            )}
-            <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 16, borderWidth: 3, bottom: 0, height: 32, justifyContent: "center", position: "absolute", right: 0, width: 32 }}>
-              <Ionicons name="camera-outline" size={15} color="#FFFFFF" />
-            </View>
-          </Pressable>
-          <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", marginTop: 8 }}>{t("addAvatar")}</Text>
-        </View>
       </View>
 
-      {/* ── Scrollable form (keyboard-aware) ── */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
+      {/* ── Scrollable form ── */}
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView
           ref={scrollRef}
-          style={{ backgroundColor: "#F7FAF7", marginTop: -18 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 + keyboardHeight }}
+          style={{ backgroundColor: "transparent" }}
+          contentContainerStyle={{ paddingBottom: 120 + keyboardHeight }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
+          {/* ── Avatar ── */}
+          <View style={{ alignItems: "center", marginTop: 28, marginBottom: 22 }}>
+            <Pressable onPress={pickAvatar} style={{ position: "relative" }}>
+              {avatarUri ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={{ width: 92, height: 92, borderRadius: 46, borderWidth: 3, borderColor: "rgba(255,255,255,0.9)" }}
+                />
+              ) : name.trim() ? (
+                <Avatar name={name.trim()} size={92} />
+              ) : (
+                <View style={{ width: 92, height: 92, borderRadius: 46, backgroundColor: "rgba(31,112,72,0.09)", borderWidth: 3, borderColor: "rgba(255,255,255,0.85)", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="person-outline" size={40} color={mesh.green700} />
+                </View>
+              )}
+              <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 15, borderWidth: 2.5, bottom: 0, height: 30, justifyContent: "center", position: "absolute", right: 0, width: 30 }}>
+                <Ionicons name="camera-outline" size={14} color="#FFFFFF" />
+              </View>
+            </Pressable>
+            <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", marginTop: 9 }}>{t("addAvatar")}</Text>
+          </View>
+
+          {/* ── Save error banner ── */}
           {saveError ? (
-            <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ marginHorizontal: 24, marginBottom: 12, backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(220,38,38,0.18)", paddingHorizontal: 14, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
               <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
             </View>
           ) : null}
 
-          {/* ── Basic info card (no title) ── */}
-          <FormSection>
-            <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
-            <FormRow icon="call-outline"   label={t("phone")}       value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
-            <FormRow icon="mail-outline"   label="Email"            value={email} onChangeText={setEmail} placeholder={t("enterEmail")} />
-            {/* Relationship / Status — inline dot + name + chevron */}
-            <Pressable
+          {/* ── Field card: Name / Phone / Email / Relationship ── */}
+          <View style={{
+            marginHorizontal: 24,
+            borderRadius: 28,
+            backgroundColor: "rgba(255,255,255,0.92)",
+            borderWidth: 1,
+            borderColor: "rgba(6,69,50,0.08)",
+            overflow: "hidden",
+            shadowColor: "#064532",
+            shadowOpacity: 0.025,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 1,
+          }}>
+            <ContactFieldRow
+              icon="person-outline"
+              label={`${t("name")} *`}
+              value={name}
+              placeholder={t("enterName")}
+              onChangeText={setName}
+            />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <ContactFieldRow
+              icon="call-outline"
+              label={t("phone")}
+              value={phone}
+              placeholder={t("enterPhone")}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <ContactFieldRow
+              icon="mail-outline"
+              label="Email"
+              value={email}
+              placeholder={t("enterEmail")}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <View style={{ height: 1, backgroundColor: "rgba(6,69,50,0.07)", marginLeft: 74 }} />
+            <ContactFieldPickerRow
+              icon="people-outline"
+              label={t("relationship")}
+              value={currentStatus?.name ?? ""}
+              placeholder="Choose"
+              statusColor={currentStatus?.color}
               onPress={() => setStatusOpen(true)}
-              style={{ alignItems: "center", borderBottomWidth: 0, flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 14 }}
-            >
-              <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-                <Ionicons name="people-outline" size={20} color={mesh.green700} />
-              </View>
-              <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", flex: 1 }}>{t("relationship")}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: currentStatus?.color ?? mesh.ink300 }} />
-                <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "600" }}>{currentStatus?.name ?? ""}</Text>
-                <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
-              </View>
-            </Pressable>
-          </FormSection>
+            />
+          </View>
 
           {/* ── Add field button ── */}
           {availableFields.length > 0 && (
-            <View ref={addFieldRef} collapsable={false}>
-              <Pressable onPress={openPopup} style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4, paddingVertical: 6 }}>
-                <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 12, height: 32, justifyContent: "center", width: 32 }}>
-                  <Ionicons name="add" size={18} color={mesh.green700} />
+            <View ref={addFieldRef} collapsable={false} style={{ marginLeft: 24, marginTop: 18 }}>
+              <Pressable
+                onPress={openPopup}
+                style={{
+                  alignSelf: "flex-start",
+                  minHeight: 44,
+                  borderRadius: 22,
+                  paddingHorizontal: 16,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  backgroundColor: "rgba(31,112,72,0.08)",
+                }}
+              >
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(31,112,72,0.12)", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="add" size={16} color={mesh.green700} />
                 </View>
                 <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField")}</Text>
               </Pressable>
@@ -1143,10 +1198,9 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
           {/* ── Additional information (shown after fields are added) ── */}
           {hasAdditional && (
-            // onLayout gives this section's y relative to the ScrollView content
-            <View onLayout={registerRow("additionalSection")}>
+            <View onLayout={registerRow("additionalSection")} style={{ marginHorizontal: 16 }}>
               <FormSection title={t("additionalInfo")}>
-                {/* Birthday row — tappable, no TextInput, no scrollToRow needed */}
+                {/* Birthday row */}
                 {activeFields.includes("birthday") && (
                   <Pressable
                     onPress={() => openDatePicker({ kind: "birthday" })}
@@ -1178,7 +1232,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
                   const [val, setter] = fieldStateMap[f];
                   const isLastText = loopIdx === arr.length - 1 && specialDays.length === 0;
                   return (
-                    // onLayout gives this row's y relative to FormSection's inner container
                     <View key={f} onLayout={registerRow(f)}>
                       <AdditionalRow
                         icon={fieldIcon[f] ?? "ellipsis-horizontal-outline"}
@@ -1210,7 +1263,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             </View>
           )}
 
-          <View style={{ marginBottom: 24, marginTop: 16 }}>
+          <View style={{ marginHorizontal: 16, marginBottom: 24, marginTop: 16 }}>
             <TipCard>{t("canAddLater")}</TipCard>
           </View>
         </ScrollView>
@@ -1219,24 +1272,55 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       {/* ── Status picker bottom sheet ── */}
       <StatusPicker open={statusOpen} value={status} statuses={pickerStatuses} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
 
-      {/* ── Add field popup (transparent, anchored above button) ── */}
+      {/* ── Add field popup — transparent modal, anchored below button ── */}
       <Modal visible={addFieldOpen} transparent animationType="none" onRequestClose={() => setAddFieldOpen(false)}>
         <Pressable style={{ flex: 1 }} onPress={() => setAddFieldOpen(false)}>
           <View style={{
-            position: "absolute", left: 20, right: 20, bottom: popupBtm,
+            position: "absolute",
+            top: popupY,
+            left: popupX,
+            width: 260,
+            borderRadius: 18,
             backgroundColor: "#FFFFFF",
-            borderRadius: 18, borderWidth: 1, borderColor: "rgba(6,69,50,0.10)",
-            shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14, shadowRadius: 24,
-            elevation: 8, paddingVertical: 6,
+            borderWidth: 1,
+            borderColor: "rgba(6,69,50,0.08)",
+            paddingVertical: 8,
+            shadowColor: "#064532",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 12,
           }}>
+            {/* Arrow notch pointing up at the button */}
+            <View style={{
+              position: "absolute",
+              top: -8,
+              left: 28,
+              width: 16,
+              height: 16,
+              backgroundColor: "#FFFFFF",
+              transform: [{ rotate: "45deg" }],
+              borderLeftWidth: 1,
+              borderTopWidth: 1,
+              borderColor: "rgba(6,69,50,0.08)",
+            }} />
             {availableFields.map((f, i) => (
               <Pressable
                 key={`${f.key}-${i}`}
                 onPress={() => handleAddField(f.key)}
-                style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < availableFields.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.06)" }}
+                style={{
+                  minHeight: 48,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 14,
+                  borderBottomWidth: i < availableFields.length - 1 ? 1 : 0,
+                  borderColor: "rgba(6,69,50,0.07)",
+                }}
               >
-                <Ionicons name={f.icon} size={18} color={mesh.green700} />
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "600" }}>{f.label}</Text>
+                <View style={{ width: 30, alignItems: "center", marginRight: 10 }}>
+                  <Ionicons name={f.icon} size={18} color={mesh.green700} />
+                </View>
+                <Text style={{ flex: 1, color: mesh.ink700, fontSize: 15, fontWeight: "700" }}>{f.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -1245,40 +1329,24 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
       {/* ── Date / special-day picker bottom sheet ── */}
       <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={cancelDatePicker}>
-        {/*
-          Backdrop is a separate absolute Pressable so it does NOT wrap the sheet.
-          The sheet itself is a plain View — nothing steals touch from the wheel ScrollViews.
-        */}
         <View style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
           <Pressable
             onPress={cancelDatePicker}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
           <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36 }}>
-            {/* Handle */}
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
-            {/* Header row */}
             <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
               <Pressable onPress={cancelDatePicker} hitSlop={10}>
-                <Text
-                  maxFontSizeMultiplier={1.1}
-                  style={{ color: mesh.ink400, fontSize: SHEET_FONT.action, fontWeight: "700" }}
-                >{t("cancel")}</Text>
+                <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.ink400, fontSize: SHEET_FONT.action, fontWeight: "700" }}>{t("cancel")}</Text>
               </Pressable>
-              <Text
-                maxFontSizeMultiplier={1.1}
-                style={{ color: mesh.green800, fontSize: SHEET_FONT.title, fontWeight: "800" }}
-              >
+              <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.green800, fontSize: SHEET_FONT.title, fontWeight: "800" }}>
                 {dateTarget?.kind === "birthday" ? t("birthday") : t("specialDay")}
               </Text>
               <Pressable onPress={confirmDate} hitSlop={10}>
-                <Text
-                  maxFontSizeMultiplier={1.1}
-                  style={{ color: mesh.green700, fontSize: SHEET_FONT.action, fontWeight: "800" }}
-                >{t("done")}</Text>
+                <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.green700, fontSize: SHEET_FONT.action, fontWeight: "800" }}>{t("done")}</Text>
               </Pressable>
             </View>
-            {/* Event name input — only for special days */}
             {dateTarget?.kind === "specialDay" && (
               <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
                 <TextInput
@@ -1298,16 +1366,11 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
                 />
               </View>
             )}
-            {/* Wheel picker */}
             <WheelDatePicker value={pickerValue} onChange={setPickerValue} />
-            {/* Selected date preview chip */}
             {pickerValue && (
               <View style={{ marginHorizontal: 20, marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9 }}>
                 <Ionicons name="calendar-outline" size={15} color={mesh.green700} />
-                <Text
-                  maxFontSizeMultiplier={1.1}
-                  style={{ color: mesh.green700, fontSize: SHEET_FONT.preview, fontWeight: "800" }}
-                >{formatDateShort(pickerValue)}</Text>
+                <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.green700, fontSize: SHEET_FONT.preview, fontWeight: "800" }}>{formatDateShort(pickerValue)}</Text>
               </View>
             )}
           </View>
@@ -1316,6 +1379,74 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     </MeshScreen>
   );
 }
+
+// ── ContactFieldRow — text-input row inside the main field card ──────────────
+
+function ContactFieldRow({
+  icon, label, value, placeholder, onChangeText, keyboardType, autoCapitalize,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChangeText?: (v: string) => void;
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" | "url";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+}) {
+  return (
+    <View style={{ minHeight: 66, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}>
+      <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)", marginRight: 14 }}>
+        <Ionicons name={icon} size={20} color={mesh.green700} />
+      </View>
+      <Text style={{ width: 140, color: mesh.green800, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={mesh.ink300}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        style={{ flex: 1, color: mesh.ink900, fontSize: 15, textAlign: "right", paddingVertical: 0 }}
+      />
+    </View>
+  );
+}
+
+// ── ContactFieldPickerRow — tappable picker row (e.g. Relationship) ──────────
+
+function ContactFieldPickerRow({
+  icon, label, value, placeholder, onPress, statusColor,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  placeholder?: string;
+  onPress?: () => void;
+  statusColor?: string;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{ minHeight: 66, flexDirection: "row", alignItems: "center", paddingHorizontal: 18 }}
+    >
+      <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.075)", marginRight: 14 }}>
+        <Ionicons name={icon} size={20} color={mesh.green700} />
+      </View>
+      <Text style={{ width: 140, color: mesh.green800, fontSize: 15, fontWeight: "800" }} numberOfLines={1}>{label}</Text>
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+        {statusColor ? (
+          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: statusColor }} />
+        ) : null}
+        <Text style={{ color: value ? mesh.ink700 : mesh.ink300, fontSize: 15 }}>
+          {value || placeholder}
+        </Text>
+        <Ionicons name="chevron-forward" size={15} color={mesh.ink400} style={{ marginLeft: 2 }} />
+      </View>
+    </Pressable>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function FormSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
@@ -1342,31 +1473,6 @@ function FormSection({ title, children }: { title?: string; children: ReactNode 
       <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>
         {children}
       </View>
-    </View>
-  );
-}
-
-function FormRow({
-  icon, label, value, onChangeText, placeholder, onFocus, last = false,
-}: {
-  icon: keyof typeof Ionicons.glyphMap; label: string; value: string;
-  onChangeText?: (value: string) => void; placeholder?: string;
-  onFocus?: () => void; last?: boolean;
-}) {
-  return (
-    <View style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-        <Ionicons name={icon} size={20} color={mesh.green700} />
-      </View>
-      <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", width: 90 }}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        placeholder={placeholder}
-        placeholderTextColor="#8C9691"
-        style={{ color: mesh.ink900, flex: 1, fontSize: 14, textAlign: "right" }}
-      />
     </View>
   );
 }
