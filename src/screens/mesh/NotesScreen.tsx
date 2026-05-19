@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { useMemo, useState } from "react";
 import {
@@ -347,6 +348,30 @@ function FilterRow({
   );
 }
 
+// ─── Bottom scrim ─────────────────────────────────────────────────────────────
+
+function BottomNavScrim() {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[
+        "rgba(250,252,249,0)",
+        "rgba(250,252,249,0.92)",
+        "#FAFCF9",
+      ]}
+      locations={[0, 0.45, 1]}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 170,
+        zIndex: 8,
+      }}
+    />
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 type Props = { t: TFn; lang: Lang; nav: NavFn };
@@ -410,6 +435,8 @@ export function NotesScreen({ t, lang: _lang, nav }: Props) {
           <NoteCard note={item} onPress={() => nav("noteDetail", { id: item.id })} />
         )}
       />
+
+      <BottomNavScrim />
 
       <BottomNav
         active="notes"

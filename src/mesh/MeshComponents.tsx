@@ -310,6 +310,7 @@ export function BottomNav({
         shadowRadius: 22,
         shadowOffset: { width: 0, height: 8 },
         elevation: 8,
+        zIndex: 10,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-around"
