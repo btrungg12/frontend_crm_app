@@ -194,7 +194,15 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [loadingNote,  setLoadingNote]  = useState(edit);
   const [loadError,    setLoadError]    = useState("");
 
-  const bodyRef = useRef<TextInput>(null);
+  const bodyRef      = useRef<TextInput>(null);
+  const firstLineRef = useRef<TextInput>(null);
+
+  // Derived state (computed each render)
+  const hasBody      = bodyText.length > 0;
+  const hasFirstLine = firstLine.trim().length > 0;
+
+  // showBody: true when user has pressed Enter or bodyText has content (edit mode)
+  const [showBody, setShowBody] = useState(false);
 
   // Load existing note in edit mode
   useEffect(() => {
@@ -212,10 +220,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         if (data.title) {
           setFirstLine(data.title);
           setBodyText(data.content);
+          if (data.content.trim()) setShowBody(true);
         } else {
           const lines = data.content.split("\n");
           setFirstLine(lines[0] ?? "");
-          setBodyText(lines.slice(1).join("\n"));
+          const bodyContent = lines.slice(1).join("\n");
+          setBodyText(bodyContent);
+          if (bodyContent.trim()) setShowBody(true);
         }
         setPerson(data.contactId);
         setPersonLabel(data.contactName);
@@ -254,11 +265,36 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const clear = () => {
     setFirstLine("");
     setBodyText("");
+    setShowBody(false);
     if (!edit) { setPerson(initialPerson || null); setPersonLabel(""); setPersonQuery(""); }
     setReminderAt(null);
     setPersonError(false);
     setContentError(false);
     setSaveError("");
+  };
+
+  // Handle newline in first-line input: split text and move to body
+  const handleFirstLineChange = (value: string) => {
+    if (value.includes("\n")) {
+      const parts = value.split(/\r?\n/);
+      const nextFirst         = parts[0] ?? "";
+      const nextBodyFromFirst = parts.slice(1).join("\n");
+      setFirstLine(nextFirst);
+      setBodyText((prev) =>
+        [nextBodyFromFirst, prev].filter(Boolean).join(prev ? "\n" : "")
+      );
+      setShowBody(true);
+      if (nextFirst.trim() || nextBodyFromFirst.trim()) setContentError(false);
+      requestAnimationFrame(() => { bodyRef.current?.focus(); });
+      return;
+    }
+    setFirstLine(value);
+    if (value.trim() || bodyText.trim()) setContentError(false);
+  };
+
+  const handleBodyChange = (value: string) => {
+    setBodyText(value);
+    if (firstLine.trim() || value.trim()) setContentError(false);
   };
 
   const save = async () => {
@@ -342,46 +378,61 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+
+      {/* ── Full-screen light mesh background ── */}
+      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        <MeshGradientView
+          style={StyleSheet.absoluteFillObject}
+          columns={4}
+          rows={5}
+          colors={[
+            "#DDF2E8", "#CFEBDC", "#EAF7EF", "#FFFFFF",
+            "#F7FCF8", "#EEF8F1", "#FFFFFF", "#F8FCF7",
+            "#FFFFFF", "#F8FCF7", "#F6FBF6", "#FFFFFF",
+            "#FFFFFF", "#FFFFFF", "#F9FCF9", "#FFFFFF",
+            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          ]}
+          points={[
+            [0, 0],    [0.35, 0],    [0.7, 0],    [1, 0],
+            [0, 0.25], [0.35, 0.22], [0.7, 0.25], [1, 0.22],
+            [0, 0.5],  [0.35, 0.48], [0.7, 0.52], [1, 0.5],
+            [0, 0.75], [0.35, 0.72], [0.7, 0.76], [1, 0.74],
+            [0, 1],    [0.35, 1],    [0.7, 1],    [1, 1],
+          ]}
+          smoothsColors
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={["rgba(255,255,255,0.20)", "rgba(255,255,255,0.60)", "rgba(255,255,255,0.84)"]}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <Image
+          source={leaf2Png}
+          resizeMode="contain"
+          style={{
+            position: "absolute",
+            right: -70,
+            top: insets.top + 70,
+            width: 290,
+            height: 210,
+            opacity: 0.16,
+            transform: [{ rotate: "-6deg" }],
+          }}
+        />
+      </View>
+
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: "transparent" }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
         contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
       >
-        {/* ── Mesh gradient header ── */}
-        <View style={{ overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 24 }}>
-          <MeshGradientView
-            pointerEvents="none"
-            style={StyleSheet.absoluteFillObject}
-            columns={4}
-            rows={4}
-            colors={[
-              "#064532", "#0B573E", "#1D704F", "#2F805E",
-              "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
-              "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
-              "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
-            ]}
-            points={[
-              [0, 0],    [0.35, 0],    [0.7, 0],    [1, 0],
-              [0, 0.36], [0.35, 0.38], [0.7, 0.34], [1, 0.3],
-              [0, 0.66], [0.35, 0.68], [0.7, 0.72], [1, 0.7],
-              [0, 1],    [0.35, 1],    [0.7, 1],    [1, 1],
-            ]}
-            smoothsColors
-          />
-          <Image
-            source={leaf2Png}
-            resizeMode="contain"
-            style={{
-              height: 210,
-              opacity: 0.18,
-              position: "absolute",
-              right: -70,
-              top: insets.top + 36,
-              transform: [{ rotate: "-6deg" }],
-              width: 290,
-            }}
-          />
+        {/* ── Header (transparent — background comes from root) ── */}
+        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 24 }}>
 
           {/* Top bar */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -457,9 +508,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
         {/* ── Note canvas ── */}
         <Pressable
-          onPress={() => bodyRef.current?.focus()}
+          onPress={() => {
+            if (hasBody || showBody) bodyRef.current?.focus();
+            else firstLineRef.current?.focus();
+          }}
           style={{
-            marginHorizontal: 16,
+            marginHorizontal: 24,
             marginTop: 14,
             minHeight: 360,
             borderRadius: 30,
@@ -470,59 +524,56 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             paddingTop: 22,
             paddingBottom: 56,
             shadowColor: "#064532",
-            shadowOpacity: 0.025,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 5 },
+            shadowOpacity: 0.02,
+            shadowRadius: 9,
+            shadowOffset: { width: 0, height: 4 },
             elevation: 1,
           }}
         >
-          {/* First line — displayed as bold title-like text */}
+          {/* First line: bold when filled, regular weight when empty (placeholder) */}
           <TextInput
+            ref={firstLineRef}
             value={firstLine}
-            onChangeText={(v) => {
-              setFirstLine(v);
-              if (v.trim() || bodyText.trim()) setContentError(false);
-            }}
+            onChangeText={handleFirstLineChange}
             placeholder={isVi ? "Bạn muốn ghi nhớ điều gì?" : "What would you like to remember?"}
-            placeholderTextColor={mesh.ink300}
-            style={{
-              color: mesh.green800,
-              fontSize: 24,
-              lineHeight: 32,
-              fontWeight: "800",
-              letterSpacing: -0.3,
-              padding: 0,
-              margin: 0,
-            }}
-            maxLength={300}
-            multiline
-          />
-
-          {/* Body text */}
-          <TextInput
-            ref={bodyRef}
-            value={bodyText}
-            onChangeText={(v) => {
-              setBodyText(v);
-              if (firstLine.trim() || v.trim()) setContentError(false);
-            }}
-            placeholder=""
             placeholderTextColor={mesh.ink400}
             style={{
-              marginTop: 12,
               color: mesh.ink900,
               fontSize: 16,
-              lineHeight: 26,
+              lineHeight: 27,
+              fontWeight: hasFirstLine ? "700" : "400",
               padding: 0,
               margin: 0,
-              textAlignVertical: "top",
-              minHeight: 120,
+              minHeight: 27,
             }}
             multiline
-            textAlignVertical="top"
           />
 
-          {/* Counter footer */}
+          {/* Body text — only rendered after user presses Enter or has content */}
+          {(showBody || hasBody) ? (
+            <TextInput
+              ref={bodyRef}
+              value={bodyText}
+              onChangeText={handleBodyChange}
+              placeholder=""
+              placeholderTextColor={mesh.ink400}
+              style={{
+                marginTop: 6,
+                color: mesh.ink900,
+                fontSize: 16,
+                lineHeight: 27,
+                fontWeight: "400",
+                padding: 0,
+                margin: 0,
+                textAlignVertical: "top",
+                minHeight: 120,
+              }}
+              multiline
+              textAlignVertical="top"
+            />
+          ) : null}
+
+          {/* Counter footer — number only */}
           <View
             style={{
               position: "absolute",
@@ -545,7 +596,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         ) : null}
 
         {/* ── Reminder chip ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={{ marginHorizontal: 24, marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => setReminderSheet("preset")}
             style={{
@@ -685,29 +736,29 @@ function PersonPill({
     : "rgba(6,69,50,0.08)";
 
   return (
-    <View style={{ marginHorizontal: 16 }}>
+    <View style={{ marginLeft: 24, width: 228, zIndex: 20 }}>
       {/* Pill input */}
       <View
         style={{
-          minHeight: 54,
-          borderRadius: 27,
+          minHeight: 52,
+          borderRadius: 26,
           backgroundColor: "rgba(255,255,255,0.92)",
           borderWidth: 1,
           borderColor,
-          paddingHorizontal: 16,
+          paddingHorizontal: 15,
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
           shadowColor: "#064532",
-          shadowOpacity: 0.025,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.02,
+          shadowRadius: 7,
+          shadowOffset: { width: 0, height: 3 },
           elevation: 1,
         }}
       >
-        {trimmed || selectedPersonId
-          ? <Avatar name={trimmed || "?"} size={34} />
-          : <Ionicons name="person-outline" size={18} color={mesh.ink400} />
+        {selectedPersonId
+          ? <Avatar name={trimmed || "?"} size={32} />
+          : <Ionicons name="person-outline" size={18} color={mesh.green700} />
         }
         <TextInput
           value={value}
@@ -717,7 +768,7 @@ function PersonPill({
           placeholder="Type a person name..."
           placeholderTextColor={mesh.ink400}
           returnKeyType="done"
-          style={{ color: mesh.ink900, flex: 1, fontSize: 16, padding: 0 }}
+          style={{ color: mesh.ink900, flex: 1, fontSize: 16, fontWeight: "400", padding: 0 }}
         />
         {value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} hitSlop={8}>
