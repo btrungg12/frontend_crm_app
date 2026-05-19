@@ -92,7 +92,8 @@ function normalizeNotification(value: unknown): ApiNotificationItem | null {
   const item = asRecord(value);
   if (!item) return null;
 
-  const id = text(item._id ?? item.id ?? item.relatedId);
+  // Use the notification's own _id, not relatedId (which points to a Contact/Note)
+  const id = text(item._id ?? item.id);
   if (!id) return null;
 
   const type = text(item.type, "REMINDER");

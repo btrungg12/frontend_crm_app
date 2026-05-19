@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
 import { getDashboard } from "../../api/dashboardApi";
+import { getUnreadCount } from "../../api/notificationApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
@@ -106,6 +107,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("User");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   function openUpcoming(item: Upcoming) {
     if (item.kind !== "reminder") return;
@@ -140,6 +142,17 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           getDashboard(),
           getProfile().catch(() => null)
         ]);
+
+        // Fetch unread count separately — failure is non-fatal
+        getUnreadCount()
+          .then((res) => {
+            const raw = res && typeof res === "object" && "unreadCount" in (res as object)
+              ? (res as Record<string, unknown>).unreadCount
+              : res;
+            const count = typeof raw === "number" ? raw : 0;
+            if (active) setUnreadCount(count);
+          })
+          .catch(() => {});
 
         if (!active) return;
 
@@ -182,7 +195,26 @@ export function DashboardScreen({ t, lang, nav }: Props) {
             </Text>
             <Pressable onPress={() => nav("notifications")} style={{ position: "relative" }}>
               <Ionicons name="notifications-outline" size={26} color="#FFFFFF" />
-              <View style={{ position: "absolute", right: -2, top: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: "#28C56E", borderWidth: 1.5, borderColor: "#F8FCF7" }} />
+              {unreadCount > 0 ? (
+                <View style={{
+                  position: "absolute",
+                  right: -4,
+                  top: -4,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: "#FF3B30",
+                  borderWidth: 1.5,
+                  borderColor: "#F8FCF7",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 3
+                }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "900", lineHeight: 12 }}>
+                    {unreadCount > 9 ? "9+" : String(unreadCount)}
+                  </Text>
+                </View>
+              ) : null}
             </Pressable>
           </View>
         </View>
