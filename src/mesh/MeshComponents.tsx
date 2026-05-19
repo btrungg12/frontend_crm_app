@@ -310,13 +310,9 @@ export function BottomNav({
   const bottomOffset = Platform.OS === "ios"
     ? Math.max(insets.bottom - 6, 24)
     : 16;
-  const TAB_W = 68;
-  const FAB_SLOT_W = 86;
   const navColors = {
     primary: "#064E35",
     inactive: "#5F6663",
-    navBg: "#FFFFFF",
-    navBorder: "#E8EFEA",
     underline: "#0B6B48",
   };
 
@@ -357,10 +353,11 @@ export function BottomNav({
         activeScale={0.94}
         onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
         style={{
-          width: TAB_W,
+          flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          paddingVertical: 4,
+          paddingHorizontal: 8,
+          paddingVertical: 6,
           backgroundColor: "transparent",
         }}
       >
@@ -445,57 +442,55 @@ export function BottomNav({
       <View
         style={{
           position: "absolute",
-          left: 24,
-          right: 24,
+          left: 20,
+          right: 20,
           bottom: bottomOffset,
-          minHeight: 84,
+          minHeight: 78,
           paddingVertical: 8,
-          paddingHorizontal: 10,
-          backgroundColor: navColors.navBg,
-          borderRadius: 36,
+          paddingHorizontal: 12,
+          backgroundColor: "#FFFFFF",
+          borderRadius: 34,
           borderWidth: 1,
-          borderColor: navColors.navBorder,
-          shadowColor: "#0B2F20",
-          shadowOpacity: 0.08,
-          shadowRadius: 18,
+          borderColor: "rgba(6,69,50,0.08)",
+          shadowColor: "#064532",
+          shadowOpacity: 0.1,
+          shadowRadius: 22,
           shadowOffset: { width: 0, height: 8 },
           elevation: 8,
           zIndex: 10,
           flexDirection: "row",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "space-around",
         }}
       >
         {tabs.map((tab) => {
           if (tab.id === "fab") {
             return withFab ? (
-              <View key="fab" style={{ width: FAB_SLOT_W, alignItems: "center" }}>
-                <View style={{ transform: [{ translateY: -20 }] }}>
-                  <ScalePressable
-                    activeScale={0.9}
-                    onPress={() => { triggerHaptic(); setDockOpen((v) => !v); }}
-                    style={{
-                      width: 76,
-                      height: 76,
-                      borderRadius: 38,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: navColors.primary,
-                      shadowColor: navColors.primary,
-                      shadowOpacity: 0.22,
-                      shadowRadius: 16,
-                      shadowOffset: { width: 0, height: 8 },
-                      elevation: 10,
-                    }}
-                  >
-                    <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
-                      <Ionicons name="add" size={34} color="#FFFFFF" />
-                    </Animated.View>
-                  </ScalePressable>
-                </View>
-              </View>
+              <ScalePressable
+                key="fab"
+                activeScale={0.9}
+                onPress={() => { triggerHaptic(); setDockOpen((v) => !v); }}
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: mesh.green700,
+                  transform: [{ translateY: -16 }],
+                  shadowColor: mesh.green700,
+                  shadowOpacity: 0.24,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 10,
+                }}
+              >
+                <Animated.View style={{ transform: [{ rotate: plusRotate }] }}>
+                  <Ionicons name="add" size={28} color="#FFFFFF" />
+                </Animated.View>
+              </ScalePressable>
             ) : (
-              <View key="fab" style={{ width: FAB_SLOT_W }} />
+              <View key="fab" style={{ width: 56 }} />
             );
           }
 
