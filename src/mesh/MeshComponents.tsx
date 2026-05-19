@@ -278,8 +278,8 @@ export function BottomNav({
 }) {
   const insets = useSafeAreaInsets();
   const bottomOffset = Platform.OS === "ios"
-    ? Math.max(insets.bottom - 18, 8)
-    : 12;
+    ? Math.max(insets.bottom - 6, 24)
+    : 16;
   const triggerHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
