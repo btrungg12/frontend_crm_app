@@ -36,10 +36,6 @@ type ApiNoteDetail = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function asRecord(value: unknown) {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
 function makeCreatedLabel(note: (typeof mockNotes)[number]): string {
   const prefix: Record<string, string> = {
     today:     "Tạo hôm nay",
@@ -52,15 +48,18 @@ function makeCreatedLabel(note: (typeof mockNotes)[number]): string {
 }
 
 function normalizeMockNote(note: (typeof mockNotes)[number]): ApiNoteDetail {
-  const contact = contactById(note.contact ?? undefined);
+  const contact    = contactById(note.contact ?? undefined);
+  const rawTitle   = note.title?.trim() || null;
+  // Treat as untitled if the title is just the contact's name (old data pattern)
+  const isFakeTitle = rawTitle !== null && contact?.name === rawTitle;
   return {
     contactId:    note.contact ?? undefined,
     contactName:  contact?.name,
-    content:      note.contentEn || note.preview || note.title,
+    content:      note.contentEn || note.preview,
     createdLabel: makeCreatedLabel(note),
     id:           note.id,
     reminder:     note.reminder || undefined,
-    title:        note.title || null,
+    title:        isFakeTitle ? null : rawTitle,
   };
 }
 
@@ -112,6 +111,24 @@ function NoteMetaRow({
         </View>
       )}
     </View>
+  );
+}
+
+// ─── ReminderChip ─────────────────────────────────────────────────────────────
+
+function ReminderChip({ reminder }: { reminder: string }) {
+  return (
+    <Pressable
+      style={styles.reminderChip}
+      onPress={() => {
+        // TODO: edit reminder later
+      }}
+    >
+      <Ionicons name="notifications-outline" size={14} color={mesh.green700} />
+      <Text style={styles.reminderChipText} numberOfLines={1} ellipsizeMode="tail">
+        {reminder}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -245,10 +262,12 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
           <>
             <Text style={styles.title}>{note.title}</Text>
             <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
+            {reminder ? <ReminderChip reminder={reminder} /> : null}
           </>
         ) : (
           <View style={styles.noTitleMetaWrap}>
             <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
+            {reminder ? <ReminderChip reminder={reminder} /> : null}
           </View>
         )}
       </View>
@@ -258,15 +277,6 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
         <View style={[styles.contentCard, !hasTitle && styles.contentCardNoTitle]}>
           <Text style={styles.contentText}>{content}</Text>
         </View>
-
-        {reminder ? (
-          <Pressable style={styles.reminderRow}>
-            <View style={styles.reminderIcon}>
-              <Ionicons name="notifications-outline" size={16} color={mesh.green700} />
-            </View>
-            <Text style={styles.reminderText}>{reminder}</Text>
-          </Pressable>
-        ) : null}
       </MeshScroll>
 
       {/* ── Menu + confirm ── */}
@@ -447,30 +457,26 @@ const styles = StyleSheet.create({
   },
 
   // Reminder
-  reminderRow: {
-    marginTop: 14,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    backgroundColor: "rgba(31,112,72,0.08)",
+  reminderChip: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    minHeight: 34,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 7,
+    backgroundColor: "rgba(31,112,72,0.045)",
+    borderWidth: 1,
+    borderColor: "rgba(31,112,72,0.10)",
   },
 
-  reminderIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(31,112,72,0.10)",
-  },
-
-  reminderText: {
+  reminderChipText: {
     color: mesh.green700,
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: -0.05,
   },
 
   // Action menu
