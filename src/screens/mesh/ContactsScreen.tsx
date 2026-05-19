@@ -1263,11 +1263,6 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             </View>
           )}
 
-          {!addFieldOpen ? (
-            <View style={{ marginHorizontal: 16, marginBottom: 24, marginTop: 16 }}>
-              <TipCard>{t("canAddLater")}</TipCard>
-            </View>
-          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
