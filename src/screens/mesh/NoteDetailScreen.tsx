@@ -432,17 +432,12 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
         </View>
 
         {/* ── Reminder chip ── */}
-        {reminder ? <ReminderChip reminder={reminder} /> : null}
+        {reminder && <ReminderChip reminder={reminder} />}
 
         {/* ── Note content card ── */}
         <View style={styles.noteCanvas}>
-          {firstLine ? (
-            <Text style={styles.noteFirstLine}>{firstLine}</Text>
-          ) : null}
-
-          {rest ? (
-            <Text style={[styles.noteBody, firstLine && { marginTop: 14 }]}>{rest}</Text>
-          ) : null}
+          {firstLine && <Text style={styles.noteFirstLine}>{firstLine}</Text>}
+          {rest && <Text style={[styles.noteBody, firstLine && { marginTop: 14 }]}>{rest}</Text>}
         </View>
       </MeshScroll>
 
