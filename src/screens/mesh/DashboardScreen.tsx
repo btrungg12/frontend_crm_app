@@ -37,6 +37,22 @@ function unwrapData(value: unknown) {
   return asRecord(root?.data) ?? root;
 }
 
+function deriveTitleFromContent(content: unknown, maxLength = 80): string {
+  if (typeof content !== "string") return "";
+
+  const firstLine =
+    content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
+
+  if (!firstLine) return "";
+
+  return firstLine.length > maxLength
+    ? firstLine.slice(0, maxLength).trimEnd() + "…"
+    : firstLine;
+}
+
 function readDashboardContact(value: unknown) {
   const item = asRecord(value);
   if (!item) return null;
@@ -174,12 +190,30 @@ function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null
   const contactInfo = readDashboardContact(item);
   const contactName = contactInfo?.name || "Unknown person";
 
-  const title = String(
-    reminder?.content ??
-    item.title ??
-    item.content ??
-    (lang === "vi" ? "Nhắc nhở" : "Reminder")
-  );
+  const note = asRecord(item.note);
+
+  // Title priority: note title (from item or embedded note), then content first line, then reminder content
+  const noteTitle =
+    typeof item.title === "string" && item.title.trim()
+      ? item.title.trim()
+      : typeof note?.title === "string" && note.title.trim()
+        ? note.title.trim()
+        : "";
+
+  const contentTitle =
+    deriveTitleFromContent(item.content) ||
+    deriveTitleFromContent(note?.content);
+
+  const reminderContent =
+    typeof reminder?.content === "string" && reminder.content.trim()
+      ? reminder.content.trim()
+      : "";
+
+  const title =
+    noteTitle ||
+    contentTitle ||
+    reminderContent ||
+    (lang === "vi" ? "Nhắc nhở" : "Reminder");
 
   const noteId = String(item._id ?? item.id ?? item.noteId ?? "");
 
