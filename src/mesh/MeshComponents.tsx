@@ -454,13 +454,22 @@ export function BottomNav({
                 paddingHorizontal: 8,
                 paddingVertical: 6,
                 borderRadius: 18,
-                backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent",
+                backgroundColor: "transparent",
               }}
             >
               <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
               <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: mesh.font.nav, fontWeight: isActive ? "700" : "500" }}>
                 {tab.label}
               </Text>
+              <View
+                style={{
+                  width: 18,
+                  height: 3,
+                  borderRadius: 999,
+                  backgroundColor: isActive ? "#0B6B48" : "transparent",
+                  marginTop: 2,
+                }}
+              />
             </ScalePressable>
           );
         })}
