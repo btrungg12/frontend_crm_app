@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -1014,6 +1015,22 @@ export function CreateContactScreen({
   };
 
   // ── Field meta (popup menu options) ───────────────────────────────────────
+  const clearContactForm = () => {
+    setName("");
+    setPhone("");
+    setEmail("");
+    setStatus("");
+    setBirthday(null);
+    setHowYouMet("");
+    setAddress("");
+    setSocial("");
+    setNote("");
+    setSpecialDays([]);
+    setActiveFields([]);
+    setAvatarUri(null);
+    setSaveError("");
+  };
+
   const fieldMeta: { key: AddField; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { key: "birthday",   icon: "gift-outline",          label: t("birthday")   },
     { key: "address",    icon: "location-outline",      label: t("address")    },
@@ -1081,29 +1098,8 @@ export function CreateContactScreen({
           >
             {edit ? t("editContact") : t("createContact")}
           </Text>
-          <Pressable
-            onPress={handleSave}
-            disabled={saving}
-            style={{
-              alignItems: "center",
-              backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
-              borderRadius: 999,
-              elevation: 3,
-              flexDirection: "row",
-              gap: 6,
-              justifyContent: "center",
-              minWidth: 72,
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              shadowColor: "#064532",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.18,
-              shadowRadius: 16,
-            }}
-          >
-            {saving
-              ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>}
+          <Pressable onPress={clearContactForm} hitSlop={10}>
+            <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>{t("clear")}</Text>
           </Pressable>
         </View>
       </View>
@@ -1113,7 +1109,7 @@ export function CreateContactScreen({
         <ScrollView
           ref={scrollRef}
           style={{ backgroundColor: "transparent" }}
-          contentContainerStyle={{ paddingBottom: 120 + keyboardHeight }}
+          contentContainerStyle={{ paddingBottom: 150 + keyboardHeight }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -1294,6 +1290,45 @@ export function CreateContactScreen({
       </KeyboardAvoidingView>
 
       {/* ── Status picker bottom sheet ── */}
+      <View
+        style={{
+          backgroundColor: "rgba(255,255,255,0.72)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(6,69,50,0.06)",
+          paddingBottom: insets.bottom + 14,
+          paddingHorizontal: 20,
+          paddingTop: 12,
+        }}
+      >
+        <Pressable
+          disabled={saving}
+          onPress={handleSave}
+          style={{ borderRadius: 999, opacity: saving ? 0.82 : 1, overflow: "hidden" }}
+        >
+          <LinearGradient
+            colors={["#064532", "#0B6B48", "#02A45C"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              alignItems: "center",
+              borderRadius: 999,
+              flexDirection: "row",
+              gap: 10,
+              justifyContent: "center",
+              minHeight: 58,
+            }}
+          >
+            {saving
+              ? <ActivityIndicator size="small" color="#FFFFFF" />
+              : <Ionicons name="save-outline" size={21} color="#FFFFFF" />
+            }
+            <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>
+              {saving ? "Saving..." : "Save contact"}
+            </Text>
+          </LinearGradient>
+        </Pressable>
+      </View>
+
       <StatusPicker open={statusOpen} value={status} statuses={pickerStatuses} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
 
       {/* ── Add field popup — transparent modal, anchored ABOVE the button ── */}
