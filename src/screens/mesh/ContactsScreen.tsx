@@ -816,8 +816,6 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           ]}
           smoothsColors
         />
-        <Image source={leafPng} resizeMode="contain" style={{ height: 220, left: -100, opacity: 0.12, position: "absolute", top: insets.top + 60, transform: [{ rotate: "10deg" }], width: 260 }} />
-        <Image source={leafPng} resizeMode="contain" style={{ height: 230, opacity: 0.14, position: "absolute", right: -104, top: insets.top + 56, transform: [{ rotate: "-12deg" }], width: 290 }} />
 
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
