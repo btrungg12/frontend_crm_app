@@ -506,6 +506,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  title: {
+    color: mesh.green800,
+    fontSize: 20,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+  },
+
   // NoteMetaRow
   noteMetaRow: {
     flexDirection: "row",
