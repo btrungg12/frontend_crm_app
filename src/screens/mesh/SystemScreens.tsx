@@ -895,8 +895,8 @@ function EmptyShell({
         <BottomNav
           active={tab}
           t={t}
-          onCreateContact={() => nav("createContact")}
-          onCreateNote={() => nav("createNote")}
+          onQuickCreateContact={() => nav("createContact")}
+          onQuickCreateNote={() => nav("createNote")}
           onTab={(id) => nav(id === "home" ? "dashboard" : id)}
         />
       ) : null}
@@ -1111,8 +1111,8 @@ export function NotesEmptyScreen({ t, nav }: Props) {
       <BottomNav
         active="notes"
         t={t}
-        onCreateContact={() => nav("createContact")}
-        onCreateNote={() => nav("createNote")}
+        onQuickCreateContact={() => nav("createContact")}
+        onQuickCreateNote={() => nav("createNote")}
         onTab={(id) => nav(id === "home" ? "dashboard" : id)}
       />
     </MeshScreen>

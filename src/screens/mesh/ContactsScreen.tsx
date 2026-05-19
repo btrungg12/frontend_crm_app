@@ -9,6 +9,7 @@ import { createContact, deleteContact, getContactById, getContactTimeline, getCo
 import { getStatuses } from "../../api/statusApi";
 import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
+import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { Contact, Lang, Status, statuses as mockStatuses, statusById } from "../../mesh/meshData";
@@ -253,6 +254,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
   const [apiContacts, setApiContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   const sourceContacts = apiContacts;
   const filters = [{ id: "all", label: t("fAll"), color: null }, ...mockStatuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
   const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
@@ -355,13 +357,22 @@ export function ContactsScreen({ t, lang, nav }: Props) {
       <BottomNav
         active="contacts"
         t={t}
-        onCreateContact={() => nav("createContact")}
-        onCreateNote={() => nav("createNote")}
+        onQuickCreateContact={() => setQuickCreateMode("contact")}
+        onQuickCreateNote={() => setQuickCreateMode("note")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "notes") nav("notes");
           else if (id === "status") nav("status");
         }}
+      />
+
+      <QuickCreateSheet
+        open={quickCreateMode !== null}
+        mode={quickCreateMode}
+        onClose={() => setQuickCreateMode(null)}
+        t={t}
+        lang={lang}
+        nav={nav}
       />
     </MeshScreen>
   );
@@ -1502,7 +1513,8 @@ function StatusPicker({ open, value, statuses, onClose, onPick, t }: { open: boo
   );
 }
 
-export function ContactsEmptyScreen({ t, nav }: Props) {
+export function ContactsEmptyScreen({ t, lang, nav }: Props) {
+  const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   return (
     <MeshScreen>
       <MeshHeader>
@@ -1529,13 +1541,22 @@ export function ContactsEmptyScreen({ t, nav }: Props) {
       <BottomNav
         active="contacts"
         t={t}
-        onCreateContact={() => nav("createContact")}
-        onCreateNote={() => nav("createNote")}
+        onQuickCreateContact={() => setQuickCreateMode("contact")}
+        onQuickCreateNote={() => setQuickCreateMode("note")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "notes") nav("notes");
           else if (id === "status") nav("status");
         }}
+      />
+
+      <QuickCreateSheet
+        open={quickCreateMode !== null}
+        mode={quickCreateMode}
+        onClose={() => setQuickCreateMode(null)}
+        t={t}
+        lang={lang}
+        nav={nav}
       />
     </MeshScreen>
   );

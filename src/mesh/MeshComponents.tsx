@@ -294,15 +294,15 @@ export function BottomNavScrim({ color = "#FFFFFF" }: { color?: string }) {
 export function BottomNav({
   active,
   onTab,
-  onCreateContact,
-  onCreateNote,
+  onQuickCreateContact,
+  onQuickCreateNote,
   t,
   withFab = true
 }: {
   active: "home" | "contacts" | "notes" | "status";
   onTab: (id: string) => void;
-  onCreateContact?: () => void;
-  onCreateNote?: () => void;
+  onQuickCreateContact?: () => void;
+  onQuickCreateNote?: () => void;
   t: TFn;
   withFab?: boolean;
 }) {
@@ -310,11 +310,6 @@ export function BottomNav({
   const bottomOffset = Platform.OS === "ios"
     ? Math.max(insets.bottom - 6, 24)
     : 16;
-  const navColors = {
-    primary: "#064E35",
-    inactive: "#5F6663",
-    underline: "#0B6B48",
-  };
 
   const [dockOpen, setDockOpen] = useState(false);
   const dockAnim = useRef(new Animated.Value(0)).current;
@@ -343,54 +338,6 @@ export function BottomNav({
     { id: "notes",    label: t("tabNotes"),    icon: "document-text-outline", activeIcon: "document-text" },
     { id: "status",   label: t("tabStatus"),   icon: "pricetag-outline",      activeIcon: "pricetag"      },
   ];
-
-  const renderTabItem = (tab: (typeof tabs)[number]) => {
-    const isActive = active === tab.id;
-
-    return (
-      <ScalePressable
-        key={tab.id}
-        activeScale={0.94}
-        onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 8,
-          paddingVertical: 6,
-          backgroundColor: "transparent",
-        }}
-      >
-        <Ionicons
-          name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"}
-          size={22}
-          color={isActive ? navColors.primary : navColors.inactive}
-        />
-
-        <Text
-          style={{
-            marginTop: 3,
-            color: isActive ? navColors.primary : navColors.inactive,
-            fontSize: 12.5,
-            fontWeight: isActive ? "700" : "500",
-            lineHeight: 16,
-          }}
-        >
-          {tab.label}
-        </Text>
-
-        <View
-          style={{
-            width: 18,
-            height: 3,
-            borderRadius: 999,
-            backgroundColor: isActive ? navColors.underline : "transparent",
-            marginTop: 4,
-          }}
-        />
-      </ScalePressable>
-    );
-  };
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFillObject}>
@@ -421,7 +368,7 @@ export function BottomNav({
           <View style={bnStyles.dock}>
             <Pressable
               accessibilityLabel="Create contact"
-              onPress={() => { triggerHaptic(); setDockOpen(false); onCreateContact ? onCreateContact() : onTab("createContact"); }}
+              onPress={() => { triggerHaptic(); setDockOpen(false); onQuickCreateContact?.(); }}
               style={bnStyles.dockBtn}
             >
               <Ionicons name="person-add-outline" size={22} color={mesh.green700} />
@@ -429,7 +376,7 @@ export function BottomNav({
             <View style={bnStyles.dockDivider} />
             <Pressable
               accessibilityLabel="Create note"
-              onPress={() => { triggerHaptic(); setDockOpen(false); onCreateNote ? onCreateNote() : onTab("createNote"); }}
+              onPress={() => { triggerHaptic(); setDockOpen(false); onQuickCreateNote?.(); }}
               style={bnStyles.dockBtn}
             >
               <Ionicons name="document-text-outline" size={22} color={mesh.green700} />
@@ -494,7 +441,28 @@ export function BottomNav({
             );
           }
 
-          return renderTabItem(tab);
+          const isActive = active === tab.id;
+          return (
+            <ScalePressable
+              key={tab.id}
+              activeScale={0.94}
+              onPress={() => { triggerHaptic(); setDockOpen(false); onTab(tab.id); }}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                gap: 3,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                borderRadius: 18,
+                backgroundColor: isActive ? "rgba(6,69,50,0.08)" : "transparent",
+              }}
+            >
+              <Ionicons name={(isActive ? tab.activeIcon : tab.icon) || "ellipse"} size={22} color={isActive ? mesh.green700 : mesh.ink500} />
+              <Text style={{ color: isActive ? mesh.green700 : mesh.ink500, fontSize: mesh.font.nav, fontWeight: isActive ? "700" : "500" }}>
+                {tab.label}
+              </Text>
+            </ScalePressable>
+          );
         })}
       </View>
     </View>

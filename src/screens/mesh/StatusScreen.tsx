@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
 import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
+import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -25,10 +26,11 @@ const statusIconMap = {
   heart: "heart-outline"
 } as const;
 
-export function StatusScreen({ t, nav }: Props) {
+export function StatusScreen({ t, lang, nav }: Props) {
   const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   const sourceStatuses = apiStatuses;
 
   useEffect(() => {
@@ -111,13 +113,22 @@ export function StatusScreen({ t, nav }: Props) {
       <BottomNav
         active="status"
         t={t}
-        onCreateContact={() => nav("createContact")}
-        onCreateNote={() => nav("createNote")}
+        onQuickCreateContact={() => setQuickCreateMode("contact")}
+        onQuickCreateNote={() => setQuickCreateMode("note")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "contacts") nav("contacts");
           else if (id === "notes") nav("notes");
         }}
+      />
+
+      <QuickCreateSheet
+        open={quickCreateMode !== null}
+        mode={quickCreateMode}
+        onClose={() => setQuickCreateMode(null)}
+        t={t}
+        lang={lang}
+        nav={nav}
       />
     </MeshScreen>
   );

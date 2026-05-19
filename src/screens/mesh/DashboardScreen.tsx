@@ -8,6 +8,7 @@ import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../a
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { GradientAvatar } from "../../components/GradientAvatar";
+import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -108,6 +109,7 @@ export function DashboardScreen({ t, lang, nav }: Props) {
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("User");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
 
   function openUpcoming(item: Upcoming) {
     if (item.kind !== "reminder") return;
@@ -323,14 +325,23 @@ export function DashboardScreen({ t, lang, nav }: Props) {
       <BottomNav
         active="home"
         t={t}
-        onCreateContact={() => nav("createContact")}
-        onCreateNote={() => nav("createNote")}
+        onQuickCreateContact={() => setQuickCreateMode("contact")}
+        onQuickCreateNote={() => setQuickCreateMode("note")}
         onTab={(id) => {
           if (id === "home") nav("dashboard");
           else if (id === "contacts") nav("contacts");
           else if (id === "notes") nav("notes");
           else if (id === "status") nav("status");
         }}
+      />
+
+      <QuickCreateSheet
+        open={quickCreateMode !== null}
+        mode={quickCreateMode}
+        onClose={() => setQuickCreateMode(null)}
+        t={t}
+        lang={lang}
+        nav={nav}
       />
     </MeshScreen>
   );
