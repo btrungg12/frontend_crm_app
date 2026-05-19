@@ -11,6 +11,7 @@ import {
   NavFn,
   TFn,
 } from "../../mesh/MeshComponents";
+import { deleteNote, getNoteById } from "../../api/noteApi";
 import { contactById, Lang, notes as mockNotes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -61,6 +62,99 @@ function normalizeMockNote(note: (typeof mockNotes)[number]): ApiNoteDetail {
     reminder:     note.reminder || undefined,
     title:        isFakeTitle ? null : rawTitle,
   };
+}
+
+// ─── API response normalizer ──────────────────────────────────────────────────
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+}
+
+function formatDateLabel(iso: string | null | undefined): string {
+  if (!iso) return "Đã tạo";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "Đã tạo";
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
+  const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const months = ["Th1","Th2","Th3","Th4","Th5","Th6","Th7","Th8","Th9","Th10","Th11","Th12"];
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const timeStr = `${hh}:${mm}`;
+  if (diffDays === 0) return `Tạo hôm nay, ${timeStr}`;
+  if (diffDays === 1) return `Tạo hôm qua, ${timeStr}`;
+  if (diffDays < 7)  return `Tạo tuần này, ${days[d.getDay()]} ${timeStr}`;
+  return `Đã tạo, ${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function formatReminderLabel(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return undefined;
+  const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const months = ["Th1","Th2","Th3","Th4","Th5","Th6","Th7","Th8","Th9","Th10","Th11","Th12"];
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} · ${hh}:${mm}`;
+}
+
+function normalizeApiNote(response: unknown): ApiNoteDetail | null {
+  // Unwrap common envelope shapes: { data: { note } } / { data: {...} } / raw object
+  const root = asRecord(response);
+  if (!root) return null;
+  const dataObj = asRecord(root.data) ?? root;
+  const noteObj = asRecord(dataObj.note) ?? dataObj;
+
+  const id = typeof noteObj._id === "string" ? noteObj._id
+            : typeof noteObj.id  === "string" ? noteObj.id
+            : null;
+  const content = typeof noteObj.content === "string" ? noteObj.content
+                : typeof noteObj.body    === "string" ? noteObj.body
+                : null;
+  if (!id || !content) return null;
+
+  // Contact — may be embedded object or just an id string
+  const contactObj = asRecord(noteObj.contact ?? noteObj.person);
+  const contactId = typeof noteObj.contactId === "string" ? noteObj.contactId
+                  : typeof contactObj?._id   === "string" ? String(contactObj._id)
+                  : typeof contactObj?.id    === "string" ? String(contactObj.id)
+                  : undefined;
+  const contactName = typeof contactObj?.name     === "string" ? String(contactObj.name)
+                    : typeof contactObj?.fullName  === "string" ? String(contactObj.fullName)
+                    : undefined;
+
+  const title = typeof noteObj.title === "string" && noteObj.title.trim()
+              ? noteObj.title.trim() : null;
+
+  const createdLabel = formatDateLabel(
+    typeof noteObj.interactionDate === "string" ? noteObj.interactionDate
+    : typeof noteObj.createdAt     === "string" ? noteObj.createdAt
+    : null
+  );
+
+  // Reminder — backend returns { reminder: { enabled, remindAt } }
+  const reminderObj = asRecord(noteObj.reminder);
+  const reminderEnabled = Boolean(reminderObj?.enabled ?? noteObj.reminderEnabled);
+  const remindAt = reminderEnabled
+    ? (typeof reminderObj?.remindAt === "string" ? String(reminderObj.remindAt)
+       : typeof noteObj.remindAt    === "string" ? String(noteObj.remindAt)
+       : null)
+    : null;
+
+  return {
+    contactId,
+    contactName,
+    content,
+    createdLabel,
+    id,
+    reminder: formatReminderLabel(remindAt),
+    title,
+  };
+}
+
+/** True for mock dev IDs like "n1", "n2"; false for real MongoDB ObjectIds */
+function isMockNoteId(id: string) {
+  return /^n\d+$/.test(id);
 }
 
 function getInitials(name?: string) {
@@ -202,19 +296,41 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
     setLoading(true);
     setError("");
 
-    const mock = mockNotes.find((item) => item.id === noteId);
-
-    if (!active) return () => { active = false; };
-
-    if (!mock) {
-      setNote(null);
-      setError("Note not found.");
+    // Use mock data instantly for dev IDs (n1-n4); hit the real API for all others.
+    if (isMockNoteId(noteId)) {
+      const mock = mockNotes.find((item) => item.id === noteId);
+      if (mock) {
+        setNote(normalizeMockNote(mock));
+      } else {
+        setError("Note not found.");
+      }
       setLoading(false);
       return () => { active = false; };
     }
 
-    setNote(normalizeMockNote(mock));
-    setLoading(false);
+    getNoteById(noteId)
+      .then((response) => {
+        if (!active) return;
+        const normalized = normalizeApiNote(response);
+        if (!normalized) {
+          setError("Note not found.");
+        } else {
+          setNote(normalized);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        // ApiError with status 404 → endpoint may not exist on this backend yet
+        const status = (err as { status?: number })?.status;
+        if (status === 404) {
+          setError("Note not found.");
+        } else {
+          setError(err instanceof Error && err.message ? err.message : "Failed to load note.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
     return () => { active = false; };
   }, [noteId]);
@@ -232,8 +348,17 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
   }
 
   function handleDeleteNote() {
-    // TODO: call delete note API
     setConfirmDeleteOpen(false);
+    if (!note) { nav("notes"); return; }
+
+    // Fire-and-forget: navigate away immediately; delete runs in background.
+    // Mock notes don't have a real API record to delete.
+    if (!isMockNoteId(note.id)) {
+      deleteNote(note.id).catch((err) => {
+        console.warn("Delete note failed:", err?.message ?? err);
+      });
+    }
+
     nav("notes");
   }
 

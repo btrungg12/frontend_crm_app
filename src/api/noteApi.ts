@@ -1,5 +1,4 @@
 import { apiRequest } from "./client";
-import { quickCreateContact } from "./contactApi";
 
 type NoteQuery = {
   contactId?: string;
@@ -7,10 +6,12 @@ type NoteQuery = {
 };
 
 type SubmitCreateNotePayload = {
+  /** ID of an existing contact from the contacts list */
   contactId?: string;
+  /** Name typed by the user when no existing contact was selected */
+  newContactName?: string;
   content: string;
   interactionDate?: string;
-  newContactName?: string;
   remindAt?: string;
   reminderEnabled?: boolean;
   title?: string;
@@ -71,35 +72,36 @@ export async function deleteNoteReminder(noteId: string) {
 }
 
 export async function submitCreateNote(payload: SubmitCreateNotePayload) {
-  let contactId = payload.contactId;
+  // Build the note body according to the API spec:
+  //   POST /api/notes
+  //   Required: content + (contactId  OR  contactName + createContactIfMissing: true)
+  //   Optional: title, interactionDate
+  const noteBody: Record<string, unknown> = {
+    content: payload.content,
+    interactionDate: payload.interactionDate,
+    title: payload.title,
+  };
 
-  if (!contactId && payload.newContactName?.trim()) {
-    const contactResponse = unwrapData(await quickCreateContact(payload.newContactName.trim())) as Record<string, unknown>;
-    const createdContactId = contactResponse._id ?? contactResponse.id;
-    if (typeof createdContactId === "string") {
-      contactId = createdContactId;
-    }
-  }
-
-  if (!contactId) {
+  if (payload.contactId) {
+    noteBody.contactId = payload.contactId;
+  } else if (payload.newContactName?.trim()) {
+    noteBody.contactName = payload.newContactName.trim();
+    noteBody.createContactIfMissing = true;
+  } else {
     throw new Error("Note requires a contact");
   }
 
   const noteResponse = unwrapData(
-    await createNote({
-      contactId,
-      content: payload.content,
-      interactionDate: payload.interactionDate,
-      title: payload.title
-    })
+    await createNote(noteBody)
   ) as Record<string, unknown>;
 
   const noteId = noteResponse._id ?? noteResponse.id;
 
+  // Reminder is handled by a separate endpoint after the note is created
   if (payload.reminderEnabled && payload.remindAt && typeof noteId === "string") {
     await upsertNoteReminder(noteId, {
       enabled: true,
-      remindAt: payload.remindAt
+      remindAt: payload.remindAt,
     });
   }
 

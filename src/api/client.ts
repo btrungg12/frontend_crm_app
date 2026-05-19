@@ -84,6 +84,10 @@ function extractErrorMessage(data: unknown, status: number) {
   }
 
   if (typeof data === "string" && data.trim().length > 0) {
+    // Don't expose raw HTML error pages (e.g. Express "Cannot GET /path")
+    if (data.trimStart().startsWith("<")) {
+      return `API error ${status}`;
+    }
     return data;
   }
 

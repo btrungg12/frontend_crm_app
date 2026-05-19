@@ -6,11 +6,12 @@ import { ActivityIndicator, Dimensions, Image, Keyboard, KeyboardAvoidingView, L
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
-import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
+import { getStatuses } from "../../api/statusApi";
+import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { GradientAvatar } from "../../components/GradientAvatar";
-import { Contact, contactById, Lang, statuses, statusById } from "../../mesh/meshData";
+import { Contact, Lang, Status, statuses as mockStatuses, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
 const leafPng = require("../../../assets/leaf.png");
@@ -253,7 +254,7 @@ export function ContactsScreen({ t, lang, nav }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const sourceContacts = apiContacts;
-  const filters = [{ id: "all", label: t("fAll"), color: null }, ...statuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
+  const filters = [{ id: "all", label: t("fAll"), color: null }, ...mockStatuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
   const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
 
   useEffect(() => {
@@ -508,7 +509,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     { id: "reminder", label: t("tlReminders") }
   ];
   const filtered = tab === "all" ? timelineItems : timelineItems.filter((item) => item.kind === tab);
-  const statusMeta = contact ? statuses.find((status) => status.id === contact.status) : undefined;
+  const statusMeta = contact ? mockStatuses.find((status) => status.id === contact.status) : undefined;
 
   const handleDeleteContact = async () => {
     if (deleting) return;
@@ -711,14 +712,28 @@ function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ioni
 }
 
 export function CreateContactScreen({ t, nav, edit = false, contactId }: Props & { edit?: boolean; contactId?: string }) {
-  const insets   = useSafeAreaInsets();
-  const existing = edit && contactId ? contactById(contactId) : undefined;
+  const insets = useSafeAreaInsets();
+
+  // ── Statuses from API (fallback: mock) ────────────────────────────────────
+  const [pickerStatuses, setPickerStatuses] = useState<Status[]>(mockStatuses);
+
+  useEffect(() => {
+    getStatuses()
+      .then((resp) => {
+        const normalized = extractArray(resp, "statuses")
+          .map(normalizeApiStatus)
+          .filter(Boolean) as Status[];
+        if (normalized.length > 0) setPickerStatuses(normalized);
+      })
+      .catch(() => { /* keep mock statuses as fallback */ });
+  }, []);
 
   // ── Core fields ────────────────────────────────────────────────────────────
-  const [name,   setName]   = useState(existing?.name  || "");
-  const [phone,  setPhone]  = useState(existing?.phone || "");
-  const [email,  setEmail]  = useState(existing?.email || "");
-  const [status, setStatus] = useState(existing?.status || "st-close");
+  const [name,   setName]   = useState("");
+  const [phone,  setPhone]  = useState("");
+  const [email,  setEmail]  = useState("");
+  // Empty string = "no status selected yet" — avoids sending a mock ID to the API
+  const [status, setStatus] = useState("");
 
   // ── Additional text fields (unique ones) ───────────────────────────────────
   const [birthday,     setBirthday]     = useState<Date | null>(null);
@@ -747,6 +762,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
   const [datePickerIsNew,  setDatePickerIsNew]  = useState(false);
   const [saving,           setSaving]           = useState(false);
   const [saveError,        setSaveError]        = useState("");
+  const [loadingEdit,      setLoadingEdit]      = useState(edit && !!contactId);
 
   const addFieldRef = useRef<View>(null);
   const scrollRef   = useRef<ScrollView>(null);
@@ -783,6 +799,73 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       scrollRef.current?.scrollTo({ y: Math.max(0, base - offset), animated: true });
     }, 260);
   };
+
+  // ── Load existing contact in edit mode ────────────────────────────────────
+  useEffect(() => {
+    if (!edit || !contactId) return;
+    let active = true;
+    setLoadingEdit(true);
+
+    getContactById(contactId)
+      .then((resp) => {
+        if (!active) return;
+        const root = asRec(resp);
+        const data = asRec(root?.data) ?? root;
+        const item = asRec(data?.contact) ?? data;
+        if (!item) return;
+
+        if (typeof item.name  === "string") setName(item.name);
+        if (typeof item.phone === "string") setPhone(item.phone);
+        if (typeof item.email === "string") setEmail(item.email);
+
+        const sr = asRec(item.status);
+        const sid = item.statusId ?? sr?._id ?? sr?.id;
+        if (typeof sid === "string" && sid) setStatus(sid);
+
+        const newFields: UniqueField[] = [];
+
+        if (typeof item.birthday === "string" && item.birthday) {
+          setBirthday(new Date(item.birthday));
+          newFields.push("birthday");
+        }
+        if (typeof item.address === "string" && item.address) {
+          setAddress(item.address);
+          newFields.push("address");
+        }
+        if (typeof item.source === "string" && item.source) {
+          setHowYouMet(item.source);
+          newFields.push("howYouMet");
+        }
+        const links = Array.isArray(item.socialLinks) ? item.socialLinks : [];
+        if (links.length > 0 && typeof links[0] === "string" && links[0]) {
+          setSocial(links[0]);
+          newFields.push("social");
+        }
+        if (newFields.length > 0) setActiveFields(newFields);
+
+        if (Array.isArray(item.specialDays) && item.specialDays.length > 0) {
+          setSpecialDays(
+            item.specialDays.map((sd: unknown, i: number) => {
+              const r = asRec(sd);
+              // Backend field is "occasion", fallback to "name" for safety
+              const title = typeof r?.occasion === "string" ? r.occasion
+                          : typeof r?.name     === "string" ? r.name
+                          : "";
+              return {
+                id:    String(i),
+                title,
+                date:  typeof r?.date === "string" ? new Date(r.date) : null,
+              };
+            })
+          );
+        }
+      })
+      .catch(() => { /* ignore — form stays empty so user can re-fill */ })
+      .finally(() => { if (active) setLoadingEdit(false); });
+
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edit, contactId]);
 
   // ── Popup positioning ──────────────────────────────────────────────────────
   const openPopup = () => {
@@ -867,17 +950,37 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
     setSaveError("");
     setSaving(true);
     try {
+      // Only send statusId when it's a real MongoDB ObjectId (24-char hex).
+      // Mock IDs like "st-close" would cause a backend 500 error.
+      const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
+
       const payload: Record<string, unknown> = {
-        name:      name.trim(),
-        phone:     phone.trim()     || undefined,
-        email:     email.trim()     || undefined,
-        statusId:  status           || undefined,
-        birthday:  birthday         ? birthday.toISOString() : undefined,
-        howYouMet: howYouMet.trim() || undefined,
-        address:   address.trim()   || undefined,
-        social:    social.trim()    || undefined,
-        note:      note.trim()      || undefined,
+        name:     name.trim(),
+        phone:    phone.trim()     || undefined,
+        email:    email.trim()     || undefined,
+        statusId: status && isMongoId(status) ? status : undefined,
+        birthday: birthday         ? birthday.toISOString() : undefined,
+        // "source" is the API field name for how you met
+        source:   howYouMet.trim() || undefined,
+        address:  address.trim()   || undefined,
+        // API expects an array; we store a single link in the UI
+        socialLinks: social.trim() ? [social.trim()] : undefined,
+        // "note" is not a contact field — notes are created via the Notes API
       };
+
+      // Special days — only include ones that have a date set
+      // Backend field: "occasion" (not "name")
+      const specialDaysPayload = specialDays
+        .filter((sd) => sd.date !== null)
+        .map((sd) => ({
+          occasion:     sd.title.trim() || t("specialDay"),
+          date:         sd.date!.toISOString(),
+          repeatYearly: true,
+        }));
+      if (specialDaysPayload.length > 0) {
+        payload.specialDays = specialDaysPayload;
+      }
+
       if (edit && contactId) {
         await updateContact(contactId, payload);
         nav("contactDetail", { id: contactId });
@@ -911,10 +1014,22 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
   const hasAdditional = activeFields.length > 0 || specialDays.length > 0;
 
-  // Current status for relationship row
-  const currentStatus = statusById(status);
+  // Current status for relationship row — look up in API statuses first, fallback to mock
+  const currentStatus = status
+    ? (pickerStatuses.find((s) => s.id === status) ?? statusById(status))
+    : null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (loadingEdit) {
+    return (
+      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: insets.top }}>
+          <ActivityIndicator size="large" color={mesh.green700} />
+        </View>
+      </MeshScreen>
+    );
+  }
+
   return (
     <MeshScreen>
       {/* ── Hero header ── */}
@@ -1102,7 +1217,7 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       </KeyboardAvoidingView>
 
       {/* ── Status picker bottom sheet ── */}
-      <StatusPicker open={statusOpen} value={status} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
+      <StatusPicker open={statusOpen} value={status} statuses={pickerStatuses} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
 
       {/* ── Add field popup (transparent, anchored above button) ── */}
       <Modal visible={addFieldOpen} transparent animationType="none" onRequestClose={() => setAddFieldOpen(false)}>
@@ -1256,7 +1371,7 @@ function FormRow({
   );
 }
 
-function StatusPicker({ open, value, onClose, onPick, t }: { open: boolean; value: string; onClose: () => void; onPick: (value: string) => void; t: TFn }) {
+function StatusPicker({ open, value, statuses, onClose, onPick, t }: { open: boolean; value: string; statuses: Status[]; onClose: () => void; onPick: (value: string) => void; t: TFn }) {
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>

@@ -278,12 +278,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
       } else {
         await submitCreateNote({
           contactId: person || undefined,
+          newContactName: person ? undefined : (typedName || undefined),
           content: content.trim(),
           interactionDate: new Date().toISOString(),
           reminderEnabled: Boolean(reminderAt),
           remindAt: reminderAt?.toISOString(),
           title: title.trim() || undefined
         });
+
         nav("notes");
       }
     } catch (err) {

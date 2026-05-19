@@ -6,6 +6,7 @@ import { login as loginRequest, register as registerRequest } from "../../api/au
 import { HeaderCircleBtn, MeshScroll, NavFn, TFn } from "../../mesh/MeshComponents";
 import { Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
+import { registerPushToken } from "../../utils/registerPushToken";
 
 type Props = {
   t: TFn;
@@ -168,6 +169,9 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
       setFormError("");
       await loginRequest(emailOrPhone.trim(), password);
       nav("dashboard");
+      // Fire-and-forget: request permission + upload push token after login succeeds.
+      // Errors are handled inside registerPushToken and never surface to the user.
+      registerPushToken();
     } catch (err) {
       setFormError(messageFromError(err, tx(t, "incorrectLogin")));
     } finally {
