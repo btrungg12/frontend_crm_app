@@ -148,7 +148,7 @@ export function AppShell() {
     case "createNote":
       return <CreateNoteScreen {...common} initialPerson={route.props?.person as string | undefined} />;
     case "editNote":
-      return <CreateNoteScreen {...common} edit />;
+      return noteId ? <CreateNoteScreen {...common} edit noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
     case "search":
       return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} type={(route.props?.type as "contacts" | "notes" | undefined) || "notes"} />;
     case "contactDetail":
