@@ -11,7 +11,8 @@ import {
   NavFn,
   TFn,
 } from "../../mesh/MeshComponents";
-import { deleteNote, getNote } from "../../api/noteApi";
+import { deleteNote, getNote, getNotes } from "../../api/noteApi";
+import { extractArray } from "../../api/screenAdapters";
 import { contactById, Lang, notes as mockNotes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -326,24 +327,43 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
       return () => { active = false; };
     }
 
+    // Try GET /api/notes/:id first; if backend doesn't have that route yet
+    // (returns HTML 404 "Cannot GET ..."), fall back to GET /api/notes + find by id.
     getNote(noteId)
       .then((response) => {
         if (!active) return;
         const normalized = normalizeApiNote(response);
-        if (!normalized) {
-          setError("Note not found.");
-        } else {
-          setNote(normalized);
-        }
+        if (!normalized) throw new Error("not_found");
+        setNote(normalized);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         if (!active) return;
-        // Handle 404 response from GET /api/notes/:id
+
+        // Detect "route not implemented" — backend returns HTML, which apiRequest
+        // likely throws as a non-JSON / generic error (not a clean HTTP status).
+        const msg = err instanceof Error ? err.message : String(err);
+        const isHtml = msg.includes("<!DOCTYPE") || msg.includes("<html") || msg.includes("Cannot GET");
         const status = (err as { status?: number })?.status;
-        if (status === 404) {
+
+        if (isHtml || status === 404) {
+          // Fallback: load full list and find by id
+          try {
+            const listResponse = await getNotes();
+            const allRaw = extractArray(listResponse, "notes");
+            const found = allRaw.find((raw: any) => (raw._id ?? raw.id) === noteId);
+            if (!active) return;
+            if (found) {
+              const normalized = normalizeApiNote(found);
+              if (normalized) { setNote(normalized); return; }
+            }
+            setError("Note not found.");
+          } catch {
+            if (active) setError("Cannot load note.");
+          }
+        } else if (msg === "not_found") {
           setError("Note not found.");
         } else {
-          setError(err instanceof Error && err.message ? err.message : "Failed to load note.");
+          setError(msg || "Failed to load note.");
         }
       })
       .finally(() => {
