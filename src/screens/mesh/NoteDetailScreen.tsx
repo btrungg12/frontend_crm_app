@@ -37,6 +37,25 @@ type ApiNoteDetail = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function splitNoteContent(content: string): { firstLine: string; rest: string } {
+  const normalized = content.trim();
+  const lines = normalized.split(/\r?\n/);
+
+  const firstIndex = lines.findIndex((line) => line.trim().length > 0);
+  if (firstIndex === -1) {
+    return { firstLine: "", rest: "" };
+  }
+
+  const firstLine = lines[firstIndex].trim();
+
+  const before = lines.slice(0, firstIndex);
+  const after = lines.slice(firstIndex + 1);
+
+  const rest = [...before, ...after].join("\n").trim();
+
+  return { firstLine, rest };
+}
+
 function makeCreatedLabel(note: (typeof mockNotes)[number]): string {
   const prefix: Record<string, string> = {
     today:     "Tạo hôm nay",
@@ -281,7 +300,6 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
   const content      = note?.content ?? "";
   const reminder     = note?.reminder;
   const createdLabel = note?.createdLabel ?? "Tạo hôm nay";
-  const hasTitle     = !!note?.title?.trim();
 
   useEffect(() => {
     let active = true;
@@ -374,6 +392,8 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
+  const { firstLine, rest } = splitNoteContent(content);
+
   return (
     <MeshScreen style={styles.root}>
       {/* ── Header ── */}
@@ -382,25 +402,27 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("notes")} />
           <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
-
-        {hasTitle ? (
-          <>
-            <Text style={styles.title}>{note.title}</Text>
-            <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
-            {reminder ? <ReminderChip reminder={reminder} /> : null}
-          </>
-        ) : (
-          <View style={styles.noTitleMetaWrap}>
-            <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
-            {reminder ? <ReminderChip reminder={reminder} /> : null}
-          </View>
-        )}
       </View>
 
       {/* ── Scrollable content ── */}
       <MeshScroll style={styles.scroll} bottom={48}>
-        <View style={[styles.contentCard, !hasTitle && styles.contentCardNoTitle]}>
-          <Text style={styles.contentText}>{content}</Text>
+        {/* ── Metadata ── */}
+        <View style={styles.metadataSection}>
+          <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
+        </View>
+
+        {/* ── Reminder chip ── */}
+        {reminder ? <ReminderChip reminder={reminder} /> : null}
+
+        {/* ── Note content card ── */}
+        <View style={styles.noteCanvas}>
+          {firstLine ? (
+            <Text style={styles.noteFirstLine}>{firstLine}</Text>
+          ) : null}
+
+          {rest ? (
+            <Text style={[styles.noteBody, firstLine && { marginTop: 14 }]}>{rest}</Text>
+          ) : null}
         </View>
       </MeshScroll>
 
@@ -481,19 +503,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 36,
-  },
-
-  title: {
-    color: mesh.green800,
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "900",
-    letterSpacing: -0.4,
-  },
-
-  noTitleMetaWrap: {
-    marginTop: 20,
+    marginBottom: 16,
   },
 
   // NoteMetaRow
@@ -551,40 +561,56 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
+  // Metadata section
+  metadataSection: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+
   // Content
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
 
-  contentCard: {
-    marginTop: 18,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 26,
+  // Note canvas
+  noteCanvas: {
+    marginTop: 8,
+    marginHorizontal: 0,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderWidth: 1,
     borderColor: "rgba(6,69,50,0.08)",
-    paddingHorizontal: 20,
-    paddingVertical: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
     shadowColor: "#064532",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 1,
+    shadowOpacity: 0.035,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
 
-  contentCardNoTitle: {
-    marginTop: 14,
-  },
-
-  contentText: {
+  noteFirstLine: {
     color: mesh.ink900,
-    fontSize: 16,
-    lineHeight: 27,
+    fontSize: 21,
+    lineHeight: 28,
+    fontWeight: "800",
+    letterSpacing: -0.25,
+  },
+
+  noteBody: {
+    color: mesh.ink900,
+    fontSize: 19,
+    lineHeight: 31,
+    fontWeight: "400",
   },
 
   // Reminder
   reminderChip: {
     alignSelf: "flex-start",
-    marginTop: 12,
+    marginTop: 0,
+    marginHorizontal: 0,
+    marginBottom: 12,
     minHeight: 34,
     borderRadius: 999,
     paddingHorizontal: 12,
