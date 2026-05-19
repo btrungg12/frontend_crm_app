@@ -529,10 +529,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             paddingTop: 22,
             paddingBottom: 56,
             shadowColor: "#064532",
-            shadowOpacity: 0.02,
-            shadowRadius: 9,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 1,
+            shadowOpacity: 0.048,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 2,
           }}
         >
           {/* First line: placeholder only shown when entire draft is empty */}
@@ -766,10 +766,10 @@ function PersonPill({
           alignItems: "center",
           gap: 10,
           shadowColor: "#064532",
-          shadowOpacity: 0.02,
-          shadowRadius: 7,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 1,
+          shadowOpacity: 0.048,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 2,
         }}
       >
         {selectedPersonId
@@ -1363,10 +1363,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(31,112,72,0.065)",
     shadowColor: "#064532",
-    shadowOpacity: 0.018,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    shadowOpacity: 0.048,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   reminderChipEmpty: {
     backgroundColor: "rgba(255,255,255,0.84)",
