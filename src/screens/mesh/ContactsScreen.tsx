@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -249,41 +249,126 @@ type Props = {
   t: TFn;
   lang: Lang;
   nav: NavFn;
+  highlightId?: string;
+  highlightName?: string;
+  refresh?: number;
 };
 
-export function ContactsScreen({ t, lang, nav }: Props) {
+const SUCCESS_HOLD_MS = 750;
+const HIGHLIGHT_MS = 2800;
+
+type SavePhase = "idle" | "saving" | "success";
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractCreatedId(response: unknown): string | undefined {
+  const root = response && typeof response === "object" ? (response as Record<string, any>) : null;
+  if (!root) return undefined;
+
+  return (
+    root?.data?.contact?._id ||
+    root?.data?.contact?.id ||
+    root?.contact?._id ||
+    root?.contact?.id ||
+    root?.data?._id ||
+    root?.data?.id ||
+    root?._id ||
+    root?.id
+  );
+}
+
+export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refresh }: Props) {
   const [filter, setFilter] = useState("all");
   const [apiContacts, setApiContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const rowLayouts = useRef<Record<string, number>>({});
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
+  const [pendingHighlight, setPendingHighlight] = useState<{ id?: string; name?: string } | null>(null);
   const sourceContacts = apiContacts;
   const filters = [{ id: "all", label: t("fAll"), color: null }, ...mockStatuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
   const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
 
-  useEffect(() => {
-    let active = true;
-
-    getContacts()
-      .then((response) => {
-        if (!active) return;
-        const normalized = extractArray(response, "contacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-        setApiContacts(normalized);
-        setError("");
-      })
-      .catch((err) => {
-        if (!active) return;
-        setApiContacts([]);
-        setError(err instanceof Error && err.message ? err.message : "Cannot load contacts.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadContacts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getContacts();
+      const normalized = extractArray(response, "contacts").map(normalizeApiContact).filter(Boolean) as Contact[];
+      setApiContacts(normalized);
+      setError("");
+    } catch (err) {
+      setApiContacts([]);
+      setError(err instanceof Error && err.message ? err.message : "Cannot load contacts.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
+
+  useEffect(() => {
+    if (refresh) {
+      loadContacts();
+    }
+  }, [refresh, loadContacts]);
+
+  useEffect(() => {
+    if (highlightId || highlightName) {
+      setPendingHighlight({ id: highlightId, name: highlightName });
+    }
+  }, [highlightId, highlightName, refresh]);
+
+  // Find target contact from pending highlight
+  const targetContact = useMemo(() => {
+    if (!pendingHighlight) return null;
+
+    if (pendingHighlight.id) {
+      const found = list.find((c) => c.id === pendingHighlight.id);
+      if (found) return found;
+    }
+
+    if (pendingHighlight.name) {
+      const normalizedName = pendingHighlight.name.trim().toLowerCase();
+      return list.find((c) => c.name.trim().toLowerCase() === normalizedName) ?? null;
+    }
+
+    return null;
+  }, [pendingHighlight, list]);
+
+  // Scroll to and highlight target contact
+  useEffect(() => {
+    if (!targetContact) return;
+
+    const timer = setTimeout(() => {
+      const y = rowLayouts.current[targetContact.id];
+
+      if (typeof y === "number") {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, y - 120),
+          animated: true,
+        });
+
+        setActiveHighlightId(targetContact.id);
+
+        setTimeout(() => {
+          setActiveHighlightId((current) =>
+            current === targetContact.id ? null : current
+          );
+        }, HIGHLIGHT_MS);
+
+        setPendingHighlight(null);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [targetContact]);
+
 
   const grouped = useMemo(() => {
     return list.reduce<Record<string, Contact[]>>((acc, contact) => {
@@ -314,7 +399,16 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         </View>
       </MeshHeroHeader>
 
-      <MeshScroll bottom={150}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 150 }}
+        automaticallyAdjustKeyboardInsets={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
           {filters.map((item) => (
             <MeshChip key={item.id} active={filter === item.id} onPress={() => setFilter(item.id)} style={{ backgroundColor: filter === item.id ? mesh.green700 : "#FFFFFF", borderColor: filter === item.id ? mesh.green700 : "rgba(6,69,50,0.12)" }}>
@@ -333,11 +427,33 @@ export function ContactsScreen({ t, lang, nav }: Props) {
           ) : Object.keys(grouped).sort().map((key) => (
             <View key={key}>
               <Text style={{ color: "#7A837E", fontSize: mesh.font.bodySm, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
-              {grouped[key].map((contact, index) => (
+              {grouped[key].map((contact, index) => {
+                const highlighted = activeHighlightId === contact.id;
+                return (
                 <Pressable
                   key={contact.id}
                   onPress={() => nav("contactDetail", { id: contact.id })}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
+                  onLayout={(e) => {
+                    rowLayouts.current[contact.id] = e.nativeEvent.layout.y;
+                  }}
+                  style={[
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      paddingVertical: 10,
+                      borderBottomWidth: index < grouped[key].length - 1 ? 1 : 0,
+                      borderColor: "rgba(6,69,50,0.08)",
+                    },
+                    highlighted && {
+                      backgroundColor: "#EAF5EF",
+                      borderColor: "#CFE5D8",
+                      borderWidth: 1,
+                      borderRadius: 18,
+                      paddingHorizontal: 10,
+                      marginHorizontal: -10,
+                    },
+                  ]}
                 >
                   <GradientAvatar name={contact.name} statusColor={statusById(contact.status)?.color} size={48} />
                   <View style={{ flex: 1 }}>
@@ -348,11 +464,12 @@ export function ContactsScreen({ t, lang, nav }: Props) {
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                 </Pressable>
-              ))}
+              );
+              })}
             </View>
           ))}
         </View>
-      </MeshScroll>
+      </ScrollView>
 
       <BottomNavScrim />
 
@@ -373,10 +490,38 @@ export function ContactsScreen({ t, lang, nav }: Props) {
         onClose={() => setQuickCreateMode(null)}
       >
         {quickCreateMode === "note" && (
-          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateNoteScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("notes", {
+                highlightId: result.id,
+                highlightLatest: result.highlightLatest,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
         {quickCreateMode === "contact" && (
-          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateContactScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("contacts", {
+                highlightId: result.id,
+                highlightName: result.name,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
       </QuickCreateSheet>
     </MeshScreen>
@@ -737,7 +882,7 @@ export function CreateContactScreen({
   /** "sheet" = rendered inside a QuickCreateSheet bottom sheet */
   presentation?: "page" | "sheet";
   onCloseSheet?: () => void;
-  onCreated?: () => void;
+  onCreated?: (result: { type: "contact"; id?: string; name: string; highlightLatest?: boolean }) => void;
 }) {
   const isSheet = presentation === "sheet";
   const insets = useSafeAreaInsets();
@@ -789,9 +934,12 @@ export function CreateContactScreen({
   const [pickerValue,      setPickerValue]      = useState<Date | null>(null);
   const [pickerEventName,  setPickerEventName]  = useState("");
   const [datePickerIsNew,  setDatePickerIsNew]  = useState(false);
-  const [saving,           setSaving]           = useState(false);
+  const [savePhase,        setSavePhase]        = useState<SavePhase>("idle");
   const [saveError,        setSaveError]        = useState("");
   const [loadingEdit,      setLoadingEdit]      = useState(edit && !!contactId);
+
+  const saving = savePhase === "saving";
+  const saveSuccess = savePhase === "success";
 
   const addFieldRef = useRef<View>(null);
   const scrollRef   = useRef<ScrollView>(null);
@@ -974,7 +1122,6 @@ export function CreateContactScreen({
   const handleSave = async () => {
     if (!name.trim()) { setSaveError(t("nameRequired") || "Name is required"); return; }
     setSaveError("");
-    setSaving(true);
     try {
       const isMongoId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
 
@@ -1001,16 +1148,39 @@ export function CreateContactScreen({
       }
 
       if (edit && contactId) {
+        setSavePhase("saving");
         await updateContact(contactId, payload);
-        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("contactDetail", { id: contactId }); }
+        setSavePhase("success");
+        await delay(SUCCESS_HOLD_MS);
+        if (isSheet) { onCreated?.({ type: "contact", id: contactId, name: name.trim() }); onCloseSheet?.(); } else { nav("contactDetail", { id: contactId }); }
       } else {
-        await createContact(payload);
-        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("contacts"); }
+        setSavePhase("saving");
+        const response = await createContact(payload);
+        const createdId = extractCreatedId(response);
+        const createdName = name.trim();
+
+        setSavePhase("success");
+        await delay(SUCCESS_HOLD_MS);
+
+        if (isSheet) {
+          onCreated?.({
+            type: "contact",
+            id: createdId,
+            name: createdName,
+            highlightLatest: !createdId,
+          });
+          onCloseSheet?.();
+        } else {
+          nav("contacts", {
+            highlightId: createdId,
+            highlightName: createdName,
+            refresh: Date.now(),
+          });
+        }
       }
     } catch (err: unknown) {
+      setSavePhase("idle");
       setSaveError(err instanceof Error ? err.message : "Failed to save contact");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -1301,9 +1471,9 @@ export function CreateContactScreen({
         }}
       >
         <Pressable
-          disabled={saving}
+          disabled={savePhase === "saving" || savePhase === "success"}
           onPress={handleSave}
-          style={{ borderRadius: 999, opacity: saving ? 0.82 : 1, overflow: "hidden" }}
+          style={{ borderRadius: 999, opacity: savePhase !== "idle" ? 0.82 : 1, overflow: "hidden" }}
         >
           <LinearGradient
             colors={["#064532", "#0B6B48", "#02A45C"]}
@@ -1318,12 +1488,15 @@ export function CreateContactScreen({
               minHeight: 58,
             }}
           >
-            {saving
-              ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Ionicons name="save-outline" size={21} color="#FFFFFF" />
-            }
+            {savePhase === "saving" ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : savePhase === "success" ? (
+              <Ionicons name="checkmark-circle" size={21} color="#FFFFFF" />
+            ) : (
+              <Ionicons name="save-outline" size={21} color="#FFFFFF" />
+            )}
             <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>
-              {saving ? "Saving..." : "Save contact"}
+              {savePhase === "saving" ? "Creating..." : savePhase === "success" ? "Created" : "Save contact"}
             </Text>
           </LinearGradient>
         </Pressable>
@@ -1605,10 +1778,38 @@ export function ContactsEmptyScreen({ t, lang, nav }: Props) {
         onClose={() => setQuickCreateMode(null)}
       >
         {quickCreateMode === "note" && (
-          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateNoteScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("notes", {
+                highlightId: result.id,
+                highlightLatest: result.highlightLatest,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
         {quickCreateMode === "contact" && (
-          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateContactScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("contacts", {
+                highlightId: result.id,
+                highlightName: result.name,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
       </QuickCreateSheet>
     </MeshScreen>

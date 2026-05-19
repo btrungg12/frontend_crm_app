@@ -142,12 +142,12 @@ const SECTION_ORDER = ["today", "yesterday", "thisweek", "older"] as const;
 
 // ─── NoteCard ─────────────────────────────────────────────────────────────────
 
-function NoteCard({ note, onPress }: { note: NoteItem; onPress: () => void }) {
+function NoteCard({ note, onPress, highlighted }: { note: NoteItem; onPress: () => void; highlighted?: boolean }) {
   const status = statusById(note.person.statusId);
 
   return (
     <Pressable onPress={onPress} style={styles.cardWrap}>
-      <View style={styles.card}>
+      <View style={[styles.card, highlighted && styles.cardHighlighted]}>
         {/* Avatar */}
         <Avatar name={note.person.name} size={44} />
 
@@ -353,13 +353,23 @@ function FilterRow({
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-type Props = { t: TFn; lang: Lang; nav: NavFn };
+type Props = {
+  t: TFn;
+  lang: Lang;
+  nav: NavFn;
+  highlightId?: string;
+  highlightLatest?: boolean;
+  refresh?: number;
+};
 
-export function NotesScreen({ t, lang, nav }: Props) {
+const HIGHLIGHT_MS = 2800;
+
+export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refresh }: Props) {
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [sort,   setSort]   = useState<NoteSort>("newest");
   const [search, setSearch] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
 
   const sections = useMemo<NoteSection[]>(() => {
     const filtered = MOCK_NOTES.filter((note) => {
@@ -385,6 +395,18 @@ export function NotesScreen({ t, lang, nav }: Props) {
       .filter((key) => (groups[key]?.length ?? 0) > 0)
       .map((key) => ({ key, title: SECTION_LABELS[key], data: groups[key] }));
   }, [filter, sort, search]);
+
+  useEffect(() => {
+    const id =
+      highlightId ||
+      (highlightLatest ? sections[0]?.data?.[0]?.id : undefined);
+
+    if (!id) return;
+
+    setActiveHighlightId(id);
+    const timer = setTimeout(() => setActiveHighlightId(null), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightId, highlightLatest, refresh, sections]);
 
   return (
     <View style={styles.root}>
@@ -412,7 +434,7 @@ export function NotesScreen({ t, lang, nav }: Props) {
           <Text style={styles.sectionLabel}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
-          <NoteCard note={item} onPress={() => nav("noteDetail", { id: item.id })} />
+          <NoteCard note={item} highlighted={activeHighlightId === item.id} onPress={() => nav("noteDetail", { id: item.id })} />
         )}
       />
 
@@ -435,10 +457,38 @@ export function NotesScreen({ t, lang, nav }: Props) {
         onClose={() => setQuickCreateMode(null)}
       >
         {quickCreateMode === "note" && (
-          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateNoteScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("notes", {
+                highlightId: result.id,
+                highlightLatest: result.highlightLatest,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
         {quickCreateMode === "contact" && (
-          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateContactScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("contacts", {
+                highlightId: result.id,
+                highlightName: result.name,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
       </QuickCreateSheet>
     </View>
@@ -576,6 +626,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
+  },
+  cardHighlighted: {
+    backgroundColor: "#EAF5EF",
+    borderColor: "#CFE5D8",
   },
 
   // Reminder chip

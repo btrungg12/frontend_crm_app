@@ -342,10 +342,38 @@ export function DashboardScreen({ t, lang, nav }: Props) {
         onClose={() => setQuickCreateMode(null)}
       >
         {quickCreateMode === "note" && (
-          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateNoteScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("notes", {
+                highlightId: result.id,
+                highlightLatest: result.highlightLatest,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
         {quickCreateMode === "contact" && (
-          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+          <CreateContactScreen
+            t={t}
+            lang={lang}
+            nav={nav}
+            presentation="sheet"
+            onCloseSheet={() => setQuickCreateMode(null)}
+            onCreated={(result) => {
+              setQuickCreateMode(null);
+              nav("contacts", {
+                highlightId: result.id,
+                highlightName: result.name,
+                refresh: Date.now(),
+              });
+            }}
+          />
         )}
       </QuickCreateSheet>
     </MeshScreen>

@@ -23,12 +23,37 @@ type Props = {
   /** "sheet" = rendered inside a QuickCreateSheet bottom sheet */
   presentation?: "page" | "sheet";
   onCloseSheet?: () => void;
-  onCreated?: () => void;
+  onCreated?: (result: { type: "note"; id?: string; highlightLatest?: boolean }) => void;
 };
 
 const TITLE_MAX_LENGTH = 100;
 const CONTENT_MAX_LENGTH = 1000;
 const leaf2Png = require("../../../assets/leaf_2.png");
+
+const SUCCESS_HOLD_MS = 750;
+const HIGHLIGHT_MS = 2800;
+
+type SavePhase = "idle" | "saving" | "success";
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractCreatedId(response: unknown): string | undefined {
+  const root = response && typeof response === "object" ? (response as Record<string, any>) : null;
+  if (!root) return undefined;
+
+  return (
+    root?.data?.note?._id ||
+    root?.data?.note?.id ||
+    root?.note?._id ||
+    root?.note?.id ||
+    root?.data?._id ||
+    root?.data?.id ||
+    root?._id ||
+    root?.id
+  );
+}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
@@ -196,9 +221,12 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [personError,  setPersonError]  = useState(false);
   const [contentError, setContentError] = useState(false);
   const [saveError,    setSaveError]    = useState("");
-  const [saving,       setSaving]       = useState(false);
+  const [savePhase,    setSavePhase]    = useState<SavePhase>("idle");
   const [loadingNote,  setLoadingNote]  = useState(edit);
   const [loadError,    setLoadError]    = useState("");
+
+  const saving = savePhase === "saving";
+  const saveSuccess = savePhase === "success";
 
   const bodyRef      = useRef<TextInput>(null);
   const firstLineRef = useRef<TextInput>(null);
@@ -318,21 +346,24 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
     if (missingPerson || missingContent) return;
 
     try {
-      setSaving(true);
       const token = await getToken();
       if (!token) { setSaveError("Please log in before saving notes."); return; }
 
       if (edit) {
         if (!noteId) { setSaveError("Missing note id."); return; }
+        setSavePhase("saving");
         await updateNote(noteId, { contactId: person, title: title || undefined, content });
         if (reminderAt) {
           await upsertNoteReminder(noteId, { enabled: true, remindAt: reminderAt.toISOString() });
         } else if (hadReminder) {
           await deleteNoteReminder(noteId);
         }
-        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("noteDetail", { id: noteId }); }
+        setSavePhase("success");
+        await delay(SUCCESS_HOLD_MS);
+        if (isSheet) { onCreated?.({ type: "note", id: noteId }); onCloseSheet?.(); } else { nav("noteDetail", { id: noteId }); }
       } else {
-        await submitCreateNote({
+        setSavePhase("saving");
+        const response = await submitCreateNote({
           contactId:       person || undefined,
           newContactName:  person ? undefined : (typedName || undefined),
           content,
@@ -341,12 +372,30 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           reminderEnabled: Boolean(reminderAt),
           remindAt:        reminderAt?.toISOString(),
         });
-        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("notes"); }
+
+        const createdId = extractCreatedId(response);
+
+        setSavePhase("success");
+        await delay(SUCCESS_HOLD_MS);
+
+        if (isSheet) {
+          onCreated?.({
+            type: "note",
+            id: createdId,
+            highlightLatest: !createdId,
+          });
+          onCloseSheet?.();
+        } else {
+          nav("notes", {
+            highlightId: createdId,
+            highlightLatest: !createdId,
+            refresh: Date.now(),
+          });
+        }
       }
     } catch (err) {
+      setSavePhase("idle");
       setSaveError(err instanceof Error && err.message ? err.message : "Could not save note.");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -687,9 +736,9 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         }}
       >
         <Pressable
-          disabled={saving}
+          disabled={savePhase === "saving" || savePhase === "success"}
           onPress={save}
-          style={{ borderRadius: 28, opacity: saving ? 0.75 : 1, overflow: "hidden" }}
+          style={{ borderRadius: 28, opacity: savePhase !== "idle" ? 0.75 : 1, overflow: "hidden" }}
         >
           <LinearGradient
             colors={[mesh.green800, mesh.green700, "#008A55"]}
@@ -697,12 +746,15 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
             end={{ x: 1, y: 1 }}
             style={{ minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}
           >
-            {saving
-              ? <ActivityIndicator color="#FFFFFF" size="small" />
-              : <Ionicons name="save-outline" size={20} color="#FFFFFF" />
-            }
+            {savePhase === "saving" ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : savePhase === "success" ? (
+              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            ) : (
+              <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+            )}
             <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800" }}>
-              {saving ? "Saving..." : edit ? t("save") : t("saveNote")}
+              {savePhase === "saving" ? "Saving..." : savePhase === "success" ? "Saved" : edit ? t("save") : t("saveNote")}
             </Text>
           </LinearGradient>
         </Pressable>
