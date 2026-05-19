@@ -7,7 +7,7 @@ import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../a
 import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { GradientAvatar } from "../../components/GradientAvatar";
-import { Avatar, BottomNav, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, BottomNavScrim, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { getToken } from "../../storage/tokenStorage";
@@ -285,6 +285,8 @@ export function DashboardScreen({ t, lang, nav }: Props) {
           )}
         </View>
       </ScrollView>
+
+      <BottomNavScrim />
 
       <BottomNav
         active="home"

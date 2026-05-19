@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
 import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
-import { BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -105,6 +105,8 @@ export function StatusScreen({ t, nav }: Props) {
           </Text>
         </MeshCard>
       </MeshScroll>
+
+      <BottomNavScrim />
 
       <BottomNav
         active="status"

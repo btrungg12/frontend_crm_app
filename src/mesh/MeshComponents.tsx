@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { PropsWithChildren, useRef } from "react";
 import { Animated, Modal, Platform, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -262,6 +263,31 @@ function ScalePressable({
     <AnimatedPressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={[style, { transform: [{ scale }] }]}>
       {children}
     </AnimatedPressable>
+  );
+}
+
+/** Fades the screen background over the floating BottomNav area. */
+export function BottomNavScrim({ color = "#FFFFFF" }: { color?: string }) {
+  const hex = color.replace("#", "");
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const transparent = `rgba(${r},${g},${b},0)`;
+
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[transparent, color, color]}
+      locations={[0, 0.5, 1]}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 170,
+        zIndex: 8,
+      }}
+    />
   );
 }
 

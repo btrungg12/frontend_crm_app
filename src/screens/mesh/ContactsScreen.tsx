@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
-import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { Contact, contactById, Lang, statuses, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -348,6 +348,8 @@ export function ContactsScreen({ t, lang, nav }: Props) {
           ))}
         </View>
       </MeshScroll>
+
+      <BottomNavScrim />
 
       <BottomNav
         active="contacts"

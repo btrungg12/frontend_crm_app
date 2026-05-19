@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { useMemo, useState } from "react";
 import {
@@ -13,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Avatar, BottomNav, NavFn, TFn } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, BottomNavScrim, NavFn, TFn } from "../../mesh/MeshComponents";
 import { Lang, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -38,9 +37,10 @@ type NoteSection = { key: string; title: string; data: NoteItem[] };
 
 const TODAY = new Date(2026, 4, 19); // May 19 2026
 
+// IDs match meshData.ts mockNotes (n1–n4) so NoteDetailScreen can find them.
 const MOCK_NOTES: NoteItem[] = [
   {
-    id: "mn1",
+    id: "n1",
     person: { id: "c1", name: "Nguyễn Văn An", statusId: "st-close" },
     title: "Gọi điện hỏi thăm công việc",
     content:
@@ -49,7 +49,7 @@ const MOCK_NOTES: NoteItem[] = [
     reminderAt: new Date(2026, 4, 19, 18, 0),
   },
   {
-    id: "mn2",
+    id: "n2",
     person: { id: "cx", name: "Chí Nam", statusId: "st-work" },
     title: null,
     content:
@@ -59,7 +59,7 @@ const MOCK_NOTES: NoteItem[] = [
     isPinned: true,
   },
   {
-    id: "mn3",
+    id: "n3",
     person: { id: "c2", name: "Trần Mai Anh", statusId: "st-work" },
     title: "Sở thích cá nhân",
     content:
@@ -68,7 +68,7 @@ const MOCK_NOTES: NoteItem[] = [
     reminderAt: null,
   },
   {
-    id: "mn4",
+    id: "n4",
     person: { id: "cy", name: "Ánh Minh", statusId: "st-school" },
     title: null,
     content:
@@ -348,30 +348,6 @@ function FilterRow({
   );
 }
 
-// ─── Bottom scrim ─────────────────────────────────────────────────────────────
-
-function BottomNavScrim() {
-  return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[
-        "rgba(250,252,249,0)",
-        "rgba(250,252,249,0.92)",
-        "#FAFCF9",
-      ]}
-      locations={[0, 0.45, 1]}
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: 170,
-        zIndex: 8,
-      }}
-    />
-  );
-}
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 type Props = { t: TFn; lang: Lang; nav: NavFn };
@@ -436,7 +412,7 @@ export function NotesScreen({ t, lang: _lang, nav }: Props) {
         )}
       />
 
-      <BottomNavScrim />
+      <BottomNavScrim color="#FAFCF9" />
 
       <BottomNav
         active="notes"
