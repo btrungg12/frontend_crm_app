@@ -383,18 +383,19 @@ export function NotesScreen({ t, lang: _lang, nav }: Props) {
 
   return (
     <View style={styles.root}>
+      {/* Header and filter are fixed above the list — not inside ListHeaderComponent */}
+      <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
+      <FilterRow filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
+
       <SectionList<NoteItem, NoteSection>
         sections={sections}
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
         contentContainerStyle={{ paddingBottom: 130 }}
-        ListHeaderComponent={
-          <>
-            <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
-            <FilterRow filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
-          </>
-        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={40} color={mesh.ink200} />
