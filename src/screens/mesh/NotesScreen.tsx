@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
