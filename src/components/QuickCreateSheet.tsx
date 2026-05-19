@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, Modal, PanResponder, Pressable, StyleSheet, View } from "react-native";
 
 // 93% of screen height — tall enough to show full form even with keyboard open
 const SHEET_H = Dimensions.get("window").height * 0.93;
@@ -17,12 +17,45 @@ export function QuickCreateSheet({
   onClose: () => void;
 }>) {
   const translateY  = useRef(new Animated.Value(SHEET_H)).current;
+  const dragY       = useRef(new Animated.Value(0)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [modalVisible, setModalVisible] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (evt, gesture) => {
+        if (gesture.dy > 0) {
+          dragY.setValue(gesture.dy);
+        }
+      },
+      onPanResponderRelease: (evt, gesture) => {
+        const threshold = 120;
+        const velocityThreshold = 0.85;
+
+        if (gesture.dy > threshold || gesture.vy > velocityThreshold) {
+          // Swipe down to close
+          dragY.setValue(0);
+          onClose();
+        } else {
+          // Snap back
+          Animated.spring(dragY, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 200,
+            mass: 1,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (open) {
       translateY.setValue(SHEET_H);
+      dragY.setValue(0);
       overlayAnim.setValue(0);
       setModalVisible(true);
       Animated.parallel([
@@ -55,6 +88,9 @@ export function QuickCreateSheet({
     }
   }, [open]);
 
+  // Combine translateY with dragY: when dragging, sheet moves down by dragY amount
+  const sheetTransformY = Animated.add(translateY, dragY);
+
   return (
     <Modal
       visible={modalVisible}
@@ -75,13 +111,16 @@ export function QuickCreateSheet({
 
       {/* ── Sheet ── */}
       <Animated.View
+        {...panResponder.panHandlers}
         style={[
           styles.sheet,
-          { transform: [{ translateY }] },
+          { transform: [{ translateY: sheetTransformY }] },
         ]}
       >
-        {/* Drag handle */}
-        <View style={styles.handle} />
+        {/* Drag handle wrapper */}
+        <View style={styles.handleWrap}>
+          <View style={styles.handle} />
+        </View>
 
         {/* Content — fills remaining height */}
         {children}
@@ -107,13 +146,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -10 },
     elevation: 20,
   },
+  handleWrap: {
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   handle: {
     alignSelf: "center",
     width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: "rgba(6,69,50,0.15)",
-    marginTop: 10,
-    marginBottom: -10,
   },
 });

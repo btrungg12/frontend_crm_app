@@ -1089,7 +1089,7 @@ export function CreateContactScreen({
       />
 
       {/* ── Top bar ── */}
-      <View style={{ paddingTop: isSheet ? 16 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
+      <View style={{ paddingTop: isSheet ? 18 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => isSheet ? onCloseSheet?.() : nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
           <Text

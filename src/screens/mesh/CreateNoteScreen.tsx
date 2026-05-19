@@ -447,7 +447,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         contentContainerStyle={{ paddingBottom: isSheet ? insets.bottom + 80 : insets.bottom + 110 }}
       >
         {/* ── Header (transparent — background comes from root) ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: isSheet ? 16 : insets.top + 14, paddingBottom: 24 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: isSheet ? 18 : insets.top + 14, paddingBottom: 24 }}>
 
           {/* Top bar */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
