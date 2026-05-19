@@ -5,6 +5,32 @@ type NoteQuery = {
   search?: string;
 };
 
+export type CreateNotePayload = {
+  /** ID of an existing contact from the contacts list */
+  contactId?: string;
+  /** Name typed by the user when no existing contact was selected */
+  contactName?: string;
+  /** If true, backend will create contact if it doesn't exist */
+  createContactIfMissing?: boolean;
+  /** The note content (required) */
+  content: string;
+  /** The note title (optional, derived from first line) */
+  title?: string;
+  /** The interaction date (optional) */
+  interactionDate?: string;
+};
+
+export type UpdateNotePayload = {
+  title?: string;
+  content?: string;
+};
+
+export type UpdateNoteReminderPayload = {
+  enabled: boolean;
+  remindAt?: string | null;
+  content?: string;
+};
+
 type SubmitCreateNotePayload = {
   /** ID of an existing contact from the contacts list */
   contactId?: string;
@@ -59,6 +85,13 @@ export async function deleteNote(noteId: string) {
 }
 
 export async function upsertNoteReminder(noteId: string, payload: Record<string, unknown>) {
+  return await apiRequest(`/notes/${noteId}/reminder`, {
+    body: payload,
+    method: "PUT"
+  });
+}
+
+export async function updateNoteReminder(noteId: string, payload: UpdateNoteReminderPayload) {
   return await apiRequest(`/notes/${noteId}/reminder`, {
     body: payload,
     method: "PUT"

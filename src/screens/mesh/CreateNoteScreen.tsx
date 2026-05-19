@@ -189,7 +189,9 @@ function parseNoteDraftFromComposer(
     cleanFirst.length <= TITLE_MAX_LENGTH &&
     cleanBody.length > 0;
 
-  if (useAsTitle) return { title: cleanFirst, content: cleanBody };
+  // Important: content MUST include the full text including first line
+  // title is the first line, content is the complete text
+  if (useAsTitle) return { title: cleanFirst, content: rawText };
   return { title: null, content: rawText };
 }
 

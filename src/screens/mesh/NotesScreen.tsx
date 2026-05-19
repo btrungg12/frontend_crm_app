@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   SectionList,
@@ -12,6 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getNotes } from "../../api/noteApi";
+import { extractArray } from "../../api/screenAdapters";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, NavFn, TFn } from "../../mesh/MeshComponents";
 import { CreateNoteScreen } from "./CreateNoteScreen";
@@ -35,6 +38,48 @@ type NoteItem = {
 };
 
 type NoteSection = { key: string; title: string; data: NoteItem[] };
+
+// ─── Normalize API note to NoteItem ───────────────────────────────────────────
+
+function normalizeApiNoteToItem(value: unknown): NoteItem | null {
+  if (!value || typeof value !== "object") return null;
+
+  const item = value as Record<string, any>;
+  const id = item._id ?? item.id;
+  const content = item.content ?? item.body ?? "";
+
+  if (!id || !content) return null;
+
+  // Extract contact info
+  const contact = item.contact ?? item.person ?? {};
+  const contactId = String(contact._id ?? contact.id ?? "");
+  const contactName = String(contact.name ?? item.contactName ?? item.personName ?? "Unknown");
+  const statusId = contact.statusId ?? contact.status ?? item.statusId;
+
+  // Parse dates
+  const createdAtRaw = item.interactionDate ?? item.createdAt ?? item.updatedAt;
+  const createdAt = createdAtRaw ? new Date(createdAtRaw) : new Date();
+
+  // Check for reminder
+  const reminder = item.reminder ?? {};
+  const reminderEnabled = Boolean(reminder.enabled ?? item.reminderEnabled);
+  const remindAtRaw = item.reminderAt ?? item.remindAt ?? reminder.remindAt;
+  const reminderAt = reminderEnabled && remindAtRaw ? new Date(remindAtRaw) : null;
+
+  return {
+    id: String(id),
+    person: {
+      id: contactId || "unknown",
+      name: contactName,
+      statusId: statusId ? String(statusId) : undefined,
+    },
+    title: item.title ?? null,
+    content: String(content),
+    createdAt,
+    reminderAt,
+    isPinned: Boolean(item.isPinned ?? item.pinned ?? item.bookmark),
+  };
+}
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -371,8 +416,40 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
 
+  // API state
+  const [apiNotes, setApiNotes] = useState<NoteItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadNotes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getNotes();
+      const normalized = extractArray(response, "notes")
+        .map(normalizeApiNoteToItem)
+        .filter(Boolean) as NoteItem[];
+      setApiNotes(normalized);
+      setError("");
+    } catch (err) {
+      setApiNotes([]);
+      setError(err instanceof Error && err.message ? err.message : "Cannot load notes.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  useEffect(() => {
+    if (refresh) {
+      loadNotes();
+    }
+  }, [refresh, loadNotes]);
+
   const sections = useMemo<NoteSection[]>(() => {
-    const filtered = MOCK_NOTES.filter((note) => {
+    const filtered = apiNotes.filter((note) => {
       if (!matchSearch(note, search)) return false;
       if (filter === "reminders" && !note.reminderAt) return false;
       if (filter === "pinned" && !note.isPinned) return false;
@@ -394,7 +471,7 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
     return SECTION_ORDER
       .filter((key) => (groups[key]?.length ?? 0) > 0)
       .map((key) => ({ key, title: SECTION_LABELS[key], data: groups[key] }));
-  }, [filter, sort, search]);
+  }, [filter, sort, search, apiNotes]);
 
   useEffect(() => {
     const id =
@@ -414,29 +491,41 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
       <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
       <FilterRow filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
 
-      <SectionList<NoteItem, NoteSection>
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        stickySectionHeadersEnabled={false}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        alwaysBounceVertical={false}
-        overScrollMode="never"
-        contentContainerStyle={{ paddingBottom: 180 }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={40} color={mesh.ink200} />
-            <Text style={styles.emptyTitle}>Chưa có ghi chú</Text>
-            <Text style={styles.emptyDesc}>Ghi lại những điều quan trọng về mọi người.</Text>
-          </View>
-        }
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionLabel}>{section.title}</Text>
-        )}
-        renderItem={({ item }) => (
-          <NoteCard note={item} highlighted={activeHighlightId === item.id} onPress={() => nav("noteDetail", { id: item.id })} />
-        )}
-      />
+      {loading ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={mesh.green700} />
+        </View>
+      ) : error ? (
+        <View style={styles.empty}>
+          <Ionicons name="alert-circle-outline" size={40} color={mesh.pink} />
+          <Text style={[styles.emptyTitle, { color: mesh.pink }]}>Error</Text>
+          <Text style={styles.emptyDesc}>{error}</Text>
+        </View>
+      ) : (
+        <SectionList<NoteItem, NoteSection>
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          stickySectionHeadersEnabled={false}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
+          contentContainerStyle={{ paddingBottom: 180 }}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="document-text-outline" size={40} color={mesh.ink200} />
+              <Text style={styles.emptyTitle}>Chưa có ghi chú</Text>
+              <Text style={styles.emptyDesc}>Ghi lại những điều quan trọng về mọi người.</Text>
+            </View>
+          }
+          renderSectionHeader={({ section }) => (
+            <Text style={styles.sectionLabel}>{section.title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <NoteCard note={item} highlighted={activeHighlightId === item.id} onPress={() => nav("noteDetail", { id: item.id })} />
+          )}
+        />
+      )}
 
       <BottomNavScrim color="#FAFCF9" />
 
