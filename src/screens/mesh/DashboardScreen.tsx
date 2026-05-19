@@ -37,6 +37,60 @@ function unwrapData(value: unknown) {
   return asRecord(root?.data) ?? root;
 }
 
+function readDashboardContact(value: unknown) {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const reminder = asRecord(item.reminder);
+  const note = asRecord(item.note);
+
+  const candidates = [
+    asRecord(item.contact),
+    asRecord(item.contactId),
+    asRecord(item.person),
+    asRecord(item.personId),
+
+    asRecord(note?.contact),
+    asRecord(note?.contactId),
+    asRecord(note?.person),
+    asRecord(note?.personId),
+
+    asRecord(reminder?.contact),
+    asRecord(reminder?.contactId),
+  ];
+
+  const contact = candidates.find((candidate) => {
+    const name = candidate?.name;
+    return typeof name === "string" && name.trim().length > 0;
+  });
+
+  const id =
+    contact?._id ??
+    contact?.id ??
+    item.contactId ??
+    note?.contactId ??
+    item.personId ??
+    "";
+
+  const name =
+    contact?.name ??
+    item.contactName ??
+    item.personName ??
+    note?.contactName ??
+    note?.personName ??
+    "";
+
+  const avatarUrl =
+    typeof contact?.avatarUrl === "string" ? contact.avatarUrl : undefined;
+
+  return {
+    id: typeof id === "string" ? id : String(id ?? ""),
+    name: typeof name === "string" ? name.trim() : "",
+    avatarUrl,
+    statusId: contact?.statusId ?? contact?.status ?? item.statusId ?? note?.statusId,
+  };
+}
+
 function readUserName(value: unknown) {
   const profile = unwrapData(value);
   const candidate = profile?.name ?? profile?.fullName ?? profile?.displayName ?? profile?.username;
@@ -117,8 +171,8 @@ function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null
 
   if (!enabled || !remindAt) return null;
 
-  const contact = asRecord(item.contact);
-  const contactName = String(contact?.name ?? item.contactName ?? "Unknown person");
+  const contactInfo = readDashboardContact(item);
+  const contactName = contactInfo?.name || "Unknown person";
 
   const title = String(
     reminder?.content ??
@@ -127,11 +181,13 @@ function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null
     (lang === "vi" ? "Nhắc nhở" : "Reminder")
   );
 
+  const noteId = String(item._id ?? item.id ?? item.noteId ?? "");
+
   return {
-    id: String(item._id ?? item.id ?? `${contactName}-${remindAt.toISOString()}`),
+    id: noteId || `${contactName}-${remindAt.toISOString()}`,
     icon: "alarm-outline",
-    noteId: String(item._id ?? item.id ?? ""),
-    contactId: String(item.contactId ?? contact?._id ?? contact?.id ?? ""),
+    noteId,
+    contactId: contactInfo?.id || String(item.contactId ?? ""),
     kind: "reminder",
     title,
     titleEn: title,
@@ -140,7 +196,8 @@ function normalizeDashboardReminder(value: unknown, lang: Lang): Upcoming | null
     time: formatTimeHHMM(remindAt, lang),
     tag: formatRelativeUpcomingTag(remindAt, "vi" as Lang),
     tagEn: formatRelativeUpcomingTag(remindAt, "en" as Lang),
-  };
+    ...(remindAt ? { dateValue: remindAt as any } : {}),
+  } as Upcoming;
 }
 
 function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | null {
@@ -150,8 +207,14 @@ function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | nu
   const date = parseDate(item.date);
   if (!date) return null;
 
+  const contact = asRecord(item.contact) ?? asRecord(item.contactId);
+  const contactName = String(
+    contact?.name ??
+    item.contactName ??
+    "Unknown person"
+  );
+
   const occasion = String(item.occasion ?? (lang === "vi" ? "Ngày đặc biệt" : "Special day"));
-  const contactName = String(item.contactName ?? "Unknown person");
 
   const occasionLower = occasion.toLowerCase();
   const isBirthday =
@@ -164,7 +227,7 @@ function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | nu
   return {
     id: String(item.specialDayId ?? `${item.contactId ?? contactName}-${date.toISOString()}`),
     icon: isBirthday ? "gift-outline" : "sparkles-outline",
-    contactId: String(item.contactId ?? ""),
+    contactId: String(contact?._id ?? contact?.id ?? item.contactId ?? ""),
     kind: isBirthday ? "birthday" : "special",
     title: titleVi,
     titleEn,
@@ -173,7 +236,8 @@ function normalizeDashboardSpecialDay(value: unknown, lang: Lang): Upcoming | nu
     time: "",
     tag: formatRelativeUpcomingTag(date, "vi" as Lang),
     tagEn: formatRelativeUpcomingTag(date, "en" as Lang),
-  };
+    ...(date ? { dateValue: date as any } : {}),
+  } as Upcoming;
 }
 
 function getContactFromNote(noteValue: unknown): Contact | null {
@@ -361,7 +425,11 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
         .filter(Boolean) as Upcoming[];
 
       const apiUpcoming = [...upcomingReminders, ...upcomingSpecialDays]
-        .sort((a, b) => (a.tag && b.tag ? 0 : a.tag ? -1 : 1))
+        .sort((a, b) => {
+          const aTime = (a as any).dateValue?.getTime?.() ?? Number.MAX_SAFE_INTEGER;
+          const bTime = (b as any).dateValue?.getTime?.() ?? Number.MAX_SAFE_INTEGER;
+          return aTime - bTime;
+        })
         .slice(0, 4);
 
       const activityContacts = buildRecentActivityContacts(
