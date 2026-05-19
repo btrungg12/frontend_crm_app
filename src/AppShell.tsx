@@ -138,9 +138,9 @@ export function AppShell() {
     case "loading":
       return <LoadingScreen {...common} />;
     case "dashboard":
-      return <DashboardScreen {...common} />;
+      return <DashboardScreen {...common} {...(route.props as Record<string, unknown>)} />;
     case "notes":
-      return <NotesScreen {...common} />;
+      return <NotesScreen {...common} {...(route.props as Record<string, unknown>)} />;
     case "noteDetail":
       return noteId ? <NoteDetailScreen {...common} noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
     case "noteDetailB":
@@ -151,8 +151,6 @@ export function AppShell() {
       return <CreateNoteScreen {...common} edit />;
     case "search":
       return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} type={(route.props?.type as "contacts" | "notes" | undefined) || "notes"} />;
-    case "contacts":
-      return <ContactsScreen {...common} />;
     case "contactDetail":
       return contactId ? (
         <ContactDetailScreen key={`contact-detail-${contactId}`} {...common} contactId={contactId} />
@@ -169,8 +167,10 @@ export function AppShell() {
       );
     case "contactsEmpty":
       return <ContactsEmptyScreen {...common} />;
+    case "contacts":
+      return <ContactsScreen {...common} {...(route.props as Record<string, unknown>)} />;
     case "status":
-      return <StatusScreen {...common} />;
+      return <StatusScreen {...common} {...(route.props as Record<string, unknown>)} />;
     case "createStatus":
       return <CreateStatusScreen {...common} statusId={(route.props?.id as string) || (route.props?.statusId as string) || undefined} />;
     case "notifications":
