@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Modal, Pressable, Text, TextInput, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
@@ -13,6 +14,189 @@ import { Contact, contactById, Lang, statuses, statusById } from "../../mesh/mes
 import { mesh } from "../../mesh/meshTheme";
 
 const leafPng = require("../../../assets/leaf.png");
+
+// ─── CreateContactScreen helpers ─────────────────────────────────────────────
+
+const WHEEL_H = 44;
+const MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const YEARS_ARR = Array.from({ length: 100 }, (_, i) => String(new Date().getFullYear() - i));
+
+type SpecialDay = { id: string; title: string; date: Date | null };
+type DateTarget  = { kind: "birthday" } | { kind: "specialDay"; index: number };
+type AddField    = "birthday" | "howYouMet" | "address" | "social" | "note";
+
+function daysInMonth(month: number, year: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function formatDateShort(d: Date): string {
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
+// ── WheelCol ──────────────────────────────────────────────────────────────────
+
+function WheelCol({
+  items, selectedIndex, onSelect,
+  width = 72, fontSize = 18, fontSizeSelected = 22,
+}: {
+  items: string[]; selectedIndex: number; onSelect: (i: number) => void;
+  width?: number; fontSize?: number; fontSizeSelected?: number;
+}) {
+  const ref = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      ref.current?.scrollTo({ y: selectedIndex * WHEEL_H, animated: false });
+    }, 60);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={{ width, height: WHEEL_H * 5, overflow: "hidden" }}>
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute", left: 0, right: 0,
+          top: WHEEL_H * 2, height: WHEEL_H,
+          backgroundColor: "rgba(31,112,72,0.08)",
+          borderRadius: 10, zIndex: 1,
+        }}
+      />
+      <ScrollView
+        ref={ref}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={WHEEL_H}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingVertical: WHEEL_H * 2 }}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.y / WHEEL_H);
+          onSelect(Math.max(0, Math.min(idx, items.length - 1)));
+        }}
+      >
+        {items.map((item, i) => (
+          <View key={i} style={{ height: WHEEL_H, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{
+              fontSize: i === selectedIndex ? fontSizeSelected : fontSize,
+              fontWeight: i === selectedIndex ? "800" : "400",
+              color: i === selectedIndex ? mesh.green700 : mesh.ink400,
+            }}>{item}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ── WheelDatePicker ───────────────────────────────────────────────────────────
+
+function WheelDatePicker({ value, onChange }: { value: Date | null; onChange: (d: Date) => void }) {
+  const init   = value ?? new Date();
+  const [dayIdx,   setDayIdx]   = useState(init.getDate() - 1);
+  const [monthIdx, setMonthIdx] = useState(init.getMonth());
+  const yearStr = String(init.getFullYear());
+  const initYrIdx = YEARS_ARR.indexOf(yearStr);
+  const [yearIdx,  setYearIdx]  = useState(initYrIdx >= 0 ? initYrIdx : 0);
+
+  useEffect(() => {
+    const year   = Number(YEARS_ARR[yearIdx]);
+    const maxDay = daysInMonth(monthIdx, year);
+    const day    = Math.min(dayIdx + 1, maxDay);
+    onChange(new Date(year, monthIdx, day));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dayIdx, monthIdx, yearIdx]);
+
+  const maxDay = daysInMonth(monthIdx, Number(YEARS_ARR[yearIdx]));
+  const days   = Array.from({ length: maxDay }, (_, i) => String(i + 1));
+
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "center", gap: 4, paddingVertical: 8 }}>
+      <WheelCol items={days}        selectedIndex={Math.min(dayIdx, maxDay - 1)} onSelect={setDayIdx}   width={52} />
+      <WheelCol items={MONTHS_LONG} selectedIndex={monthIdx}                      onSelect={setMonthIdx} width={148} fontSize={13} fontSizeSelected={15} />
+      <WheelCol items={YEARS_ARR}   selectedIndex={yearIdx}                       onSelect={setYearIdx}  width={72} />
+    </View>
+  );
+}
+
+// ── AdditionalRow ─────────────────────────────────────────────────────────────
+
+function AdditionalRow({
+  icon, label, value, onChangeText, multiline = false, onRemove, last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; value: string;
+  onChangeText?: (v: string) => void; multiline?: boolean;
+  onRemove: () => void; last?: boolean;
+}) {
+  return (
+    <View style={{
+      borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
+      flexDirection: "row", alignItems: "flex-start",
+      gap: 12, paddingHorizontal: 12, paddingVertical: 12,
+    }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42, flexShrink: 0 }}>
+        <Ionicons name={icon} size={20} color={mesh.green700} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{label}</Text>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          multiline={multiline}
+          placeholder="—"
+          placeholderTextColor="#8C9691"
+          style={{ color: mesh.ink900, fontSize: 14 }}
+        />
+      </View>
+      <Pressable onPress={onRemove} hitSlop={8} style={{ paddingTop: 11 }}>
+        <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+      </Pressable>
+    </View>
+  );
+}
+
+// ── SpecialDayRow ─────────────────────────────────────────────────────────────
+
+function SpecialDayRow({
+  item, onChangeTitle, onPressDate, onRemove, last = false,
+}: {
+  item: SpecialDay; onChangeTitle: (v: string) => void;
+  onPressDate: () => void; onRemove: () => void; last?: boolean;
+}) {
+  return (
+    <View style={{
+      borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)",
+      flexDirection: "row", alignItems: "center",
+      gap: 8, paddingHorizontal: 12, paddingVertical: 12,
+    }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42, flexShrink: 0 }}>
+        <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <TextInput
+          value={item.title}
+          onChangeText={onChangeTitle}
+          placeholder="Event name"
+          placeholderTextColor="#8C9691"
+          style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700", marginBottom: 4 }}
+        />
+        <Pressable onPress={onPressDate} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Ionicons name="calendar-outline" size={13} color={mesh.ink500} />
+          <Text style={{ color: item.date ? mesh.green700 : mesh.ink400, fontSize: 12 }}>
+            {item.date ? formatDateShort(item.date) : "Set date"}
+          </Text>
+        </Pressable>
+      </View>
+      <Pressable onPress={onRemove} hitSlop={8}>
+        <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+      </Pressable>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 type Props = {
   t: TFn;
@@ -482,30 +666,103 @@ function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ioni
 }
 
 export function CreateContactScreen({ t, nav, edit = false, contactId }: Props & { edit?: boolean; contactId?: string }) {
-  const insets = useSafeAreaInsets();
+  const insets   = useSafeAreaInsets();
   const existing = edit && contactId ? contactById(contactId) : undefined;
-  const [name, setName] = useState(existing?.name || "");
-  const [phone, setPhone] = useState(existing?.phone || "");
-  const [email, setEmail] = useState(existing?.email || "");
-  const [status, setStatus] = useState(existing?.status || "st-close");
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setSaveError(t("nameRequired") || "Name is required");
-      return;
+  // ── Core fields ────────────────────────────────────────────────────────────
+  const [name,   setName]   = useState(existing?.name  || "");
+  const [phone,  setPhone]  = useState(existing?.phone || "");
+  const [email,  setEmail]  = useState(existing?.email || "");
+  const [status, setStatus] = useState(existing?.status || "st-close");
+
+  // ── Additional fields ──────────────────────────────────────────────────────
+  const [birthday,      setBirthday]      = useState<Date | null>(null);
+  const [howYouMet,     setHowYouMet]     = useState("");
+  const [address,       setAddress]       = useState("");
+  const [social,        setSocial]        = useState("");
+  const [note,          setNote]          = useState("");
+  const [activeFields,  setActiveFields]  = useState<AddField[]>([]);
+
+  // ── Special days ───────────────────────────────────────────────────────────
+  const [specialDays, setSpecialDays] = useState<SpecialDay[]>([]);
+
+  // ── Avatar ─────────────────────────────────────────────────────────────────
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+  // ── UI state ───────────────────────────────────────────────────────────────
+  const [statusOpen,     setStatusOpen]     = useState(false);
+  const [addFieldOpen,   setAddFieldOpen]   = useState(false);
+  const [popupBtm,       setPopupBtm]       = useState(0);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateTarget,     setDateTarget]     = useState<DateTarget | null>(null);
+  const [pickerValue,    setPickerValue]    = useState<Date | null>(null);
+  const [saving,         setSaving]         = useState(false);
+  const [saveError,      setSaveError]      = useState("");
+
+  const addFieldRef = useRef<View>(null);
+
+  // ── Popup positioning ──────────────────────────────────────────────────────
+  const openPopup = () => {
+    addFieldRef.current?.measureInWindow((_x, y) => {
+      setPopupBtm(Dimensions.get("window").height - y + 8);
+      setAddFieldOpen(true);
+    });
+  };
+
+  const addField    = (f: AddField) => { setActiveFields(prev => [...prev, f]); setAddFieldOpen(false); };
+  const removeField = (f: AddField) =>   setActiveFields(prev => prev.filter(x => x !== f));
+
+  // ── Date picker ────────────────────────────────────────────────────────────
+  const openDatePicker = (target: DateTarget) => {
+    setDateTarget(target);
+    setPickerValue(
+      target.kind === "birthday"
+        ? birthday
+        : (specialDays[(target as { kind: "specialDay"; index: number }).index]?.date ?? null)
+    );
+    setDatePickerOpen(true);
+  };
+
+  const confirmDate = (d: Date) => {
+    if (!dateTarget) return;
+    if (dateTarget.kind === "birthday") {
+      setBirthday(d);
+    } else {
+      const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
+      setSpecialDays(prev => prev.map((sd, i) => i === idx ? { ...sd, date: d } : sd));
     }
+    setDatePickerOpen(false);
+  };
+
+  // ── Avatar picker ──────────────────────────────────────────────────────────
+  const pickAvatar = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!name.trim()) { setSaveError(t("nameRequired") || "Name is required"); return; }
     setSaveError("");
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
-        name: name.trim(),
-        phone: phone.trim() || undefined,
-        email: email.trim() || undefined,
-        statusId: status || undefined,
-        source: "Work"
+        name:      name.trim(),
+        phone:     phone.trim()    || undefined,
+        email:     email.trim()    || undefined,
+        statusId:  status          || undefined,
+        birthday:  birthday        ? birthday.toISOString()  : undefined,
+        howYouMet: howYouMet.trim()|| undefined,
+        address:   address.trim()  || undefined,
+        social:    social.trim()   || undefined,
+        note:      note.trim()     || undefined,
       };
       if (edit && contactId) {
         await updateContact(contactId, payload);
@@ -515,68 +772,39 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
         nav("contacts");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save contact";
-      setSaveError(msg);
+      setSaveError(err instanceof Error ? err.message : "Failed to save contact");
     } finally {
       setSaving(false);
     }
   };
 
+  // ── Available "Add field" options (exclude already-added) ──────────────────
+  const fieldMeta: { key: AddField; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+    { key: "birthday",  icon: "gift-outline",           label: t("birthday")  || "Birthday"     },
+    { key: "howYouMet", icon: "chatbubble-outline",     label: t("howYouMet") || "How you met"  },
+    { key: "address",   icon: "location-outline",       label: t("address")   || "Address"      },
+    { key: "social",    icon: "globe-outline",          label: t("social")    || "Social"       },
+    { key: "note",      icon: "document-text-outline",  label: t("moreNote")  || "Note"         },
+  ];
+  const availableFields = fieldMeta.filter(f => !activeFields.includes(f.key));
+
+  const fieldIcon:  Record<AddField, keyof typeof Ionicons.glyphMap> = Object.fromEntries(fieldMeta.map(f => [f.key, f.icon]))  as Record<AddField, keyof typeof Ionicons.glyphMap>;
+  const fieldLabel: Record<AddField, string>                         = Object.fromEntries(fieldMeta.map(f => [f.key, f.label])) as Record<AddField, string>;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <MeshScreen>
-      <View
-        style={{
-          height: insets.top + 310,
-          overflow: "hidden",
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 14,
-          position: "relative"
-        }}
-      >
+      {/* ── Hero header ── */}
+      <View style={{ height: insets.top + 280, overflow: "hidden", paddingHorizontal: 20, paddingTop: insets.top + 14, position: "relative" }}>
         <MeshGradientView
           pointerEvents="none"
           style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
-          columns={4}
-          rows={4}
-          colors={[
-            "#064532",
-            "#0B573E",
-            "#1D704F",
-            "#2F805E",
-            "#DDEFE5",
-            "#EAF6EF",
-            "#BFDCCB",
-            "#74AE8D",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#F8FCF7",
-            "#EEF8F0",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF"
-          ]}
-          points={[
-            [0, 0],
-            [0.35, 0],
-            [0.7, 0],
-            [1, 0],
-            [0, 0.3],
-            [0.35, 0.34],
-            [0.7, 0.32],
-            [1, 0.28],
-            [0, 0.6],
-            [0.35, 0.64],
-            [0.7, 0.68],
-            [1, 0.64],
-            [0, 1],
-            [0.35, 1],
-            [0.7, 1],
-            [1, 1]
-          ]}
+          columns={4} rows={4}
+          colors={["#064532","#0B573E","#1D704F","#2F805E","#DDEFE5","#EAF6EF","#BFDCCB","#74AE8D","#FFFFFF","#FFFFFF","#F8FCF7","#EEF8F0","#FFFFFF","#FFFFFF","#FFFFFF","#FFFFFF"]}
+          points={[[0,0],[0.35,0],[0.7,0],[1,0],[0,0.3],[0.35,0.34],[0.7,0.32],[1,0.28],[0,0.6],[0.35,0.64],[0.7,0.68],[1,0.64],[0,1],[0.35,1],[0.7,1],[1,1]]}
           smoothsColors
         />
-
+        {/* Top nav row */}
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
           <Text style={{ color: "#064532", fontSize: 18, fontWeight: "800", letterSpacing: -0.2 }}>{edit ? t("editContact") : t("createContact")}</Text>
@@ -584,102 +812,207 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
             onPress={handleSave}
             disabled={saving}
             style={{
-              alignItems: "center",
-              backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
-              borderRadius: 999,
-              elevation: 3,
-              flexDirection: "row",
-              gap: 6,
-              justifyContent: "center",
-              minWidth: 72,
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              shadowColor: "#064532",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.18,
-              shadowRadius: 16
+              alignItems: "center", backgroundColor: saving ? "rgba(6,69,50,0.45)" : mesh.green700,
+              borderRadius: 999, elevation: 3, flexDirection: "row", gap: 6, justifyContent: "center",
+              minWidth: 72, paddingHorizontal: 18, paddingVertical: 10,
+              shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16,
             }}
           >
             {saving
               ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>
-            }
+              : <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "800" }}>{t("save")}</Text>}
           </Pressable>
         </View>
-        <View style={{ alignItems: "center", marginTop: 26 }}>
-          <View style={{ position: "relative" }}>
-            <Avatar name={existing?.name || name || "New Contact"} size={112} />
-            <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 18, borderWidth: 3, bottom: 2, height: 36, justifyContent: "center", position: "absolute", right: 2, width: 36 }}>
-              <Ionicons name="camera-outline" size={17} color="#FFFFFF" />
+        {/* Avatar */}
+        <View style={{ alignItems: "center", marginTop: 18 }}>
+          <Pressable onPress={pickAvatar} style={{ position: "relative" }}>
+            {avatarUri
+              ? <Image source={{ uri: avatarUri }} style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: "#FFFFFF" }} />
+              : <Avatar name={existing?.name || name || "?"} size={100} />
+            }
+            <View style={{ alignItems: "center", backgroundColor: mesh.green700, borderColor: "#FFFFFF", borderRadius: 16, borderWidth: 3, bottom: 0, height: 32, justifyContent: "center", position: "absolute", right: 0, width: 32 }}>
+              <Ionicons name="camera-outline" size={15} color="#FFFFFF" />
             </View>
-          </View>
-          <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800", marginTop: 10 }}>{t("addAvatar")}</Text>
+          </Pressable>
+          <Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "700", marginTop: 8 }}>{t("addAvatar") || "Add photo"}</Text>
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -18, paddingHorizontal: 16, paddingTop: 0 }} bottom={120}>
+      {/* ── Scrollable form ── */}
+      <ScrollView
+        style={{ backgroundColor: "#F7FAF7", marginTop: -18 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+        keyboardShouldPersistTaps="handled"
+      >
         {saveError ? (
-          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(220,38,38,0.2)", paddingHorizontal: 14, paddingVertical: 10, marginTop: 16, marginBottom: 0, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
             <Text style={{ flex: 1, color: "#DC2626", fontSize: 13, fontWeight: "600" }}>{saveError}</Text>
           </View>
         ) : null}
+
+        {/* ── Basic Information ── */}
         <FormSection title={t("basicInfo")}>
           <FormRow icon="person-outline" label={`${t("name")} *`} value={name} onChangeText={setName} placeholder={t("enterName")} />
-          <FormRow icon="call-outline" label={t("phone")} value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
-          <FormRow icon="mail-outline" label="Email" value={email} onChangeText={setEmail} placeholder={t("enterEmail")} last />
-        </FormSection>
-
-        <FormSection title={t("relationshipInfo")}>
-          <Pressable onPress={() => setStatusOpen(true)} style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+          <FormRow icon="call-outline"   label={t("phone")}       value={phone} onChangeText={setPhone} placeholder={t("enterPhone")} />
+          <FormRow icon="mail-outline"   label="Email"            value={email} onChangeText={setEmail} placeholder={t("enterEmail")} />
+          {/* Relationship / Status */}
+          <Pressable
+            onPress={() => setStatusOpen(true)}
+            style={{
+              alignItems: "center",
+              borderBottomWidth: activeFields.length > 0 ? 1 : 0,
+              borderColor: "rgba(6,69,50,0.08)",
+              flexDirection: "row", gap: 12,
+              paddingHorizontal: 12, paddingVertical: 12,
+            }}
+          >
             <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
               <Ionicons name="people-outline" size={20} color={mesh.green700} />
             </View>
-            <Text style={{ color: "#073F33", flex: 1, fontSize: 14, fontWeight: "800" }}>{t("relationship")}</Text>
+            <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", flex: 1 }}>{t("relationship")}</Text>
             <StatusChip statusId={status} />
             <Ionicons name="chevron-down" size={14} color={mesh.ink400} />
           </Pressable>
-          <View style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
-            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-              <Ionicons name="link-outline" size={20} color={mesh.green700} />
-            </View>
-            <Text style={{ color: "#073F33", flex: 1, fontSize: 14, fontWeight: "800" }}>{t("source")}</Text>
-            <View style={{ borderRadius: 999, backgroundColor: mesh.bgSubtle, paddingHorizontal: 12, paddingVertical: 6 }}>
-              <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "700" }}>Work</Text>
-            </View>
-          </View>
+          {/* Active additional fields */}
+          {activeFields.map((f, i) => {
+            const isLast = i === activeFields.length - 1;
+            if (f === "birthday") {
+              return (
+                <Pressable
+                  key="birthday"
+                  onPress={() => openDatePicker({ kind: "birthday" })}
+                  style={{ alignItems: "center", borderBottomWidth: isLast ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
+                >
+                  <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
+                    <Ionicons name="gift-outline" size={20} color={mesh.green700} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: mesh.ink500, fontSize: 11, fontWeight: "700", marginBottom: 2 }}>{fieldLabel.birthday}</Text>
+                    <Text style={{ color: birthday ? mesh.green700 : mesh.ink400, fontSize: 14 }}>
+                      {birthday ? formatDateShort(birthday) : "Tap to set"}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => { removeField("birthday"); setBirthday(null); }} hitSlop={8}>
+                    <Ionicons name="close-circle-outline" size={20} color={mesh.ink400} />
+                  </Pressable>
+                </Pressable>
+              );
+            }
+            const fieldState: Record<Exclude<AddField, "birthday">, [string, (v: string) => void]> = {
+              howYouMet: [howYouMet, setHowYouMet],
+              address:   [address,   setAddress],
+              social:    [social,    setSocial],
+              note:      [note,      setNote],
+            };
+            const [val, setter] = fieldState[f as Exclude<AddField, "birthday">];
+            return (
+              <AdditionalRow
+                key={f}
+                icon={fieldIcon[f]}
+                label={fieldLabel[f]}
+                value={val}
+                onChangeText={setter}
+                multiline={f === "note"}
+                onRemove={() => removeField(f)}
+                last={isLast}
+              />
+            );
+          })}
         </FormSection>
 
+        {/* ── Add field row ── */}
+        {availableFields.length > 0 && (
+          <View ref={addFieldRef} collapsable={false}>
+            <Pressable onPress={openPopup} style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4, paddingVertical: 6 }}>
+              <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 12, height: 32, justifyContent: "center", width: 32 }}>
+                <Ionicons name="add" size={18} color={mesh.green700} />
+              </View>
+              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addField") || "Add field"}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Special Days ── */}
         <FormSection title={t("specialDays")}>
-          <View style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+          {specialDays.map((sd, i) => (
+            <SpecialDayRow
+              key={sd.id}
+              item={sd}
+              onChangeTitle={(v) => setSpecialDays(prev => prev.map((s, j) => j === i ? { ...s, title: v } : s))}
+              onPressDate={() => openDatePicker({ kind: "specialDay", index: i })}
+              onRemove={() => setSpecialDays(prev => prev.filter((_, j) => j !== i))}
+              last={false}
+            />
+          ))}
+          <Pressable
+            onPress={() => setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }])}
+            style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}
+          >
             <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
-              <Ionicons name="calendar-outline" size={20} color={mesh.green700} />
+              <Ionicons name="add-circle-outline" size={20} color={mesh.green700} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "800" }}>{t("addSpecialDay")}</Text>
-              <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{t("addSpecialHint")}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
-          </View>
-        </FormSection>
-
-        <FormSection title={t("moreInfo")}>
-          <FormRow icon="location-outline" label={t("address")} value="" placeholder={t("enterAddress")} />
-          <FormRow icon="globe-outline" label={t("social")} value="" placeholder="Facebook, LinkedIn, Zalo..." />
-          <FormRow icon="document-text-outline" label={t("moreNote")} value="" placeholder={t("enterMoreNote")} last />
+            <Text style={{ color: mesh.green700, fontSize: 14, fontWeight: "700" }}>{t("addSpecialDay") || "Add special day"}</Text>
+          </Pressable>
         </FormSection>
 
         <View style={{ marginBottom: 24, marginTop: 16 }}>
           <TipCard>{t("canAddLater")}</TipCard>
         </View>
-      </MeshScroll>
+      </ScrollView>
 
+      {/* ── Status picker bottom sheet ── */}
       <StatusPicker open={statusOpen} value={status} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
+
+      {/* ── Add field popup (transparent, anchored above button) ── */}
+      <Modal visible={addFieldOpen} transparent animationType="none" onRequestClose={() => setAddFieldOpen(false)}>
+        <Pressable style={{ flex: 1 }} onPress={() => setAddFieldOpen(false)}>
+          <View style={{
+            position: "absolute", left: 20, right: 20, bottom: popupBtm,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 18, borderWidth: 1, borderColor: "rgba(6,69,50,0.10)",
+            shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24,
+            elevation: 8, paddingVertical: 6,
+          }}>
+            {availableFields.map((f, i) => (
+              <Pressable
+                key={f.key}
+                onPress={() => addField(f.key)}
+                style={{ alignItems: "center", flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: i < availableFields.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.06)" }}
+              >
+                <Ionicons name={f.icon} size={18} color={mesh.green700} />
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "600" }}>{f.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ── Date picker bottom sheet ── */}
+      <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={() => setDatePickerOpen(false)}>
+        <Pressable onPress={() => setDatePickerOpen(false)} style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
+          <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
+            <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
+              <Pressable onPress={() => setDatePickerOpen(false)}>
+                <Text style={{ color: mesh.ink500, fontSize: 16, fontWeight: "600" }}>{t("cancel") || "Cancel"}</Text>
+              </Pressable>
+              <Text style={{ color: mesh.green800, fontSize: 17, fontWeight: "800" }}>
+                {dateTarget?.kind === "birthday" ? (t("birthday") || "Birthday") : (t("specialDay") || "Special day")}
+              </Text>
+              <Pressable onPress={() => confirmDate(pickerValue ?? new Date())}>
+                <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "800" }}>{t("done") || "Done"}</Text>
+              </Pressable>
+            </View>
+            <WheelDatePicker value={pickerValue} onChange={setPickerValue} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </MeshScreen>
   );
 }
 
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View
       style={{
@@ -693,23 +1026,38 @@ function FormSection({ title, children }: { title: string; children: React.React
         shadowColor: "#064532",
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.05,
-        shadowRadius: 20
+        shadowRadius: 20,
       }}
     >
-      <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>{title.toUpperCase()}</Text>
-      <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>{children}</View>
+      <Text style={{ color: mesh.green800, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, marginBottom: 12 }}>
+        {title.toUpperCase()}
+      </Text>
+      <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 20, borderWidth: 1, overflow: "hidden" }}>
+        {children}
+      </View>
     </View>
   );
 }
 
-function FormRow({ icon, label, value, onChangeText, placeholder, last = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; onChangeText?: (value: string) => void; placeholder?: string; last?: boolean }) {
+function FormRow({
+  icon, label, value, onChangeText, placeholder, last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; value: string;
+  onChangeText?: (value: string) => void; placeholder?: string; last?: boolean;
+}) {
   return (
-    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
+    <View style={{ alignItems: "center", borderBottomWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingHorizontal: 12, paddingVertical: 12 }}>
       <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 14, height: 42, justifyContent: "center", width: 42 }}>
         <Ionicons name={icon} size={20} color={mesh.green700} />
       </View>
-      <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", width: 110 }}>{label}</Text>
-      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8C9691" style={{ color: mesh.ink900, flex: 1, fontSize: 14, textAlign: "right" }} />
+      <Text style={{ color: "#073F33", fontSize: 14, fontWeight: "800", width: 90 }}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#8C9691"
+        style={{ color: mesh.ink900, flex: 1, fontSize: 14, textAlign: "right" }}
+      />
     </View>
   );
 }
@@ -721,21 +1069,18 @@ function StatusPicker({ open, value, onClose, onPick, t }: { open: boolean; valu
         <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginBottom: 14 }} />
           <Text style={{ textAlign: "center", color: mesh.green800, fontSize: 18, fontWeight: "800", marginBottom: 16 }}>{t("chooseStatus")}</Text>
-          {statuses.map((status) => (
+          {statuses.map((s) => (
             <Pressable
-              key={status.id}
-              onPress={() => {
-                onPick(status.id);
-                onClose();
-              }}
+              key={s.id}
+              onPress={() => { onPick(s.id); onClose(); }}
               style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: mesh.line }}
             >
-              <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: status.color }} />
+              <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: s.color }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{status.name}</Text>
-                <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{status.desc}</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>{s.name}</Text>
+                <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>{s.desc}</Text>
               </View>
-              {value === status.id ? <Ionicons name="checkmark" size={18} color={mesh.green700} /> : null}
+              {value === s.id ? <Ionicons name="checkmark" size={18} color={mesh.green700} /> : null}
             </Pressable>
           ))}
         </Pressable>
