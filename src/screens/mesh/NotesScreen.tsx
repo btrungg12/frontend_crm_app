@@ -395,7 +395,7 @@ export function NotesScreen({ t, lang: _lang, nav }: Props) {
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
-        contentContainerStyle={{ paddingBottom: 145 }}
+        contentContainerStyle={{ paddingBottom: 180 }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={40} color={mesh.ink200} />

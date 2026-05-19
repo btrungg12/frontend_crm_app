@@ -301,7 +301,7 @@ export function BottomNav({
         minHeight: 78,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: "rgba(255,255,255,0.96)",
+        backgroundColor: "#FFFFFF",
         borderRadius: 34,
         borderWidth: 1,
         borderColor: "rgba(6,69,50,0.08)",
