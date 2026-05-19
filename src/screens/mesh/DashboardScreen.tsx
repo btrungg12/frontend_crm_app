@@ -244,13 +244,47 @@ function getContactFromNote(noteValue: unknown): Contact | null {
   const note = asRecord(noteValue);
   if (!note) return null;
 
-  const contactRaw = asRecord(note.contact);
-  if (!contactRaw && !note.contactId) return null;
+  const contactRaw =
+    asRecord(note.contact) ??
+    asRecord(note.person) ??
+    asRecord(note.contactId) ??
+    asRecord(note.personId);
 
-  const id = String(contactRaw?._id ?? contactRaw?.id ?? note.contactId ?? "");
-  const name = String(contactRaw?.name ?? note.contactName ?? "Unknown person");
+  const idCandidate =
+    contactRaw?._id ??
+    contactRaw?.id ??
+    note.contactId ??
+    note.personId ??
+    "";
 
-  if (!id && !name) return null;
+  const rawName =
+    contactRaw?.name ??
+    note.contactName ??
+    note.personName ??
+    "";
+
+  const name =
+    typeof rawName === "string" ? rawName.trim() : "";
+
+  // Critical: Do not create fake Unknown contact in Recent Contacts.
+  // If backend does not provide contact name, skip this note.
+  if (!name) {
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.warn(
+        "Dashboard recentNotes item missing populated contact/name. Skipping recent contact from note.",
+        {
+          noteId: note._id ?? note.id,
+          contactId: note.contactId,
+        }
+      );
+    }
+    return null;
+  }
+
+  const id =
+    typeof idCandidate === "string"
+      ? idCandidate
+      : String(idCandidate ?? "");
 
   return {
     id: id || name,
@@ -303,6 +337,10 @@ function buildRecentActivityContacts(
   });
 
   return Array.from(byId.values())
+    .filter((contact) => {
+      const name = contact.name?.trim().toLowerCase();
+      return Boolean(name) && name !== "unknown person" && name !== "unknown";
+    })
     .sort((a, b) => (b.activityAt?.getTime() ?? 0) - (a.activityAt?.getTime() ?? 0))
     .slice(0, 4);
 }
