@@ -11,7 +11,7 @@ import {
   NavFn,
   TFn,
 } from "../../mesh/MeshComponents";
-import { deleteNote, getNoteById } from "../../api/noteApi";
+import { deleteNote, getNote } from "../../api/noteApi";
 import { contactById, Lang, notes as mockNotes } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -326,7 +326,7 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
       return () => { active = false; };
     }
 
-    getNoteById(noteId)
+    getNote(noteId)
       .then((response) => {
         if (!active) return;
         const normalized = normalizeApiNote(response);
@@ -338,7 +338,7 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
       })
       .catch((err) => {
         if (!active) return;
-        // ApiError with status 404 → endpoint may not exist on this backend yet
+        // Handle 404 response from GET /api/notes/:id
         const status = (err as { status?: number })?.status;
         if (status === 404) {
           setError("Note not found.");

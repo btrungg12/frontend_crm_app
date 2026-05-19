@@ -64,6 +64,12 @@ export async function getNoteById(noteId: string) {
   return await apiRequest(`/notes/${noteId}`);
 }
 
+export async function getNote(noteId: string) {
+  return await apiRequest(`/notes/${noteId}`, {
+    method: "GET",
+  });
+}
+
 export async function createNote(payload: Record<string, unknown>) {
   return await apiRequest("/notes", {
     body: payload,
