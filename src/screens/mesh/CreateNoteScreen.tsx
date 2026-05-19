@@ -20,6 +20,10 @@ type Props = {
   edit?: boolean;
   noteId?: string;
   initialPerson?: string;
+  /** "sheet" = rendered inside a QuickCreateSheet bottom sheet */
+  presentation?: "page" | "sheet";
+  onCloseSheet?: () => void;
+  onCreated?: () => void;
 };
 
 const TITLE_MAX_LENGTH = 100;
@@ -166,9 +170,10 @@ function parseNoteDraftFromComposer(
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPerson }: Props) {
+export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPerson, presentation = "page", onCloseSheet, onCreated }: Props) {
   const insets = useSafeAreaInsets();
-  const isVi = lang === "vi";
+  const isVi   = lang === "vi";
+  const isSheet = presentation === "sheet";
 
   // ── Editor state
   const [firstLine, setFirstLine] = useState("");
@@ -325,7 +330,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         } else if (hadReminder) {
           await deleteNoteReminder(noteId);
         }
-        nav("noteDetail", { id: noteId });
+        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("noteDetail", { id: noteId }); }
       } else {
         await submitCreateNote({
           contactId:       person || undefined,
@@ -336,7 +341,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           reminderEnabled: Boolean(reminderAt),
           remindAt:        reminderAt?.toISOString(),
         });
-        nav("notes");
+        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("notes"); }
       }
     } catch (err) {
       setSaveError(err instanceof Error && err.message ? err.message : "Could not save note.");
@@ -382,7 +387,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 
   return (
     <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
-      <StatusBar style="light" />
+      {!isSheet && <StatusBar style="light" />}
 
       {/* ── Full-screen mesh background — dark green top fading to white ── */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
@@ -439,15 +444,15 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingBottom: isSheet ? insets.bottom + 80 : insets.bottom + 110 }}
       >
         {/* ── Header (transparent — background comes from root) ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 24 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: isSheet ? 16 : insets.top + 14, paddingBottom: 24 }}>
 
           {/* Top bar */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Pressable
-              onPress={() => edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard")}
+              onPress={() => isSheet ? onCloseSheet?.() : (edit && noteId ? nav("noteDetail", { id: noteId }) : nav("dashboard"))}
               style={{
                 width: 46, height: 46, borderRadius: 23,
                 backgroundColor: "#FFFFFF",

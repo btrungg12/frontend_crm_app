@@ -10,6 +10,7 @@ import { getStatuses } from "../../api/statusApi";
 import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
+import { CreateNoteScreen } from "./CreateNoteScreen";
 import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { Contact, Lang, Status, statuses as mockStatuses, statusById } from "../../mesh/meshData";
@@ -368,12 +369,15 @@ export function ContactsScreen({ t, lang, nav }: Props) {
 
       <QuickCreateSheet
         open={quickCreateMode !== null}
-        mode={quickCreateMode}
         onClose={() => setQuickCreateMode(null)}
-        t={t}
-        lang={lang}
-        nav={nav}
-      />
+      >
+        {quickCreateMode === "note" && (
+          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+        {quickCreateMode === "contact" && (
+          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+      </QuickCreateSheet>
     </MeshScreen>
   );
 }
@@ -723,7 +727,18 @@ function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ioni
   );
 }
 
-export function CreateContactScreen({ t, nav, edit = false, contactId }: Props & { edit?: boolean; contactId?: string }) {
+export function CreateContactScreen({
+  t, nav, edit = false, contactId,
+  presentation = "page", onCloseSheet, onCreated,
+}: Props & {
+  edit?: boolean;
+  contactId?: string;
+  /** "sheet" = rendered inside a QuickCreateSheet bottom sheet */
+  presentation?: "page" | "sheet";
+  onCloseSheet?: () => void;
+  onCreated?: () => void;
+}) {
+  const isSheet = presentation === "sheet";
   const insets = useSafeAreaInsets();
 
   // ── Statuses from API (fallback: mock) ────────────────────────────────────
@@ -986,10 +1001,10 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
 
       if (edit && contactId) {
         await updateContact(contactId, payload);
-        nav("contactDetail", { id: contactId });
+        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("contactDetail", { id: contactId }); }
       } else {
         await createContact(payload);
-        nav("contacts");
+        if (isSheet) { onCreated?.(); onCloseSheet?.(); } else { nav("contacts"); }
       }
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : "Failed to save contact");
@@ -1057,9 +1072,9 @@ export function CreateContactScreen({ t, nav, edit = false, contactId }: Props &
       />
 
       {/* ── Top bar ── */}
-      <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
+      <View style={{ paddingTop: isSheet ? 16 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
+          <HeaderCircleBtn icon="chevron-back" onPress={() => isSheet ? onCloseSheet?.() : nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
           <Text
             numberOfLines={1}
             style={{ position: "absolute", left: 96, right: 96, textAlign: "center", color: mesh.green800, fontSize: 20, fontWeight: "900", letterSpacing: -0.3 }}
@@ -1552,12 +1567,15 @@ export function ContactsEmptyScreen({ t, lang, nav }: Props) {
 
       <QuickCreateSheet
         open={quickCreateMode !== null}
-        mode={quickCreateMode}
         onClose={() => setQuickCreateMode(null)}
-        t={t}
-        lang={lang}
-        nav={nav}
-      />
+      >
+        {quickCreateMode === "note" && (
+          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+        {quickCreateMode === "contact" && (
+          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+      </QuickCreateSheet>
     </MeshScreen>
   );
 }

@@ -9,6 +9,8 @@ import { extractArray, normalizeApiStatus } from "../../api/screenAdapters";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { CreateNoteScreen } from "./CreateNoteScreen";
+import { CreateContactScreen } from "./ContactsScreen";
 import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -124,12 +126,15 @@ export function StatusScreen({ t, lang, nav }: Props) {
 
       <QuickCreateSheet
         open={quickCreateMode !== null}
-        mode={quickCreateMode}
         onClose={() => setQuickCreateMode(null)}
-        t={t}
-        lang={lang}
-        nav={nav}
-      />
+      >
+        {quickCreateMode === "note" && (
+          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+        {quickCreateMode === "contact" && (
+          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+      </QuickCreateSheet>
     </MeshScreen>
   );
 }

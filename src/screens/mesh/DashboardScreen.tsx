@@ -10,6 +10,8 @@ import { DashboardMeshBackground } from "../../components/DashboardMeshBackgroun
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
+import { CreateNoteScreen } from "./CreateNoteScreen";
+import { CreateContactScreen } from "./ContactsScreen";
 import { Contact, Lang, statusById, Upcoming, upcoming as mockUpcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { getToken } from "../../storage/tokenStorage";
@@ -337,12 +339,15 @@ export function DashboardScreen({ t, lang, nav }: Props) {
 
       <QuickCreateSheet
         open={quickCreateMode !== null}
-        mode={quickCreateMode}
         onClose={() => setQuickCreateMode(null)}
-        t={t}
-        lang={lang}
-        nav={nav}
-      />
+      >
+        {quickCreateMode === "note" && (
+          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+        {quickCreateMode === "contact" && (
+          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+      </QuickCreateSheet>
     </MeshScreen>
   );
 }

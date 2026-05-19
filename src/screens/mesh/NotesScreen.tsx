@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, NavFn, TFn } from "../../mesh/MeshComponents";
+import { CreateNoteScreen } from "./CreateNoteScreen";
+import { CreateContactScreen } from "./ContactsScreen";
 import { Lang, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 
@@ -430,12 +432,15 @@ export function NotesScreen({ t, lang, nav }: Props) {
 
       <QuickCreateSheet
         open={quickCreateMode !== null}
-        mode={quickCreateMode}
         onClose={() => setQuickCreateMode(null)}
-        t={t}
-        lang={lang}
-        nav={nav}
-      />
+      >
+        {quickCreateMode === "note" && (
+          <CreateNoteScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+        {quickCreateMode === "contact" && (
+          <CreateContactScreen t={t} lang={lang} nav={nav} presentation="sheet" onCloseSheet={() => setQuickCreateMode(null)} />
+        )}
+      </QuickCreateSheet>
     </View>
   );
 }
