@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { PropsWithChildren, useRef } from "react";
-import { Animated, Modal, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
+import { Animated, Modal, Platform, Pressable, ScrollView, Text, TextInput, TextStyle, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBackground } from "../components/AppBackground";
@@ -277,6 +277,9 @@ export function BottomNav({
   withFab?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const bottomOffset = Platform.OS === "ios"
+    ? Math.max(insets.bottom - 18, 8)
+    : 12;
   const triggerHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
@@ -294,7 +297,7 @@ export function BottomNav({
         position: "absolute",
         left: 20,
         right: 20,
-        bottom: insets.bottom + 12,
+        bottom: bottomOffset,
         minHeight: 78,
         paddingVertical: 8,
         paddingHorizontal: 12,
