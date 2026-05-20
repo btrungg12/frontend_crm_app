@@ -658,6 +658,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
   const insets = useSafeAreaInsets();
   const [contact, setContact] = useState<Contact | null>(null);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("all");
@@ -682,9 +683,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
     Promise.all([
       getContactById(contactId),
-      getContactTimeline(contactId).catch(() => [])
+      getContactTimeline(contactId).catch(() => []),
+      getStatuses().catch(() => null)
     ])
-      .then(([contactRes, timelineRes]) => {
+      .then(([contactRes, timelineRes, statusesRes]) => {
         if (!active) return;
         const normalized = normalizeApiContact(extractContactData(contactRes));
         if (!normalized) { setError("Contact not found."); return; }
@@ -692,6 +694,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         setTimelineItems(
           extractTimelineArray(timelineRes).map(normalizeTimelineItem).filter(Boolean) as TimelineItem[]
         );
+        if (statusesRes) {
+          const list = extractArray(statusesRes, "statuses").map(normalizeApiStatus).filter(Boolean) as Status[];
+          if (list.length > 0) setApiStatuses(list);
+        }
       })
       .catch((err) => {
         if (!active) return;
@@ -709,7 +715,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     { id: "reminder", label: t("tlReminders") }
   ];
   const filtered = tab === "all" ? timelineItems : timelineItems.filter((item) => item.kind === tab);
-  const statusMeta = contact ? mockStatuses.find((status) => status.id === contact.status) : undefined;
+  // Look up status: real API statuses first, then mock statuses, then undefined (never show raw ObjectId)
+  const statusMeta = contact
+    ? (apiStatuses.find((s) => s.id === contact.status) ?? mockStatuses.find((s) => s.id === contact.status))
+    : undefined;
 
   const handleDeleteContact = async () => {
     if (deleting) return;
@@ -833,7 +842,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
           <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
             <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
-            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name || contact.status || "-"}</Text>
+            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name || "-"}</Text>
           </View>
         </View>
       </View>

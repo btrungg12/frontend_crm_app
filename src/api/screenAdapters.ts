@@ -92,7 +92,12 @@ export function normalizeApiContact(value: unknown): Contact | null {
     const r = asRecord(sd);
     if (!r) return [];
     const sdId   = text(r._id ?? r.id ?? String(Math.random()));
-    const sdName = text(r.name ?? r.occasion ?? r.title, "Special day");
+    // Try every plausible field name the backend might use for the occasion label
+    const sdNameRaw = text(r.name ?? r.occasion ?? r.title ?? r.type ?? r.label ?? r.category ?? r.eventName ?? r.event);
+    // Capitalize first letter for generic type strings like "birthday" → "Birthday"
+    const sdName = sdNameRaw
+      ? sdNameRaw.charAt(0).toUpperCase() + sdNameRaw.slice(1)
+      : "Special day";
     const sdDate = typeof r.date === "string" ? r.date : "";
     if (!sdDate) return [];
     return [{ id: sdId, name: sdName, date: sdDate, repeatYearly: r.repeatYearly ? true : undefined }];
