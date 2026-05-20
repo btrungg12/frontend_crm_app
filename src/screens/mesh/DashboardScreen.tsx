@@ -1,15 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
-import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
+import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, MeshCard, MeshHeader, MeshScreen, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
-import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
+import { Contact, Lang, Status, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { useAppData } from "../../state/AppDataContext";
 
@@ -495,8 +495,9 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
   const [userName, setUserName] = useState("User");
   const [unreadCount, setUnreadCount] = useState(0);
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
+  const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
 
-  const { dashboard, profile, refreshDashboard, refreshProfile } = useAppData();
+  const { dashboard, profile, statuses, refreshDashboard, refreshProfile, refreshStatuses } = useAppData();
 
   function openUpcoming(item: Upcoming) {
     if (item.kind === "reminder" && item.noteId) {
@@ -510,19 +511,21 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
     }
   }
 
-  // Load dashboard and profile data from cache on mount
+  // Load dashboard, profile, and statuses from cache on mount
   useEffect(() => {
     refreshDashboard(false);
     refreshProfile(false);
-  }, [refreshDashboard, refreshProfile]);
+    refreshStatuses(false);
+  }, [refreshDashboard, refreshProfile, refreshStatuses]);
 
   // Force refresh when refresh prop changes
   useEffect(() => {
     if (refresh) {
       refreshDashboard(true);
       refreshProfile(true);
+      refreshStatuses(true);
     }
-  }, [refresh, refreshDashboard, refreshProfile]);
+  }, [refresh, refreshDashboard, refreshProfile, refreshStatuses]);
 
   // Process dashboard.data when it updates
   useEffect(() => {
@@ -572,6 +575,17 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
     }
   }, [dashboard.data, profile.data, lang]);
 
+  // Process statuses.data when it updates
+  useEffect(() => {
+    if (!statuses.data) return;
+
+    const normalized = extractArray(statuses.data, "statuses")
+      .map(normalizeApiStatus)
+      .filter(Boolean) as Status[];
+
+    setApiStatuses(normalized);
+  }, [statuses.data]);
+
   // Update error state from context
   useEffect(() => {
     if (dashboard.error || profile.error) {
@@ -583,6 +597,41 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
   const isInitialLoading =
     (dashboard.loading && !dashboard.data) ||
     (profile.loading && !profile.data);
+
+  // Build status lookup from API statuses
+  const statusLookup = useMemo(() => {
+    const map = new Map<string, Status>();
+    apiStatuses.forEach((status) => {
+      if (status.id) map.set(String(status.id), status);
+      if (status.name) map.set(String(status.name).toLowerCase(), status);
+    });
+    return map;
+  }, [apiStatuses]);
+
+  // Helper to get recent contact status from API statuses
+  function getRecentContactStatus(contact: RecentActivityContact): Status | null {
+    const rawStatus = contact.status ?? "";
+    const rawStatusName = (contact as any).statusName ?? "";
+
+    const byId = rawStatus ? statusLookup.get(String(rawStatus)) : null;
+    if (byId) return byId;
+
+    const byName = rawStatusName ? statusLookup.get(String(rawStatusName).toLowerCase()) : null;
+    if (byName) return byName;
+
+    if (rawStatusName) {
+      return {
+        id: String(rawStatusName),
+        name: String(rawStatusName),
+        color: (contact as any).statusColor ?? mesh.orange,
+        count: 0,
+        desc: "",
+        icon: "people",
+      };
+    }
+
+    return null;
+  }
 
   return (
     <MeshScreen>
@@ -700,17 +749,78 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
             <StateCard label="No recent contacts from API." />
           ) : (
             <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
-              {recent.map((contact) => (
-                <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 68, alignItems: "center", gap: 5 }}>
-                  <GradientAvatar name={contact.name} statusColor={contact.statusColor ?? statusById(contact.status)?.color} size={64} />
-                  <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>
-                    {contact.name.split(" ").slice(-2).join(" ")}
-                  </Text>
-                  <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink400, fontSize: 10, lineHeight: 13 }}>
-                    {contact.activityLabel || ""}
-                  </Text>
-                </Pressable>
-              ))}
+              {recent.map((contact) => {
+                const contactStatus = getRecentContactStatus(contact);
+                const statusName = contactStatus?.name ?? (contact as any).statusName ?? "";
+                const statusColor = contact.statusColor ?? contactStatus?.color ?? mesh.orange;
+
+                return (
+                  <Pressable
+                    key={contact.id}
+                    onPress={() => nav("contactDetail", { id: contact.id })}
+                    style={{ width: 68, alignItems: "center", gap: 3 }}
+                  >
+                    <GradientAvatar name={contact.name} statusColor={statusColor} size={64} />
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        textAlign: "center",
+                        color: mesh.ink700,
+                        fontSize: mesh.font.caption,
+                        fontWeight: "700",
+                        lineHeight: 15,
+                      }}
+                    >
+                      {contact.name.split(" ").slice(-2).join(" ")}
+                    </Text>
+                    {statusName ? (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 3,
+                          maxWidth: 68,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 4,
+                            height: 4,
+                            borderRadius: 999,
+                            backgroundColor: statusColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            textAlign: "center",
+                            color: mesh.ink500,
+                            fontSize: 8.5,
+                            lineHeight: 11,
+                            fontWeight: "500",
+                            maxWidth: 54,
+                          }}
+                        >
+                          {statusName}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        textAlign: "center",
+                        color: mesh.ink400,
+                        fontSize: 10,
+                        lineHeight: 13,
+                      }}
+                    >
+                      {contact.activityLabel || ""}
+                    </Text>
+                  </Pressable>
+                );
+              })}
               <Pressable onPress={() => nav("createContact")} style={{ width: 64, alignItems: "center", gap: 6 }}>
                 <View style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderStyle: "dashed", borderColor: mesh.green300, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.04)" }}>
                   <Ionicons name="add" size={24} color={mesh.green700} />
