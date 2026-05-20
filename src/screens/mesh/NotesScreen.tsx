@@ -22,6 +22,9 @@ import { Lang, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { useAppData } from "../../state/AppDataContext";
 
+// Module-level asset reference to avoid re-evaluation on each render
+const leaf2Png = require("../../../assets/leaf_2.png");
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type NoteFilter = "all" | "reminders" | "pinned";
@@ -324,8 +327,7 @@ function NotesHeader({
       {/* Leaf decoration */}
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <Image
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require("../../../assets/leaf_2.png")}
+          source={leaf2Png}
           style={styles.headerLeaf}
         />
       </View>
