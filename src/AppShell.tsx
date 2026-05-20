@@ -56,6 +56,40 @@ function initialRoute(): Route {
 
 const authRoutes = new Set(["", "welcome", "login", "loginErr", "register", "registerErr", "verifyEmail", "verifyPhone", "verifyPhoneR", "verifySuccess", "forgot", "reset", "loading"]);
 
+const protectedRoutes = new Set([
+  "dashboard",
+  "contacts",
+  "notes",
+  "status",
+  "settings",
+  "notifications",
+  "contactDetail",
+  "noteDetail",
+  "noteDetailB",
+  "createContact",
+  "editContact",
+  "createNote",
+  "editNote",
+  "createStatus",
+  "search",
+  "allUpcoming",
+  "recentContacts",
+  "editProfile",
+  "changePassword",
+  "language",
+  "notifPrefs",
+  "contactsEmpty",
+  "notesEmpty",
+  "statusEmpty",
+  "notifEmpty",
+  "dashboardEmpty",
+  "statusInUse",
+  "confirmDeleteNote",
+  "confirmDeleteContact",
+  "confirmDeleteStatus",
+  "confirmDeleteSpecial"
+]);
+
 function routeForAuth(token: string | null) {
   const route = initialRoute();
 
@@ -69,6 +103,7 @@ function routeForAuth(token: string | null) {
 export function AppShell() {
   const [lang] = useState<Lang>("en");
   const [stack, setStack] = useState<Route[]>([{ name: "loading" }]);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const t = useMemo(() => makeT(lang), [lang]);
   const route = stack[stack.length - 1];
 
@@ -77,6 +112,8 @@ export function AppShell() {
 
     getToken().then((token) => {
       if (!active) return;
+      const authed = Boolean(token);
+      setIsAuthed(authed);
       setStack([routeForAuth(token)]);
       if (token) {
         registerPushToken().catch(() => undefined);
@@ -91,7 +128,10 @@ export function AppShell() {
   useEffect(() => {
     if (typeof window === "undefined" || !("location" in window) || !window.location) return undefined;
     const onHashChange = () => {
-      getToken().then((token) => setStack([routeForAuth(token)]));
+      getToken().then((token) => {
+        setIsAuthed(Boolean(token));
+        setStack([routeForAuth(token)]);
+      });
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -104,8 +144,27 @@ export function AppShell() {
     }
 
     if (name === "logout") {
+      setIsAuthed(false);
+
+      // Clear any URL hash so a refresh doesn't land on a protected route
+      if (typeof window !== "undefined" && "history" in window && window.location) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+
       setStack([{ name: "welcome" }]);
       return;
+    }
+
+    // Block navigation to protected routes when not authenticated
+    if (protectedRoutes.has(name) && isAuthed === false) {
+      setStack([{ name: "welcome" }]);
+      return;
+    }
+
+    // Mark as authed when a protected route is successfully navigated to
+    // (covers the case where login/register calls nav("dashboard") before isAuthed is set)
+    if (name === "dashboard") {
+      setIsAuthed(true);
     }
 
     const tabRoots = new Set(["dashboard", "contacts", "notes", "status"]);
@@ -154,6 +213,18 @@ export function AppShell() {
     return () => subscription.remove();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Still loading token from storage — show loading screen
+  if (isAuthed === null) {
+    const common = { t, lang, nav };
+    return <LoadingScreen {...common} />;
+  }
+
+  // After logout (or on unauthenticated deep link), block protected routes
+  if (isAuthed === false && protectedRoutes.has(route.name)) {
+    const common = { t, lang, nav };
+    return <WelcomeScreen {...common} />;
+  }
 
   const common = { t, lang, nav };
   const noteId = (route.props?.id as string) || (route.props?.noteId as string);
@@ -257,7 +328,7 @@ export function AppShell() {
     case "dashboardEmpty":
       return <DashboardEmptyScreen {...common} />;
     default:
-      return <MissingParamScreen title="Screen not found" onBack={() => nav("dashboard")} />;
+      return <MissingParamScreen title="Screen not found" onBack={() => setStack([{ name: isAuthed ? "dashboard" : "welcome" }])} />;
   }
 }
 
