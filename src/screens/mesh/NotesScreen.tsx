@@ -136,24 +136,28 @@ function padTwo(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function formatReminderLabel(d: Date, today: Date): string {
+function formatReminderLabel(d: Date, today: Date, lang: Lang): string {
+  const isVi = lang === "vi";
   const diffDays = Math.round(
     (startOfDay(d).getTime() - startOfDay(today).getTime()) / 86_400_000
   );
   const time = `${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
-  if (diffDays === 0) return `${time}, Hôm nay`;
-  if (diffDays === 1) return `${time}, Ngày mai`;
-  const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  if (diffDays === 0) return `${time}, ${isVi ? "Hôm nay" : "Today"}`;
+  if (diffDays === 1) return `${time}, ${isVi ? "Ngày mai" : "Tomorrow"}`;
+  const daysVi = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const daysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const days = isVi ? daysVi : daysEn;
   return `${time}, ${days[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
 }
 
-function formatCreatedLabel(d: Date, today: Date): string {
+function formatCreatedLabel(d: Date, today: Date, lang: Lang): string {
+  const isVi = lang === "vi";
   const diffDays = Math.round(
     (startOfDay(today).getTime() - startOfDay(d).getTime()) / 86_400_000
   );
-  if (diffDays === 0) return "Hôm nay";
-  if (diffDays === 1) return "Hôm qua";
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays === 0) return isVi ? "Hôm nay" : "Today";
+  if (diffDays === 1) return isVi ? "Hôm qua" : "Yesterday";
+  if (diffDays < 7) return isVi ? `${diffDays} ngày trước` : `${diffDays} days ago`;
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }
 
@@ -177,17 +181,32 @@ function matchSearch(note: NoteItem, q: string): boolean {
   );
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  today: "HÔM NAY",
-  yesterday: "HÔM QUA",
-  thisweek: "TUẦN NÀY",
-  older: "TRƯỚC ĐÓ",
-};
+function sectionLabel(key: string, lang: Lang): string {
+  const isVi = lang === "vi";
+  const labels: Record<string, { en: string; vi: string }> = {
+    today: { en: "TODAY", vi: "HÔM NAY" },
+    yesterday: { en: "YESTERDAY", vi: "HÔM QUA" },
+    thisweek: { en: "THIS WEEK", vi: "TUẦN NÀY" },
+    older: { en: "EARLIER", vi: "TRƯỚC ĐÓ" },
+  };
+  return isVi ? labels[key]?.vi ?? key : labels[key]?.en ?? key;
+}
+
 const SECTION_ORDER = ["today", "yesterday", "thisweek", "older"] as const;
 
 // ─── NoteCard ─────────────────────────────────────────────────────────────────
 
-function NoteCard({ note, onPress, highlighted }: { note: NoteItem; onPress: () => void; highlighted?: boolean }) {
+function NoteCard({
+  note,
+  lang,
+  onPress,
+  highlighted,
+}: {
+  note: NoteItem;
+  lang: Lang;
+  onPress: () => void;
+  highlighted?: boolean;
+}) {
   const status = statusById(note.person.statusId);
 
   return (
@@ -244,14 +263,14 @@ function NoteCard({ note, onPress, highlighted }: { note: NoteItem; onPress: () 
             <View style={styles.reminderChip}>
               <Ionicons name="alarm-outline" size={11} color={mesh.green700} />
               <Text style={styles.reminderChipText}>
-                {formatReminderLabel(note.reminderAt, TODAY)}
+                {formatReminderLabel(note.reminderAt, TODAY, lang)}
               </Text>
             </View>
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Ionicons name="time-outline" size={12} color={mesh.ink300} />
               <Text style={{ color: mesh.ink400, fontSize: mesh.font.caption }}>
-                {formatCreatedLabel(note.createdAt, TODAY)}
+                {formatCreatedLabel(note.createdAt, TODAY, lang)}
               </Text>
             </View>
           )}
@@ -344,18 +363,22 @@ function NotesHeader({
 function FilterRow({
   filter,
   sort,
+  lang,
   onFilter,
   onSort,
 }: {
   filter: NoteFilter;
   sort: NoteSort;
+  lang: Lang;
   onFilter: (f: NoteFilter) => void;
   onSort: (s: NoteSort) => void;
 }) {
+  const isVi = lang === "vi";
+
   const filters: { id: NoteFilter; label: string }[] = [
-    { id: "all",       label: "Tất cả" },
-    { id: "reminders", label: "Nhắc nhở" },
-    { id: "pinned",    label: "Đã ghim" },
+    { id: "all", label: isVi ? "Tất cả" : "All" },
+    { id: "reminders", label: isVi ? "Nhắc nhở" : "Reminders" },
+    { id: "pinned", label: isVi ? "Đã ghim" : "Pinned" },
   ];
 
   return (
@@ -389,7 +412,9 @@ function FilterRow({
           color={mesh.ink700}
         />
         <Text style={styles.chipText}>
-          {sort === "newest" ? "Mới nhất" : "Cũ nhất"}
+          {sort === "newest"
+            ? isVi ? "Mới nhất" : "Newest"
+            : isVi ? "Cũ nhất" : "Oldest"}
         </Text>
       </Pressable>
     </View>
@@ -476,8 +501,8 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
 
     return SECTION_ORDER
       .filter((key) => (groups[key]?.length ?? 0) > 0)
-      .map((key) => ({ key, title: SECTION_LABELS[key], data: groups[key] }));
-  }, [filter, sort, search, apiNotes]);
+      .map((key) => ({ key, title: sectionLabel(key, lang), data: groups[key] }));
+  }, [filter, sort, search, apiNotes, lang]);
 
   useEffect(() => {
     const id =
@@ -495,7 +520,7 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
     <View style={styles.root}>
       {/* Header and filter are fixed above the list — not inside ListHeaderComponent */}
       <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
-      <FilterRow filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
+      <FilterRow filter={filter} sort={sort} lang={lang} onFilter={setFilter} onSort={setSort} />
 
       {isInitialLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -520,15 +545,21 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="document-text-outline" size={40} color={mesh.ink200} />
-              <Text style={styles.emptyTitle}>Chưa có ghi chú</Text>
-              <Text style={styles.emptyDesc}>Ghi lại những điều quan trọng về mọi người.</Text>
+              <Text style={styles.emptyTitle}>
+                {lang === "vi" ? "Chưa có ghi chú" : "No notes yet"}
+              </Text>
+              <Text style={styles.emptyDesc}>
+                {lang === "vi"
+                  ? "Ghi lại những điều quan trọng về mọi người."
+                  : "Capture important details about people."}
+              </Text>
             </View>
           }
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionLabel}>{section.title}</Text>
           )}
           renderItem={({ item }) => (
-            <NoteCard note={item} highlighted={activeHighlightId === item.id} onPress={() => nav("noteDetail", { id: item.id })} />
+            <NoteCard note={item} lang={lang} highlighted={activeHighlightId === item.id} onPress={() => nav("noteDetail", { id: item.id })} />
           )}
         />
       )}
