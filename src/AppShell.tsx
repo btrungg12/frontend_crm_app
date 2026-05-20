@@ -169,9 +169,9 @@ export function AppShell() {
     Animated.timing(transition, {
       toValue: 1,
       duration:
-        transitionType === "tab" ? 160 :
-        transitionType === "fade" ? 150 :
-        220,
+        transitionType === "tab" ? 90 :
+        transitionType === "fade" ? 130 :
+        210,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
@@ -284,7 +284,10 @@ export function AppShell() {
     flex: 1,
     opacity: transition.interpolate({
       inputRange: [0, 1],
-      outputRange: [0.92, 1],
+      outputRange:
+        transitionType === "tab"
+          ? [0.98, 1]
+          : [0.94, 1],
     }),
     transform: [
       {
@@ -292,22 +295,10 @@ export function AppShell() {
           inputRange: [0, 1],
           outputRange:
             transitionType === "push"
-              ? [28, 0]
+              ? [24, 0]
               : transitionType === "pop"
-                ? [-18, 0]
+                ? [-14, 0]
                 : [0, 0],
-        }),
-      },
-      {
-        translateY: transition.interpolate({
-          inputRange: [0, 1],
-          outputRange: transitionType === "tab" ? [10, 0] : [0, 0],
-        }),
-      },
-      {
-        scale: transition.interpolate({
-          inputRange: [0, 1],
-          outputRange: transitionType === "tab" ? [0.995, 1] : [1, 1],
         }),
       },
     ],
