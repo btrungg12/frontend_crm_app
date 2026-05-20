@@ -41,6 +41,7 @@ import { Lang, makeT } from "./mesh/meshData";
 import { getToken } from "./storage/tokenStorage";
 import { mesh } from "./mesh/meshTheme";
 import { registerPushToken } from "./utils/registerPushToken";
+import { useAppData } from "./state/AppDataContext";
 
 type Route = {
   name: string;
@@ -107,6 +108,7 @@ export function AppShell() {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const t = useMemo(() => makeT(lang), [lang]);
   const route = stack[stack.length - 1];
+  const { preloadAppData, clearAppData } = useAppData();
 
   useEffect(() => {
     let active = true;
@@ -118,13 +120,16 @@ export function AppShell() {
       setStack([routeForAuth(token)]);
       if (token) {
         registerPushToken().catch(() => undefined);
+        preloadAppData().catch(() => undefined);
+      } else {
+        clearAppData();
       }
     });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [preloadAppData, clearAppData]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("location" in window) || !window.location) return undefined;
@@ -146,6 +151,7 @@ export function AppShell() {
 
     if (name === "logout") {
       setIsAuthed(false);
+      clearAppData();
 
       // Clear any URL hash so a refresh doesn't land on a protected route
       if (typeof window !== "undefined" && "history" in window && window.location) {
@@ -166,6 +172,7 @@ export function AppShell() {
     // (covers the case where login/register calls nav("dashboard") before isAuthed is set)
     if (name === "dashboard") {
       setIsAuthed(true);
+      preloadAppData().catch(() => undefined);
     }
 
     const tabRoots = new Set(["dashboard", "contacts", "notes", "status"]);

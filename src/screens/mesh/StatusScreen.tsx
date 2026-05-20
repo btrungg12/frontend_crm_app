@@ -13,6 +13,7 @@ import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
 import { Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
+import { useAppData } from "../../state/AppDataContext";
 
 type Props = {
   t: TFn;
@@ -30,34 +31,37 @@ const statusIconMap = {
 
 export function StatusScreen({ t, lang, nav }: Props) {
   const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
+
+  const { statuses, refreshStatuses } = useAppData();
+
   const sourceStatuses = apiStatuses;
 
+  // Load statuses from cache on mount
   useEffect(() => {
-    let active = true;
+    refreshStatuses(false);
+  }, [refreshStatuses]);
 
-    getStatuses()
-      .then((response) => {
-        if (!active) return;
-        const normalized = extractArray(response, "statuses").map(normalizeApiStatus).filter(Boolean) as Status[];
-        setApiStatuses(normalized);
-        setError("");
-      })
-      .catch((err) => {
-        if (!active) return;
-        setApiStatuses([]);
-        setError(err instanceof Error && err.message ? err.message : "Cannot load statuses.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  // Process statuses.data when it updates
+  useEffect(() => {
+    if (!statuses.data) return;
 
-    return () => {
-      active = false;
-    };
-  }, []);
+    const normalized = extractArray(statuses.data, "statuses")
+      .map(normalizeApiStatus)
+      .filter(Boolean) as Status[];
+
+    setApiStatuses(normalized);
+    setError("");
+  }, [statuses.data]);
+
+  // Update error state from context
+  useEffect(() => {
+    if (statuses.error) setError(statuses.error);
+  }, [statuses.error]);
+
+  // Compute loading states — only show full loading if no data yet
+  const isInitialLoading = statuses.loading && !statuses.data;
 
   return (
     <MeshScreen>
@@ -70,7 +74,7 @@ export function StatusScreen({ t, lang, nav }: Props) {
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={150}>
         <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
-        {loading ? (
+        {isInitialLoading ? (
           <InlineState label="Loading statuses..." loading />
         ) : error ? (
           <InlineState label={error} error />

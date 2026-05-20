@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getNotes } from "../../api/noteApi";
 import { extractArray } from "../../api/screenAdapters";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { Avatar, BottomNav, BottomNavScrim, NavFn, TFn } from "../../mesh/MeshComponents";
@@ -21,6 +20,7 @@ import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
 import { Lang, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
+import { useAppData } from "../../state/AppDataContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -418,35 +418,41 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
 
   // API state
   const [apiNotes, setApiNotes] = useState<NoteItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadNotes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getNotes();
-      const normalized = extractArray(response, "notes")
-        .map(normalizeApiNoteToItem)
-        .filter(Boolean) as NoteItem[];
-      setApiNotes(normalized);
-      setError("");
-    } catch (err) {
-      setApiNotes([]);
-      setError(err instanceof Error && err.message ? err.message : "Cannot load notes.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { notes, refreshNotes } = useAppData();
 
+  // Load notes from cache on mount
   useEffect(() => {
-    loadNotes();
-  }, [loadNotes]);
+    refreshNotes(false);
+  }, [refreshNotes]);
 
+  // Force refresh when refresh prop changes
   useEffect(() => {
     if (refresh) {
-      loadNotes();
+      refreshNotes(true);
     }
-  }, [refresh, loadNotes]);
+  }, [refresh, refreshNotes]);
+
+  // Process notes.data when it updates
+  useEffect(() => {
+    if (!notes.data) return;
+
+    const normalized = extractArray(notes.data, "notes")
+      .map(normalizeApiNoteToItem)
+      .filter(Boolean) as NoteItem[];
+
+    setApiNotes(normalized);
+    setError("");
+  }, [notes.data]);
+
+  // Update error state from context
+  useEffect(() => {
+    if (notes.error) setError(notes.error);
+  }, [notes.error]);
+
+  // Compute loading states — only show full loading if no data yet
+  const isInitialLoading = notes.loading && !notes.data;
 
   const sections = useMemo<NoteSection[]>(() => {
     const filtered = apiNotes.filter((note) => {
@@ -491,7 +497,7 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
       <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
       <FilterRow filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
 
-      {loading ? (
+      {isInitialLoading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={mesh.green700} />
         </View>

@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppShell } from "./src/AppShell";
+import { AppDataProvider } from "./src/state/AppDataContext";
 
 // Configure how notifications behave while app is in foreground
 Notifications.setNotificationHandler({
@@ -18,7 +19,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <AppShell />
+      <AppDataProvider>
+        <AppShell />
+      </AppDataProvider>
     </SafeAreaProvider>
   );
 }

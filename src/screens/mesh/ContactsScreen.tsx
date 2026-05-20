@@ -6,9 +6,10 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { createContact, deleteContact, getContactById, getContactTimeline, getContacts, updateContact } from "../../api/contactApi";
+import { createContact, deleteContact, getContactById, getContactTimeline, updateContact } from "../../api/contactApi";
 import { getStatuses } from "../../api/statusApi";
 import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
+import { useAppData } from "../../state/AppDataContext";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { CreateNoteScreen } from "./CreateNoteScreen";
@@ -282,7 +283,6 @@ function extractCreatedId(response: unknown): string | undefined {
 export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refresh }: Props) {
   const [filter, setFilter] = useState("all");
   const [apiContacts, setApiContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -290,34 +290,44 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
   const rowRefs = useRef<Record<string, View | null>>({});
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<{ id?: string; name?: string } | null>(null);
+
+  const { contacts, refreshContacts } = useAppData();
+
   const sourceContacts = apiContacts;
   const filters = [{ id: "all", label: t("fAll"), color: null }, ...mockStatuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
   const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
 
-  const loadContacts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await getContacts();
-      const normalized = extractArray(response, "contacts").map(normalizeApiContact).filter(Boolean) as Contact[];
-      setApiContacts(normalized);
-      setError("");
-    } catch (err) {
-      setApiContacts([]);
-      setError(err instanceof Error && err.message ? err.message : "Cannot load contacts.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Load contacts from cache on mount
   useEffect(() => {
-    loadContacts();
-  }, [loadContacts]);
+    refreshContacts(false);
+  }, [refreshContacts]);
 
+  // Force refresh when refresh prop changes
   useEffect(() => {
     if (refresh) {
-      loadContacts();
+      refreshContacts(true);
     }
-  }, [refresh, loadContacts]);
+  }, [refresh, refreshContacts]);
+
+  // Process contacts.data when it updates
+  useEffect(() => {
+    if (!contacts.data) return;
+
+    const normalized = extractArray(contacts.data, "contacts")
+      .map(normalizeApiContact)
+      .filter(Boolean) as Contact[];
+
+    setApiContacts(normalized);
+    setError("");
+  }, [contacts.data]);
+
+  // Update error state from context
+  useEffect(() => {
+    if (contacts.error) setError(contacts.error);
+  }, [contacts.error]);
+
+  // Compute loading states — only show full loading if no data yet
+  const isInitialLoading = contacts.loading && !contacts.data;
 
   useEffect(() => {
     if (highlightId || highlightName) {
@@ -456,7 +466,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
           collapsable={false}
           style={{ paddingHorizontal: 20, paddingTop: 8 }}
         >
-          {loading ? (
+          {isInitialLoading ? (
             <InlineState label="Loading contacts..." loading />
           ) : error ? (
             <InlineState label={error} error />

@@ -2,9 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 
-import { getDashboard } from "../../api/dashboardApi";
 import { extractArray, normalizeApiContact } from "../../api/screenAdapters";
-import { getProfile } from "../../api/userApi";
 import { DashboardMeshBackground } from "../../components/DashboardMeshBackground";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
@@ -13,7 +11,7 @@ import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
 import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
-import { getToken } from "../../storage/tokenStorage";
+import { useAppData } from "../../state/AppDataContext";
 
 type Props = {
   t: TFn;
@@ -493,11 +491,12 @@ function upcomingSubtitle(item: Upcoming, lang: Lang) {
 export function DashboardScreen({ t, lang, nav, refresh }: Props) {
   const [recent, setRecent] = useState<RecentActivityContact[]>([]);
   const [upcomingItems, setUpcomingItems] = useState<Upcoming[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("User");
   const [unreadCount, setUnreadCount] = useState(0);
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
+
+  const { dashboard, profile, refreshDashboard, refreshProfile } = useAppData();
 
   function openUpcoming(item: Upcoming) {
     if (item.kind === "reminder" && item.noteId) {
@@ -511,30 +510,32 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
     }
   }
 
-  const loadDashboard = useCallback(async () => {
-    let active = true;
+  // Load dashboard and profile data from cache on mount
+  useEffect(() => {
+    refreshDashboard(false);
+    refreshProfile(false);
+  }, [refreshDashboard, refreshProfile]);
 
-    try {
-      setLoading(true);
-      setError("");
-      const token = await getToken();
+  // Force refresh when refresh prop changes
+  useEffect(() => {
+    if (refresh) {
+      refreshDashboard(true);
+      refreshProfile(true);
+    }
+  }, [refresh, refreshDashboard, refreshProfile]);
 
-      if (!token) {
-        if (!active) return;
-        setRecent([]);
-        setUpcomingItems([]);
-        setUserName("User");
-        setError("Please log in to view dashboard data.");
-        return;
-      }
+  // Process dashboard.data when it updates
+  useEffect(() => {
+    const dashboardResponse = dashboard.data;
+    const profileResponse = profile.data;
 
-      const [dashboardResponse, profileResponse] = await Promise.all([
-        getDashboard(),
-        getProfile().catch(() => null)
-      ]);
+    if (!dashboardResponse && !profileResponse) return;
 
-      if (!active) return;
+    if (profileResponse) {
+      setUserName(readUserName(profileResponse));
+    }
 
+    if (dashboardResponse) {
       const dashboardData = unwrapData(dashboardResponse);
 
       const recentContactsRaw = extractArray(dashboardResponse, "recentContacts");
@@ -564,29 +565,24 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
 
       const unreadRaw = dashboardData?.unreadNotificationCount;
 
-      setUserName(readUserName(profileResponse));
       setUnreadCount(typeof unreadRaw === "number" ? unreadRaw : 0);
       setRecent(activityContacts);
       setUpcomingItems(apiUpcoming);
-    } catch (err) {
-      if (!active) return;
-      setRecent([]);
-      setUpcomingItems([]);
-      setError(err instanceof Error && err.message ? err.message : "Cannot load dashboard.");
-    } finally {
-      if (active) setLoading(false);
+      setError("");
     }
-  }, [lang]);
+  }, [dashboard.data, profile.data, lang]);
 
+  // Update error state from context
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  useEffect(() => {
-    if (refresh) {
-      loadDashboard();
+    if (dashboard.error || profile.error) {
+      setError(dashboard.error || profile.error);
     }
-  }, [refresh, loadDashboard]);
+  }, [dashboard.error, profile.error]);
+
+  // Compute loading states — only show full loading if no data yet
+  const isInitialLoading =
+    (dashboard.loading && !dashboard.data) ||
+    (profile.loading && !profile.data);
 
   return (
     <MeshScreen>
@@ -654,7 +650,7 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
             </Pressable>
           </View>
 
-          {loading ? (
+          {isInitialLoading ? (
             <StateCard label="Loading dashboard..." />
           ) : error ? (
             <StateCard label={error} tone="error" />
@@ -700,7 +696,7 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
             </Pressable>
           </View>
 
-          {loading ? null : error ? null : recent.length === 0 ? (
+          {isInitialLoading ? null : error ? null : recent.length === 0 ? (
             <StateCard label="No recent contacts from API." />
           ) : (
             <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
