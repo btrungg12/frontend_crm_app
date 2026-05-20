@@ -13,7 +13,7 @@ import { useAppData } from "../../state/AppDataContext";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { CreateNoteScreen } from "./CreateNoteScreen";
-import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, StatusChip, TFn, TipCard } from "../../mesh/MeshComponents";
+import { Avatar, BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn, TipCard } from "../../mesh/MeshComponents";
 import { GradientAvatar } from "../../components/GradientAvatar";
 import { Contact, Lang, Status, statuses as mockStatuses, statusById } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -291,23 +291,24 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
   const [pendingHighlight, setPendingHighlight] = useState<{ id?: string; name?: string } | null>(null);
 
-  const { contacts, refreshContacts } = useAppData();
+  const { contacts, statuses, refreshContacts, refreshStatuses } = useAppData();
+  const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
 
   const sourceContacts = apiContacts;
-  const filters = [{ id: "all", label: t("fAll"), color: null }, ...mockStatuses.slice(0, 4).map((status) => ({ id: status.id, label: status.name, color: status.color }))];
-  const list = filter === "all" ? sourceContacts : sourceContacts.filter((contact) => contact.status === filter);
 
-  // Load contacts from cache on mount
+  // Load contacts and statuses from cache on mount
   useEffect(() => {
     refreshContacts(false);
-  }, [refreshContacts]);
+    refreshStatuses(false);
+  }, [refreshContacts, refreshStatuses]);
 
   // Force refresh when refresh prop changes
   useEffect(() => {
     if (refresh) {
       refreshContacts(true);
+      refreshStatuses(true);
     }
-  }, [refresh, refreshContacts]);
+  }, [refresh, refreshContacts, refreshStatuses]);
 
   // Process contacts.data when it updates
   useEffect(() => {
@@ -321,6 +322,17 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
     setError("");
   }, [contacts.data]);
 
+  // Process statuses.data when it updates
+  useEffect(() => {
+    if (!statuses.data) return;
+
+    const normalized = extractArray(statuses.data, "statuses")
+      .map(normalizeApiStatus)
+      .filter(Boolean) as Status[];
+
+    setApiStatuses(normalized);
+  }, [statuses.data]);
+
   // Update error state from context
   useEffect(() => {
     if (contacts.error) setError(contacts.error);
@@ -328,6 +340,62 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
 
   // Compute loading states — only show full loading if no data yet
   const isInitialLoading = contacts.loading && !contacts.data;
+
+  // Build status lookup from API statuses
+  const statusLookup = useMemo(() => {
+    const map = new Map<string, Status>();
+    apiStatuses.forEach((status) => {
+      map.set(String(status.id), status);
+      map.set(String(status.name).toLowerCase(), status);
+    });
+    return map;
+  }, [apiStatuses]);
+
+  // Helper to get contact status from API statuses
+  function getContactStatus(contact: Contact): Status | null {
+    const rawStatus = contact.status ?? "";
+    const rawStatusName = (contact as any).statusName ?? "";
+
+    const byId = rawStatus ? statusLookup.get(String(rawStatus)) : null;
+    if (byId) return byId;
+
+    const byName = rawStatusName
+      ? statusLookup.get(String(rawStatusName).toLowerCase())
+      : null;
+    if (byName) return byName;
+
+    if (rawStatusName) {
+      return {
+        id: String(rawStatusName),
+        name: String(rawStatusName),
+        color: (contact as any).statusColor ?? mesh.ink500,
+        count: 0,
+        desc: "",
+        icon: "people",
+      };
+    }
+
+    return null;
+  }
+
+  // Build filters from API statuses
+  const filters = [
+    { id: "all", label: t("fAll"), color: null },
+    ...apiStatuses.map((status) => ({
+      id: status.id,
+      label: status.name,
+      color: status.color,
+    })),
+  ];
+
+  // Filter contacts by status
+  const list = filter === "all"
+    ? sourceContacts
+    : sourceContacts.filter((contact) => {
+        const rawStatus = String(contact.status ?? "");
+        const contactStatus = getContactStatus(contact);
+        return rawStatus === filter || contactStatus?.id === filter;
+      });
 
   useEffect(() => {
     if (highlightId || highlightName) {
@@ -471,7 +539,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
           ) : error ? (
             <InlineState label={error} error />
           ) : list.length === 0 ? (
-            <InlineState label="No contacts from API." />
+            <InlineState label={filter === "all" ? "No contacts yet." : "No contacts in this status."} />
           ) : Object.keys(grouped).sort().map((key) => (
             <View key={key}>
               <Text style={{ color: "#7A837E", fontSize: mesh.font.bodySm, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
@@ -502,13 +570,42 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
                     },
                   ]}
                 >
-                  <GradientAvatar name={contact.name} statusColor={contact.statusColor ?? statusById(contact.status)?.color} size={48} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact.name}</Text>
-                    <View style={{ marginTop: 3 }}>
-                      <StatusChip statusId={contact.status} />
-                    </View>
-                  </View>
+                  {(() => {
+                    const contactStatus = getContactStatus(contact);
+                    const statusColor = contact.statusColor ?? contactStatus?.color ?? mesh.green700;
+                    return (
+                      <>
+                        <GradientAvatar name={contact.name} statusColor={statusColor} size={48} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact.name}</Text>
+                          <View style={{ marginTop: 3 }}>
+                            {contactStatus ? (
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                <View
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: 3,
+                                    backgroundColor: contactStatus.color || mesh.ink500,
+                                  }}
+                                />
+                                <Text
+                                  numberOfLines={1}
+                                  style={{
+                                    color: mesh.ink500,
+                                    fontSize: mesh.font.bodySm,
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  {contactStatus.name}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      </>
+                    );
+                  })()}
                   <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
                 </Pressable>
               );
