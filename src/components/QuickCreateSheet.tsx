@@ -111,19 +111,22 @@ export function QuickCreateSheet({
 
       {/* ── Sheet ── */}
       <Animated.View
-        {...panResponder.panHandlers}
         style={[
           styles.sheet,
           { transform: [{ translateY: sheetTransformY }] },
         ]}
       >
-        {/* Drag handle wrapper */}
-        <View style={styles.handleWrap}>
+        {/* Content fills from y=0 so screen gradient fills rounded corners */}
+        {children}
+
+        {/* Handle as absolute overlay — floats above content, no white strip */}
+        <View
+          pointerEvents="box-only"
+          style={styles.handleOverlay}
+          {...panResponder.panHandlers}
+        >
           <View style={styles.handle} />
         </View>
-
-        {/* Content — fills remaining height */}
-        {children}
       </Animated.View>
     </Modal>
   );
@@ -138,7 +141,6 @@ const styles = StyleSheet.create({
     height: SHEET_H,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    backgroundColor: "#FFFFFF",
     overflow: "hidden",
     shadowColor: "#064532",
     shadowOpacity: 0.14,
@@ -146,16 +148,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -10 },
     elevation: 20,
   },
-  handleWrap: {
-    height: 18,
+  handleOverlay: {
+    position: "absolute",
+    top: 10,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    justifyContent: "center",
+    zIndex: 20,
   },
   handle: {
-    alignSelf: "center",
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(6,69,50,0.15)",
+    backgroundColor: "rgba(255,255,255,0.55)",
   },
 });
