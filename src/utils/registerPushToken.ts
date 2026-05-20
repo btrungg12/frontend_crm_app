@@ -10,11 +10,11 @@ import { getToken } from "../storage/tokenStorage";
 let registeringPromise: Promise<string | null> | null = null;
 
 function getProjectId(): string | undefined {
-  return (
+  const id =
     Constants.expoConfig?.extra?.eas?.projectId ??
-    (Constants as any).easConfig?.projectId ??
-    undefined
-  );
+    (Constants as any).easConfig?.projectId;
+  // Treat empty string the same as missing
+  return typeof id === "string" && id.trim() ? id.trim() : undefined;
 }
 
 export function registerPushToken(): Promise<string | null> {
@@ -62,11 +62,13 @@ async function registerPushTokenInner(): Promise<string | null> {
       return null;
     }
 
-    // Get Expo push token
+    // Get Expo push token — projectId required by newer expo-notifications
     const projectId = getProjectId();
-    const tokenData = projectId
-      ? await Notifications.getExpoPushTokenAsync({ projectId })
-      : await Notifications.getExpoPushTokenAsync();
+    if (!projectId) {
+      if (__DEV__) console.log("[Push] Skipped: no EAS projectId configured in app.json.");
+      return null;
+    }
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
     const expoPushToken = tokenData.data;
     if (!expoPushToken) return null;
