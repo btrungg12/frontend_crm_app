@@ -853,6 +853,8 @@ function PersonPill({
       <View
         style={{
           height: 52,
+          maxHeight: 52,
+          overflow: "hidden",
           borderRadius: 26,
           backgroundColor: "rgba(255,255,255,0.92)",
           borderWidth: 1,
@@ -886,28 +888,50 @@ function PersonPill({
             </View>
           )
         }
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          placeholder="Type a person name..."
-          placeholderTextColor={mesh.ink400}
-          returnKeyType="done"
-          style={{
-            flex: 1,
-            height: 52,
-            color: mesh.ink900,
-            fontSize: 16,
-            fontWeight: "400",
-            lineHeight: 23,
-            paddingTop: 0,
-            paddingBottom: 0,
-            paddingVertical: 0,
-            includeFontPadding: false,
-            textAlignVertical: "center",
-          } as any}
-        />
+        {/* Show Text when contact is selected; TextInput when searching */}
+        {selectedPersonId ? (
+          <View style={{ flex: 1, minWidth: 0, justifyContent: "center", overflow: "hidden" }}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{
+                color: mesh.ink900,
+                fontSize: 16,
+                lineHeight: 22,
+                fontWeight: "400",
+                includeFontPadding: false,
+              } as any}
+            >
+              {value}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1, minWidth: 0, overflow: "hidden", justifyContent: "center" }}>
+            <TextInput
+              value={value}
+              onChangeText={onChangeText}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              placeholder="Type a person name..."
+              placeholderTextColor={mesh.ink400}
+              returnKeyType="done"
+              multiline={false}
+              numberOfLines={1}
+              style={{
+                height: 52,
+                color: mesh.ink900,
+                fontSize: 16,
+                fontWeight: "400",
+                lineHeight: 22,
+                paddingTop: 0,
+                paddingBottom: 0,
+                paddingVertical: 0,
+                includeFontPadding: false,
+                textAlignVertical: "center",
+              } as any}
+            />
+          </View>
+        )}
         {value.length > 0 ? (
           <Pressable onPress={() => onChangeText("")} hitSlop={8}>
             <Ionicons name="close-circle" size={18} color={mesh.ink400} />
