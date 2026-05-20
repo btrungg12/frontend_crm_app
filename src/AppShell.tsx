@@ -198,18 +198,31 @@ export function AppShell() {
       return;
     }
 
+    // Handle login success case: verify token exists before allowing dashboard navigation
+    // LoginScreen only calls nav("dashboard") after loginRequest() succeeded and token was saved
+    if (name === "dashboard") {
+      getToken().then((token) => {
+        if (token) {
+          setIsAuthed(true);
+          preloadAppData().catch(() => undefined);
+          setTransitionType("tab");
+          setStack([{ name: "dashboard", props }]);
+        } else {
+          // Token doesn't exist, redirect to welcome
+          setIsAuthed(false);
+          setTransitionType("fade");
+          setStack([{ name: "welcome" }]);
+        }
+      });
+      return;
+    }
+
     // Block navigation to protected routes when not authenticated
+    // Important: this runs after dashboard login-success handling
     if (protectedRoutes.has(name) && isAuthed === false) {
       setTransitionType("fade");
       setStack([{ name: "welcome" }]);
       return;
-    }
-
-    // Mark as authed when a protected route is successfully navigated to
-    // (covers the case where login/register calls nav("dashboard") before isAuthed is set)
-    if (name === "dashboard") {
-      setIsAuthed(true);
-      preloadAppData().catch(() => undefined);
     }
 
     const tabRoots = new Set(["dashboard", "contacts", "notes", "status"]);
