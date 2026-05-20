@@ -492,7 +492,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
                     },
                   ]}
                 >
-                  <GradientAvatar name={contact.name} statusColor={statusById(contact.status)?.color} size={48} />
+                  <GradientAvatar name={contact.name} statusColor={contact.statusColor ?? statusById(contact.status)?.color} size={48} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: mesh.ink900, fontSize: mesh.font.cardTitle, fontWeight: "700" }}>{contact.name}</Text>
                     <View style={{ marginTop: 3 }}>
@@ -837,12 +837,12 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
               <Image source={{ uri: contact.avatarUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
             </View>
           ) : (
-            <GradientAvatar name={contact.name} statusColor={statusMeta?.color} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+            <GradientAvatar name={contact.name} statusColor={statusMeta?.color ?? contact.statusColor} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
           )}
           <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
           <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
-            <View style={{ backgroundColor: statusMeta?.color || mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
-            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name || "-"}</Text>
+            <View style={{ backgroundColor: statusMeta?.color ?? contact.statusColor ?? mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
+            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name ?? contact.statusName ?? "-"}</Text>
           </View>
         </View>
       </View>

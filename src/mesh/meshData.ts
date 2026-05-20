@@ -21,6 +21,10 @@ export type Contact = {
   name: string;
   initials: string;
   status: string;
+  /** Hex color extracted directly from a populated status object in the API response */
+  statusColor?: string;
+  /** Name extracted directly from a populated status object in the API response */
+  statusName?: string;
   interactions: number;
   source?: string;
   phone?: string;

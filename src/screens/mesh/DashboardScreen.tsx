@@ -706,7 +706,7 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
             <View style={{ flexDirection: "row", gap: 14, paddingHorizontal: 4, paddingVertical: 4 }}>
               {recent.map((contact) => (
                 <Pressable key={contact.id} onPress={() => nav("contactDetail", { id: contact.id })} style={{ width: 68, alignItems: "center", gap: 5 }}>
-                  <GradientAvatar name={contact.name} statusColor={statusById(contact.status)?.color} size={64} />
+                  <GradientAvatar name={contact.name} statusColor={contact.statusColor ?? statusById(contact.status)?.color} size={64} />
                   <Text numberOfLines={1} style={{ textAlign: "center", color: mesh.ink700, fontSize: mesh.font.caption, fontWeight: "700", lineHeight: 15 }}>
                     {contact.name.split(" ").slice(-2).join(" ")}
                   </Text>

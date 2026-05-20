@@ -69,8 +69,19 @@ export function normalizeApiContact(value: unknown): Contact | null {
   const name = text(item.name ?? item.fullName);
   if (!id || !name) return null;
 
-  const statusRecord = asRecord(item.status);
-  const status = text(item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status, "st-other");
+  const statusRecord = asRecord(item.status ?? item.statusId);
+  // When the backend returns a populated status object, extract name/color directly.
+  // This keeps the ring color correct even when the separate /statuses API isn't available.
+  const isPopulatedStatus = Boolean(statusRecord && (statusRecord.name || statusRecord.color));
+  const statusColor = isPopulatedStatus && typeof statusRecord?.color === "string" && statusRecord.color.trim()
+    ? statusRecord.color.trim()
+    : undefined;
+  const statusName = isPopulatedStatus && typeof statusRecord?.name === "string" && statusRecord.name.trim()
+    ? statusRecord.name.trim()
+    : undefined;
+  // Use "" as fallback (not "st-other") so contacts with no status API field
+  // don't accidentally inherit the orange mock "Other" colour.
+  const status = text(item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status, "");
 
   const birthdayRaw = item.birthday;
   const birthday = typeof birthdayRaw === "string" && birthdayRaw ? birthdayRaw : undefined;
@@ -120,7 +131,9 @@ export function normalizeApiContact(value: unknown): Contact | null {
     source,
     specialCount: numberValue(item.specialCount ?? item.specialDaysCount ?? specialDays.length),
     specialDays: specialDays.length > 0 ? specialDays : undefined,
-    status
+    status,
+    statusColor,
+    statusName
   };
 }
 
