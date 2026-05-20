@@ -1498,11 +1498,12 @@ export function CreateContactScreen({
         smoothsColors
       />
 
-      {/* Leaf decoration — top-right, very subtle */}
+      {/* Leaf decoration — top-right, subtle background accent */}
       <Image
         source={leafPng}
         resizeMode="contain"
-        style={{ height: 280, opacity: 0.065, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320 }}
+        pointerEvents="none"
+        style={{ height: 280, opacity: 0.10, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320 }}
       />
 
       {/* ── Top bar ── */}

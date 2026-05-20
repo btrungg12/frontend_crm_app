@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
@@ -21,6 +21,8 @@ type Props = {
   nav: NavFn;
   refresh?: number;
 };
+
+const leafPng = require("../../../assets/leaf.png");
 
 const statusIconMap = {
   people: "people-outline",
@@ -71,8 +73,18 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
   // Compute loading states — only show full loading if no data yet
   const isInitialLoading = statuses.loading && !statuses.data;
 
+  const insets = useSafeAreaInsets();
+
   return (
     <MeshScreen>
+      {/* Leaf decoration — top-right, subtle background accent */}
+      <Image
+        source={leafPng}
+        resizeMode="contain"
+        pointerEvents="none"
+        style={{ height: 280, opacity: 0.10, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320, zIndex: 0 }}
+      />
+
       <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
         <View style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />

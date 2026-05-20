@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 160,
     height: 160,
-    opacity: 0.13,
+    opacity: 0.10,
     transform: [{ rotate: "8deg" }],
   },
   headerTitleRow: {
