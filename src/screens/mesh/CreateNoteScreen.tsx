@@ -12,6 +12,7 @@ import { getToken } from "../../storage/tokenStorage";
 import { Avatar, MeshScreen, NavFn, StatusChip, TFn } from "../../mesh/MeshComponents";
 import { Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
+import { useAppData } from "../../state/AppDataContext";
 
 type Props = {
   t: TFn;
@@ -201,6 +202,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const insets = useSafeAreaInsets();
   const isVi   = lang === "vi";
   const isSheet = presentation === "sheet";
+  const { refreshNotes, refreshContacts, invalidateDashboard } = useAppData();
 
   // ── Editor state
   const [firstLine, setFirstLine] = useState("");
@@ -387,6 +389,8 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         } else if (hadReminder) {
           await deleteNoteReminder(noteId);
         }
+        await refreshNotes(true);
+        invalidateDashboard();
         setSavePhase("success");
         await delay(SUCCESS_HOLD_MS);
         if (isSheet) { onCreated?.({ type: "note", id: noteId }); onCloseSheet?.(); } else { nav("noteDetail", { id: noteId }); }
@@ -403,6 +407,13 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         });
 
         const createdId = extractCreatedId(response);
+
+        await refreshNotes(true);
+        // If new contact was created from note, refresh contacts too
+        if (!person && typedName) {
+          await refreshContacts(true);
+        }
+        invalidateDashboard();
 
         setSavePhase("success");
         await delay(SUCCESS_HOLD_MS);

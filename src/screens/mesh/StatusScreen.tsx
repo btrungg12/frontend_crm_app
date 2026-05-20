@@ -19,6 +19,7 @@ type Props = {
   t: TFn;
   lang: Lang;
   nav: NavFn;
+  refresh?: number;
 };
 
 const statusIconMap = {
@@ -29,7 +30,7 @@ const statusIconMap = {
   heart: "heart-outline"
 } as const;
 
-export function StatusScreen({ t, lang, nav }: Props) {
+export function StatusScreen({ t, lang, nav, refresh }: Props) {
   const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
@@ -42,6 +43,13 @@ export function StatusScreen({ t, lang, nav }: Props) {
   useEffect(() => {
     refreshStatuses(false);
   }, [refreshStatuses]);
+
+  // Force refresh when refresh prop changes
+  useEffect(() => {
+    if (refresh) {
+      refreshStatuses(true);
+    }
+  }, [refresh, refreshStatuses]);
 
   // Process statuses.data when it updates
   useEffect(() => {
@@ -181,6 +189,7 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
 }
 
 export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: string }) {
+  const { refreshStatuses, invalidateContacts, invalidateDashboard } = useAppData();
   const insets = useSafeAreaInsets();
   const palette = ["#2F8F5F", "#3B7BD9", "#8B5CD6", "#D9577A", "#F5B83B", "#35C7B7"];
   const [name, setName] = useState("");
@@ -263,7 +272,11 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         });
       }
 
-      nav("status");
+      await refreshStatuses(true);
+      invalidateContacts();
+      invalidateDashboard();
+
+      nav("status", { refresh: Date.now() });
     } catch (err) {
       setError(apiMessage(err, "Cannot save status."));
     } finally {
@@ -278,8 +291,11 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       setSaving(true);
       setError("");
       await deleteStatus(statusId);
+      await refreshStatuses(true);
+      invalidateContacts();
+      invalidateDashboard();
       setConfirm(false);
-      nav("status");
+      nav("status", { refresh: Date.now() });
     } catch (err) {
       setConfirm(false);
       setError(apiMessage(err, "Cannot delete status."));

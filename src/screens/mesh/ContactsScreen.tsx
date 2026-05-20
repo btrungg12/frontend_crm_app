@@ -666,6 +666,7 @@ function normalizeTimelineItem(value: unknown): TimelineItem | null {
 
 export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { contactId?: string }) {
   const insets = useSafeAreaInsets();
+  const { refreshContacts, invalidateDashboard } = useAppData();
   const [contact, setContact] = useState<Contact | null>(null);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [apiStatuses, setApiStatuses] = useState<Status[]>([]);
@@ -742,6 +743,8 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
       setDeleting(true);
       setDeleteError("");
       await deleteContact(contact.id);
+      await refreshContacts(true);
+      invalidateDashboard();
       setConfirmDelete(false);
       nav("contacts");
     } catch (err) {
@@ -1027,6 +1030,7 @@ export function CreateContactScreen({
 }) {
   const isSheet = presentation === "sheet";
   const insets = useSafeAreaInsets();
+  const { refreshContacts, invalidateDashboard } = useAppData();
 
   // ── Statuses from API (fallback: mock) ────────────────────────────────────
   const [pickerStatuses, setPickerStatuses] = useState<Status[]>(mockStatuses);
@@ -1291,6 +1295,8 @@ export function CreateContactScreen({
       if (edit && contactId) {
         setSavePhase("saving");
         await updateContact(contactId, payload);
+        await refreshContacts(true);
+        invalidateDashboard();
         setSavePhase("success");
         await delay(SUCCESS_HOLD_MS);
         if (isSheet) { onCreated?.({ type: "contact", id: contactId, name: name.trim() }); onCloseSheet?.(); } else { nav("contactDetail", { id: contactId }); }
@@ -1299,6 +1305,9 @@ export function CreateContactScreen({
         const response = await createContact(payload);
         const createdId = extractCreatedId(response);
         const createdName = name.trim();
+
+        await refreshContacts(true);
+        invalidateDashboard();
 
         setSavePhase("success");
         await delay(SUCCESS_HOLD_MS);
