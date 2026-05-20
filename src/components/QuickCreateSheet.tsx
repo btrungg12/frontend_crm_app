@@ -1,5 +1,5 @@
 import { PropsWithChildren, useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, Modal, PanResponder, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, Easing, Modal, PanResponder, Pressable, StyleSheet, View } from "react-native";
 
 // 93% of screen height — tall enough to show full form even with keyboard open
 const SHEET_H = Dimensions.get("window").height * 0.93;
@@ -21,6 +21,50 @@ export function QuickCreateSheet({
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [modalVisible, setModalVisible] = useState(false);
 
+  // Guards against duplicate close animations (e.g. swipe fires onClose → parent sets open=false → effect runs again)
+  const isClosingRef   = useRef(false);
+  const modalShownRef  = useRef(false);
+
+  // Keep latest onClose accessible inside the stable panResponder closure
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  // ── Internal close: slides sheet down from wherever it currently is ──────
+  const closeSheet = useRef((fromDragY = 0) => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    // Stop both animations and read the actual current drag value
+    translateY.stopAnimation(() => {
+      dragY.stopAnimation((currentDrag) => {
+        // Transfer drag offset into translateY so the sheet doesn't flash upward
+        const offset = typeof currentDrag === "number" ? Math.max(0, currentDrag) : Math.max(0, fromDragY);
+        translateY.setValue(offset);
+        dragY.setValue(0);
+
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: SHEET_H,
+            duration: 220,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(overlayAnim, {
+            toValue: 0,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          modalShownRef.current = false;
+          setModalVisible(false);
+          isClosingRef.current = false;
+          onCloseRef.current();
+        });
+      });
+    });
+  }).current;
+
+  // ── Pan responder ─────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
       // Don't claim touch on start — let child ScrollViews/TextInputs receive it first
@@ -31,20 +75,14 @@ export function QuickCreateSheet({
         gesture.dy > 6 && gesture.dy > Math.abs(gesture.dx),
       onMoveShouldSetPanResponderCapture: () => false,
       onPanResponderMove: (_, gesture) => {
-        if (gesture.dy > 0) {
-          dragY.setValue(gesture.dy);
-        }
+        if (gesture.dy > 0) dragY.setValue(gesture.dy);
       },
       onPanResponderRelease: (_, gesture) => {
-        const threshold = 120;
-        const velocityThreshold = 0.85;
-
-        if (gesture.dy > threshold || gesture.vy > velocityThreshold) {
-          // Swipe down to close
-          dragY.setValue(0);
-          onClose();
+        if (gesture.dy > 120 || gesture.vy > 0.85) {
+          // Swipe-to-dismiss: slide from current drag position, no upward flash
+          closeSheet(gesture.dy);
         } else {
-          // Snap back
+          // Not far enough — spring back to resting position
           Animated.spring(dragY, {
             toValue: 0,
             useNativeDriver: true,
@@ -57,12 +95,16 @@ export function QuickCreateSheet({
     })
   ).current;
 
+  // ── Open / external close effect ──────────────────────────────────────────
   useEffect(() => {
     if (open) {
+      isClosingRef.current  = false;
+      modalShownRef.current = true;
       translateY.setValue(SHEET_H);
       dragY.setValue(0);
       overlayAnim.setValue(0);
       setModalVisible(true);
+
       Animated.parallel([
         Animated.spring(translateY, {
           toValue: 0,
@@ -77,21 +119,11 @@ export function QuickCreateSheet({
           useNativeDriver: true,
         }),
       ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: SHEET_H,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnim, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setModalVisible(false));
+    } else if (modalShownRef.current && !isClosingRef.current) {
+      // Parent set open=false externally (not via swipe) — close smoothly
+      closeSheet(0);
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Combine translateY with dragY: when dragging, sheet moves down by dragY amount
   const sheetTransformY = Animated.add(translateY, dragY);
@@ -101,7 +133,7 @@ export function QuickCreateSheet({
       visible={modalVisible}
       transparent
       animationType="none"
-      onRequestClose={onClose}
+      onRequestClose={() => closeSheet(0)}
     >
       {/* ── Dim overlay ── */}
       <Animated.View
@@ -110,7 +142,7 @@ export function QuickCreateSheet({
       >
         <Pressable
           style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(8,32,22,0.18)" }]}
-          onPress={onClose}
+          onPress={() => closeSheet(0)}
         />
       </Animated.View>
 
