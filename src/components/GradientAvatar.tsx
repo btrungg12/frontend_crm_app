@@ -43,12 +43,38 @@ export function GradientAvatar({
   size = 48,
   statusColor
 }: Props) {
-  // ring start: ≈ statusColor at 0.85 opacity on white (15% toward white)
-  // ring end  : ≈ statusColor at 0.55 opacity on white (55% toward white — lighter but clearly tinted)
-  const gradColors: [string, string] = statusColor
-    ? [lightenHex(statusColor, 0.15), lightenHex(statusColor, 0.55)]
-    : ["#A8C4B8", "#D2E8DF"];
+  const showRing = Boolean(statusColor);
 
+  // No-ring path: just a plain avatar with a soft neutral border
+  if (!showRing) {
+    const avatarSize = size;
+    return (
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: "#EEF3EF",
+          borderColor: "rgba(6,69,50,0.10)",
+          borderRadius: avatarSize / 2,
+          borderWidth: 1,
+          height: avatarSize,
+          justifyContent: "center",
+          overflow: "hidden",
+          width: avatarSize,
+        }}
+      >
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={{ height: avatarSize, width: avatarSize }} />
+        ) : (
+          <Text style={{ color: "#0B4F37", fontSize: avatarSize * 0.37, fontWeight: "700", letterSpacing: 0.3 }}>
+            {getInitials(name)}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  // Ring path: gradient ring around avatar
+  const gradColors: [string, string] = [lightenHex(statusColor!, 0.15), lightenHex(statusColor!, 0.55)];
   const whiteLayerSize = size - ringWidth * 2;
   const avatarSize = size - (ringWidth + gap) * 2;
 

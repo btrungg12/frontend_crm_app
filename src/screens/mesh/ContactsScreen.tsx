@@ -351,8 +351,19 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
     return map;
   }, [apiStatuses]);
 
+  // Returns true only when the contact genuinely has a status set on the backend
+  function hasRealStatus(contact: Contact | null | undefined): boolean {
+    if (!contact) return false;
+    const s     = String(contact.status     ?? "").trim().toLowerCase();
+    const sName = String((contact as any).statusName ?? "").trim().toLowerCase();
+    const empty = new Set(["", "-", "null", "undefined", "none", "no-status", "no_status"]);
+    return !empty.has(s) || !empty.has(sName);
+  }
+
   // Helper to get contact status from API statuses
   function getContactStatus(contact: Contact): Status | null {
+    if (!hasRealStatus(contact)) return null;
+
     const rawStatus = contact.status ?? "";
     const rawStatusName = (contact as any).statusName ?? "";
 
@@ -572,7 +583,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
                 >
                   {(() => {
                     const contactStatus = getContactStatus(contact);
-                    const statusColor = contact.statusColor ?? contactStatus?.color ?? mesh.green700;
+                    const statusColor = contactStatus?.color ?? contact.statusColor;
                     return (
                       <>
                         <GradientAvatar name={contact.name} statusColor={statusColor} size={48} />
@@ -759,6 +770,15 @@ function normalizeTimelineItem(value: unknown): TimelineItem | null {
   return { date, desc, icon: iconMap[kind], kind, label: labelMap[kind], title };
 }
 
+// Standalone version of hasRealStatus for the detail screen (outside component scope)
+function hasDetailStatus(contact: Contact | null | undefined): boolean {
+  if (!contact) return false;
+  const s     = String(contact.status     ?? "").trim().toLowerCase();
+  const sName = String((contact as any).statusName ?? "").trim().toLowerCase();
+  const empty = new Set(["", "-", "null", "undefined", "none", "no-status", "no_status"]);
+  return !empty.has(s) || !empty.has(sName);
+}
+
 // ── ContactDetailScreen ───────────────────────────────────────────────────────
 
 export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { contactId?: string }) {
@@ -823,10 +843,18 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     { id: "reminder", label: t("tlReminders") }
   ];
   const filtered = tab === "all" ? timelineItems : timelineItems.filter((item) => item.kind === tab);
-  // Look up status: real API statuses first, then mock statuses, then undefined (never show raw ObjectId)
-  const statusMeta = contact
-    ? (apiStatuses.find((s) => s.id === contact.status) ?? mockStatuses.find((s) => s.id === contact.status))
+  // Look up status only for contacts that actually have one — never fall back to mocks
+  const statusMeta = contact && hasDetailStatus(contact)
+    ? (
+        apiStatuses.find((s) => s.id === contact.status) ??
+        apiStatuses.find((s) => s.name.toLowerCase() === String((contact as any).statusName ?? "").toLowerCase()) ??
+        undefined
+      )
     : undefined;
+
+  // Resolve final status display values
+  const detailStatusName  = statusMeta?.name  ?? (hasDetailStatus(contact) ? (contact as any).statusName  : undefined);
+  const detailStatusColor = statusMeta?.color ?? (hasDetailStatus(contact) ? contact.statusColor           : undefined);
 
   const handleDeleteContact = async () => {
     if (deleting) return;
@@ -947,13 +975,15 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
               <Image source={{ uri: contact.avatarUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
             </View>
           ) : (
-            <GradientAvatar name={contact.name} statusColor={statusMeta?.color ?? contact.statusColor} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+            <GradientAvatar name={contact.name} statusColor={detailStatusColor} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
           )}
           <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
-          <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
-            <View style={{ backgroundColor: statusMeta?.color ?? contact.statusColor ?? mesh.green700, borderRadius: 5, height: 9, width: 9 }} />
-            <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{statusMeta?.name ?? contact.statusName ?? "-"}</Text>
-          </View>
+          {detailStatusName ? (
+            <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
+              <View style={{ backgroundColor: detailStatusColor ?? mesh.ink400, borderRadius: 5, height: 9, width: 9 }} />
+              <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{detailStatusName}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
