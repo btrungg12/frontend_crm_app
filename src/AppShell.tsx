@@ -103,6 +103,11 @@ export function AppShell() {
       return;
     }
 
+    if (name === "logout") {
+      setStack([{ name: "welcome" }]);
+      return;
+    }
+
     const tabRoots = new Set(["dashboard", "contacts", "notes", "status"]);
     if (tabRoots.has(name)) {
       setStack([{ name, props }]);

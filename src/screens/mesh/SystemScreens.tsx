@@ -8,6 +8,7 @@ import { getDashboard } from "../../api/dashboardApi";
 import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "../../api/notificationApi";
 import { extractArray, normalizeApiContact, normalizeApiUpcoming } from "../../api/screenAdapters";
 import { changePassword, getProfile, updateProfile } from "../../api/userApi";
+import { removeToken } from "../../storage/tokenStorage";
 import { Avatar, BottomNav, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshChip, MeshHeader, MeshScreen, MeshScroll, MeshTextInput, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { Contact, Lang, statusById, Upcoming } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -969,6 +970,7 @@ export function SettingsScreen({ t, lang, nav }: Props) {
   const [notesCount, setNotesCount] = useState<number | null>(null);
   const [streakDays, setStreakDays] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -996,6 +998,17 @@ export function SettingsScreen({ t, lang, nav }: Props) {
   const displayName = profileNameVal || "—";
   const displayEmail = profileEmailVal || "—";
 
+  const handleSignOut = async () => {
+    try {
+      setSigningOut(true);
+      await removeToken();
+      nav("logout");
+    } catch (err) {
+      setSigningOut(false);
+      console.warn("Cannot sign out", err);
+    }
+  };
+
   const sections = [
     {
       label: t("account"),
@@ -1003,22 +1016,6 @@ export function SettingsScreen({ t, lang, nav }: Props) {
         { icon: "person-outline" as const, label: t("profile"), trail: displayName, route: "editProfile" },
         { icon: "mail-outline" as const, label: "Email", trail: displayEmail },
         { icon: "lock-closed-outline" as const, label: t("changePassword"), route: "changePassword" }
-      ]
-    },
-    {
-      label: t("preferences"),
-      items: [
-        { icon: "globe-outline" as const, label: t("language"), trail: lang === "vi" ? "Tiếng Việt" : "English", route: "language" },
-        { icon: "notifications-outline" as const, label: t("notifications"), route: "notifPrefs" },
-        { icon: "moon-outline" as const, label: t("darkMode"), toggle: false }
-      ]
-    },
-    {
-      label: t("about"),
-      items: [
-        { icon: "help-circle-outline" as const, label: t("help") },
-        { icon: "shield-checkmark-outline" as const, label: t("privacy") },
-        { icon: "star-outline" as const, label: t("rateApp") }
       ]
     }
   ];
@@ -1077,9 +1074,15 @@ export function SettingsScreen({ t, lang, nav }: Props) {
           </View>
         ))}
 
-        <Pressable style={{ marginTop: 20, borderRadius: mesh.radiusLg, borderWidth: 1, borderColor: "rgba(217,87,122,0.3)", backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 }}>
+        <Pressable
+          disabled={signingOut}
+          onPress={handleSignOut}
+          style={{ marginTop: 20, borderRadius: mesh.radiusLg, borderWidth: 1, borderColor: "rgba(217,87,122,0.3)", backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: signingOut ? 0.6 : 1 }}
+        >
           <Ionicons name="log-out-outline" size={16} color={mesh.pink} />
-          <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "900" }}>{t("signOut")}</Text>
+          <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "900" }}>
+            {signingOut ? "Signing out..." : t("signOut")}
+          </Text>
         </Pressable>
         <Text style={{ textAlign: "center", color: mesh.ink400, fontSize: 11, marginTop: 18 }}>Mesh v1.0.0</Text>
       </MeshScroll>
