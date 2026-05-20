@@ -1,6 +1,6 @@
 import * as Notifications from "expo-notifications";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
 
 import {
   ForgotScreen,
@@ -107,8 +107,16 @@ export function AppShell() {
   const [stack, setStack] = useState<Route[]>([{ name: "loading" }]);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const t = useMemo(() => makeT(lang), [lang]);
-  const route = stack[stack.length - 1];
   const { preloadAppData, clearAppData } = useAppData();
+
+  // Transition animation state
+  const transition = useRef(new Animated.Value(1)).current;
+  const [renderedRoute, setRenderedRoute] = useState<Route>(stack[stack.length - 1]);
+  const [transitionType, setTransitionType] = useState<"push" | "pop" | "tab" | "fade">("fade");
+  const didInitialRoute = useRef(false);
+
+  const activeRoute = stack[stack.length - 1];
+  const route = renderedRoute;
 
   useEffect(() => {
     let active = true;
@@ -143,13 +151,41 @@ export function AppShell() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  // Sync rendered route with stack changes and animate transitions
+  useEffect(() => {
+    const nextRoute = activeRoute;
+
+    setRenderedRoute(nextRoute);
+
+    // Skip animation on first app load
+    if (!didInitialRoute.current) {
+      didInitialRoute.current = true;
+      transition.setValue(1);
+      return;
+    }
+
+    transition.setValue(0);
+
+    Animated.timing(transition, {
+      toValue: 1,
+      duration:
+        transitionType === "tab" ? 160 :
+        transitionType === "fade" ? 150 :
+        220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [activeRoute, transition, transitionType]);
+
   const nav = (name: string, props: Record<string, unknown> = {}) => {
     if (name === "back") {
+      setTransitionType("pop");
       setStack((current) => (current.length > 1 ? current.slice(0, -1) : current));
       return;
     }
 
     if (name === "logout") {
+      setTransitionType("fade");
       setIsAuthed(false);
       clearAppData();
 
@@ -164,6 +200,7 @@ export function AppShell() {
 
     // Block navigation to protected routes when not authenticated
     if (protectedRoutes.has(name) && isAuthed === false) {
+      setTransitionType("fade");
       setStack([{ name: "welcome" }]);
       return;
     }
@@ -177,10 +214,12 @@ export function AppShell() {
 
     const tabRoots = new Set(["dashboard", "contacts", "notes", "status"]);
     if (tabRoots.has(name)) {
+      setTransitionType("tab");
       setStack([{ name, props }]);
       return;
     }
 
+    setTransitionType("push");
     setStack((current) => [...current, { name, props }]);
   };
 
@@ -240,106 +279,152 @@ export function AppShell() {
   const emailOrPhone = route.props?.emailOrPhone as string | undefined;
   const phone = route.props?.phone as string | undefined;
 
-  switch (route.name) {
-    case "welcome":
-      return <WelcomeScreen {...common} />;
-    case "login":
-      return <LoginScreen {...common} />;
-    case "loginErr":
-      return <LoginScreen {...common} error />;
-    case "register":
-      return <RegisterScreen {...common} />;
-    case "registerErr":
-      return <RegisterScreen {...common} error />;
-    case "verifyEmail":
-      return <VerifyEmailScreen {...common} emailOrPhone={emailOrPhone} />;
-    case "verifyPhone":
-      return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} />;
-    case "verifyPhoneR":
-      return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} resend />;
-    case "verifySuccess":
-      return <VerifySuccessScreen {...common} />;
-    case "forgot":
-      return <ForgotScreen {...common} />;
-    case "setupName":
-      return <SetupNameScreen {...common} />;
-    case "reset":
-      return <ResetScreen {...common} emailOrPhone={route.props?.emailOrPhone as string | undefined} />;
-    case "loading":
-      return <LoadingScreen {...common} />;
-    case "dashboard":
-      return <DashboardScreen {...common} {...(route.props as Record<string, unknown>)} />;
-    case "notes":
-      return <NotesScreen {...common} {...(route.props as Record<string, unknown>)} />;
-    case "noteDetail":
-      return noteId ? <NoteDetailScreen {...common} noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
-    case "noteDetailB":
-      return noteId ? <NoteDetailScreen {...common} noteId={noteId} variant="B" /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
-    case "createNote":
-      return <CreateNoteScreen {...common} initialPerson={route.props?.person as string | undefined} />;
-    case "editNote":
-      return noteId ? <CreateNoteScreen {...common} edit noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
-    case "search":
-      return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} type={(route.props?.type as "contacts" | "notes" | undefined) || "notes"} />;
-    case "contactDetail":
-      return contactId ? (
-        <ContactDetailScreen key={`contact-detail-${contactId}`} {...common} contactId={contactId} />
-      ) : (
-        <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
-      );
-    case "createContact":
-      return <CreateContactScreen {...common} />;
-    case "editContact":
-      return contactId ? (
-        <CreateContactScreen key={`edit-contact-${contactId}`} {...common} edit contactId={contactId} />
-      ) : (
-        <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
-      );
-    case "contactsEmpty":
-      return <ContactsEmptyScreen {...common} />;
-    case "contacts":
-      return <ContactsScreen {...common} {...(route.props as Record<string, unknown>)} />;
-    case "status":
-      return <StatusScreen {...common} {...(route.props as Record<string, unknown>)} />;
-    case "createStatus":
-      return <CreateStatusScreen {...common} statusId={(route.props?.id as string) || (route.props?.statusId as string) || undefined} />;
-    case "notifications":
-      return <NotificationsScreen {...common} />;
-    case "allUpcoming":
-      return <AllUpcomingScreen {...common} />;
-    case "recentContacts":
-      return <RecentContactsScreen {...common} />;
-    case "settings":
-      return <SettingsScreen {...common} />;
-    case "notesEmpty":
-      return <NotesEmptyScreen {...common} />;
-    case "editProfile":
-      return <EditProfileScreen {...common} />;
-    case "changePassword":
-      return <ChangePasswordScreen {...common} />;
-    case "language":
-      return <LanguageScreen {...common} />;
-    case "notifPrefs":
-      return <NotifPrefsScreen {...common} />;
-    case "statusInUse":
-      return <StatusInUseScreen {...common} />;
-    case "confirmDeleteNote":
-      return <ConfirmShowcaseScreen {...common} kind="note" />;
-    case "confirmDeleteContact":
-      return <ConfirmShowcaseScreen {...common} kind="contact" />;
-    case "confirmDeleteStatus":
-      return <ConfirmShowcaseScreen {...common} kind="status" />;
-    case "confirmDeleteSpecial":
-      return <ConfirmShowcaseScreen {...common} kind="special" />;
-    case "statusEmpty":
-      return <StatusEmptyScreen {...common} />;
-    case "notifEmpty":
-      return <NotifEmptyScreen {...common} />;
-    case "dashboardEmpty":
-      return <DashboardEmptyScreen {...common} />;
-    default:
-      return <MissingParamScreen title="Screen not found" onBack={() => setStack([{ name: isAuthed ? "dashboard" : "welcome" }])} />;
+  // Create animated styles for page transitions
+  const animatedStyle = {
+    flex: 1,
+    opacity: transition.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.92, 1],
+    }),
+    transform: [
+      {
+        translateX: transition.interpolate({
+          inputRange: [0, 1],
+          outputRange:
+            transitionType === "push"
+              ? [28, 0]
+              : transitionType === "pop"
+                ? [-18, 0]
+                : [0, 0],
+        }),
+      },
+      {
+        translateY: transition.interpolate({
+          inputRange: [0, 1],
+          outputRange: transitionType === "tab" ? [10, 0] : [0, 0],
+        }),
+      },
+      {
+        scale: transition.interpolate({
+          inputRange: [0, 1],
+          outputRange: transitionType === "tab" ? [0.995, 1] : [1, 1],
+        }),
+      },
+    ],
+  };
+
+  // Render the appropriate screen for the current route
+  function renderRoute() {
+    switch (route.name) {
+      case "welcome":
+        return <WelcomeScreen {...common} />;
+      case "login":
+        return <LoginScreen {...common} />;
+      case "loginErr":
+        return <LoginScreen {...common} error />;
+      case "register":
+        return <RegisterScreen {...common} />;
+      case "registerErr":
+        return <RegisterScreen {...common} error />;
+      case "verifyEmail":
+        return <VerifyEmailScreen {...common} emailOrPhone={emailOrPhone} />;
+      case "verifyPhone":
+        return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} />;
+      case "verifyPhoneR":
+        return <VerifyPhoneScreen {...common} emailOrPhone={emailOrPhone} phone={phone} resend />;
+      case "verifySuccess":
+        return <VerifySuccessScreen {...common} />;
+      case "forgot":
+        return <ForgotScreen {...common} />;
+      case "setupName":
+        return <SetupNameScreen {...common} />;
+      case "reset":
+        return <ResetScreen {...common} emailOrPhone={route.props?.emailOrPhone as string | undefined} />;
+      case "loading":
+        return <LoadingScreen {...common} />;
+      case "dashboard":
+        return <DashboardScreen {...common} {...(route.props as Record<string, unknown>)} />;
+      case "notes":
+        return <NotesScreen {...common} {...(route.props as Record<string, unknown>)} />;
+      case "noteDetail":
+        return noteId ? <NoteDetailScreen {...common} noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
+      case "noteDetailB":
+        return noteId ? <NoteDetailScreen {...common} noteId={noteId} variant="B" /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
+      case "createNote":
+        return <CreateNoteScreen {...common} initialPerson={route.props?.person as string | undefined} />;
+      case "editNote":
+        return noteId ? <CreateNoteScreen {...common} edit noteId={noteId} /> : <MissingParamScreen title="Missing note id" onBack={() => nav("notes")} />;
+      case "search":
+        return <SearchScreen {...common} initialQ={(route.props?.query as string) || ""} type={(route.props?.type as "contacts" | "notes" | undefined) || "notes"} />;
+      case "contactDetail":
+        return contactId ? (
+          <ContactDetailScreen key={`contact-detail-${contactId}`} {...common} contactId={contactId} />
+        ) : (
+          <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
+        );
+      case "createContact":
+        return <CreateContactScreen {...common} />;
+      case "editContact":
+        return contactId ? (
+          <CreateContactScreen key={`edit-contact-${contactId}`} {...common} edit contactId={contactId} />
+        ) : (
+          <MissingParamScreen title="Missing contact id" onBack={() => nav("contacts")} />
+        );
+      case "contactsEmpty":
+        return <ContactsEmptyScreen {...common} />;
+      case "contacts":
+        return <ContactsScreen {...common} {...(route.props as Record<string, unknown>)} />;
+      case "status":
+        return <StatusScreen {...common} {...(route.props as Record<string, unknown>)} />;
+      case "createStatus":
+        return <CreateStatusScreen {...common} statusId={(route.props?.id as string) || (route.props?.statusId as string) || undefined} />;
+      case "notifications":
+        return <NotificationsScreen {...common} />;
+      case "allUpcoming":
+        return <AllUpcomingScreen {...common} />;
+      case "recentContacts":
+        return <RecentContactsScreen {...common} />;
+      case "settings":
+        return <SettingsScreen {...common} />;
+      case "notesEmpty":
+        return <NotesEmptyScreen {...common} />;
+      case "editProfile":
+        return <EditProfileScreen {...common} />;
+      case "changePassword":
+        return <ChangePasswordScreen {...common} />;
+      case "language":
+        return <LanguageScreen {...common} />;
+      case "notifPrefs":
+        return <NotifPrefsScreen {...common} />;
+      case "statusInUse":
+        return <StatusInUseScreen {...common} />;
+      case "confirmDeleteNote":
+        return <ConfirmShowcaseScreen {...common} kind="note" />;
+      case "confirmDeleteContact":
+        return <ConfirmShowcaseScreen {...common} kind="contact" />;
+      case "confirmDeleteStatus":
+        return <ConfirmShowcaseScreen {...common} kind="status" />;
+      case "confirmDeleteSpecial":
+        return <ConfirmShowcaseScreen {...common} kind="special" />;
+      case "statusEmpty":
+        return <StatusEmptyScreen {...common} />;
+      case "notifEmpty":
+        return <NotifEmptyScreen {...common} />;
+      case "dashboardEmpty":
+        return <DashboardEmptyScreen {...common} />;
+      default:
+        return <MissingParamScreen title="Screen not found" onBack={() => {
+          setTransitionType("fade");
+          setStack([{ name: isAuthed ? "dashboard" : "welcome" }]);
+        }} />;
+    }
   }
+
+  return (
+    <Animated.View style={animatedStyle as any}>
+      {renderRoute()}
+    </Animated.View>
+  );
 }
 
 function MissingParamScreen({ onBack, title }: { onBack: () => void; title: string }) {
