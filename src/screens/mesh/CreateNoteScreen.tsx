@@ -213,6 +213,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
   const [personLabel,   setPersonLabel]   = useState("");
   const [personQuery,   setPersonQuery]   = useState("");
   const [personFocused, setPersonFocused] = useState(false);
+  const [personNameCommitted, setPersonNameCommitted] = useState(false);
   const [apiContacts,   setApiContacts]   = useState<PickerContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
 
@@ -573,6 +574,7 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         <PersonPill
           value={personQuery}
           selectedPersonId={person}
+          committed={personNameCommitted}
           contacts={
             personQuery.trim().length > 0
               ? apiContacts
@@ -584,12 +586,22 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           error={personError}
           loading={contactsLoading}
           onFocus={() => setPersonFocused(true)}
-          onBlur={() => setTimeout(() => setPersonFocused(false), 150)}
+          onBlur={() => {
+            setTimeout(() => {
+              setPersonFocused(false);
+              if (personQuery.trim().length > 0 && !person) {
+                setPersonLabel(personQuery.trim());
+                setPersonQuery(personQuery.trim());
+                setPersonNameCommitted(true);
+              }
+            }, 150);
+          }}
           onChangeText={(v) => {
             setPersonQuery(v);
             setPersonLabel(v);
             setPerson(null);
             setPersonError(false);
+            setPersonNameCommitted(false);
           }}
           onSelectContact={(c) => {
             setPerson(c.id);
@@ -608,6 +620,14 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
         {/* ── Note canvas ── */}
         <Pressable
           onPress={() => {
+            // Commit manually typed person name before focusing note
+            if (personQuery.trim().length > 0 && !person) {
+              setPersonLabel(personQuery.trim());
+              setPersonQuery(personQuery.trim());
+              setPersonNameCommitted(true);
+              setPersonFocused(false);
+            }
+
             if (bodyText.trim().length > 0 || showBody) bodyRef.current?.focus();
             else firstLineRef.current?.focus();
           }}
@@ -824,9 +844,19 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
 // ─── PersonPill ───────────────────────────────────────────────────────────────
 
 function PersonPill({
-  contacts, error, focused, loading, onBlur, onChangeText, onFocus,
-  onSelectContact, selectedPersonId, value,
+  committed,
+  contacts,
+  error,
+  focused,
+  loading,
+  onBlur,
+  onChangeText,
+  onFocus,
+  onSelectContact,
+  selectedPersonId,
+  value,
 }: {
+  committed: boolean;
   contacts: PickerContact[];
   error: boolean;
   focused: boolean;
@@ -839,6 +869,7 @@ function PersonPill({
   value: string;
 }) {
   const trimmed = value.trim();
+  const shouldRenderAsChipText = Boolean(selectedPersonId) || (committed && trimmed.length > 0 && !focused);
   // Dropdown only when existing contacts match — never show the raw typed name as an item
   const showSuggestions = focused && trimmed.length > 0 && (contacts.length > 0 || loading);
 
@@ -871,25 +902,22 @@ function PersonPill({
           elevation: 2,
         }}
       >
-        {selectedPersonId
-          ? (
-            <View style={styles.personAvatarSlot}>
-              <Avatar name={trimmed || "?"} size={30} />
-            </View>
-          )
-          : (
-            <View style={styles.personIconSlot}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={mesh.green700}
-                style={styles.personIcon}
-              />
-            </View>
-          )
-        }
-        {/* Show Text when contact is selected; TextInput when searching */}
-        {selectedPersonId ? (
+        {selectedPersonId || (committed && trimmed.length > 0) ? (
+          <View style={styles.personAvatarSlot}>
+            <Avatar name={trimmed || "?"} size={30} />
+          </View>
+        ) : (
+          <View style={styles.personIconSlot}>
+            <Ionicons
+              name="person-outline"
+              size={20}
+              color={mesh.green700}
+              style={styles.personIcon}
+            />
+          </View>
+        )}
+        {/* Show Text when contact is selected or committed; TextInput when actively typing */}
+        {shouldRenderAsChipText ? (
           <View style={{ flex: 1, minWidth: 0, justifyContent: "center", overflow: "hidden" }}>
             <Text
               numberOfLines={1}
@@ -902,7 +930,7 @@ function PersonPill({
                 includeFontPadding: false,
               } as any}
             >
-              {value}
+              {trimmed}
             </Text>
           </View>
         ) : (
@@ -917,8 +945,10 @@ function PersonPill({
               returnKeyType="done"
               multiline={false}
               numberOfLines={1}
+              scrollEnabled={false}
               style={{
                 height: 52,
+                maxHeight: 52,
                 color: mesh.ink900,
                 fontSize: 16,
                 fontWeight: "400",
@@ -926,6 +956,7 @@ function PersonPill({
                 paddingTop: 0,
                 paddingBottom: 0,
                 paddingVertical: 0,
+                margin: 0,
                 includeFontPadding: false,
                 textAlignVertical: "center",
               } as any}
