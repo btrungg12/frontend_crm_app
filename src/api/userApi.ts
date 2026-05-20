@@ -21,8 +21,8 @@ export async function updateProfile(payload: UpdateProfilePayload) {
 }
 
 export async function changePassword(payload: Record<string, unknown>) {
-  return await apiRequest("/users/change-password", {
+  return await apiRequest("/auth/change-password", {
     body: payload,
-    method: "PATCH"
+    method: "PUT"
   });
 }

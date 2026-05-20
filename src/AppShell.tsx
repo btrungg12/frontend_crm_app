@@ -8,6 +8,7 @@ import {
   LoginScreen,
   RegisterScreen,
   ResetScreen,
+  SetupNameScreen,
   VerifyEmailScreen,
   VerifyPhoneScreen,
   VerifySuccessScreen,
@@ -253,8 +254,10 @@ export function AppShell() {
       return <VerifySuccessScreen {...common} />;
     case "forgot":
       return <ForgotScreen {...common} />;
+    case "setupName":
+      return <SetupNameScreen {...common} />;
     case "reset":
-      return <ResetScreen {...common} />;
+      return <ResetScreen {...common} emailOrPhone={route.props?.emailOrPhone as string | undefined} />;
     case "loading":
       return <LoadingScreen {...common} />;
     case "dashboard":

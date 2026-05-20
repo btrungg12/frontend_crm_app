@@ -2,7 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { ReactNode, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 
-import { login as loginRequest, register as registerRequest } from "../../api/authApi";
+import {
+  forgotPassword as forgotPasswordRequest,
+  login as loginRequest,
+  register as registerRequest,
+  resendOtp as resendOtpRequest,
+  resetPassword as resetPasswordRequest,
+  setupName as setupNameRequest,
+  verifyOtp as verifyOtpRequest,
+} from "../../api/authApi";
 import { HeaderCircleBtn, MeshScroll, NavFn, TFn } from "../../mesh/MeshComponents";
 import { Lang } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
@@ -23,6 +31,8 @@ const copy: Record<string, string> = {
   loginWelcome: "Welcome back.\nLet's pick up where you left off.",
   emailOrPhone: "Email or phone",
   password: "Password",
+  newPassword: "New password",
+  confirmPassword: "Confirm password",
   incorrectLogin: "Email or password is incorrect.",
   forgotPassword: "Forgot password?",
   continueGoogle: "Continue with Google",
@@ -30,35 +40,37 @@ const copy: Record<string, string> = {
   signup: "Sign up",
   or: "or",
   registerWelcome: "Start building better relationships.",
-  confirmPassword: "Confirm password",
   emailExists: "This email is already registered.",
   haveAccount: "Already have an account?",
   verifyEmail: "Verify your email",
-  verifyEmailDesc: "We sent a verification link to",
-  checkInbox: "Check your inbox and tap the link to continue.",
+  verifyEmailDesc: "We sent a 6-digit code to",
+  enterCode: "Enter the 6-digit code",
   didntReceive: "Didn't receive it?",
-  spamHint: "Check spam or resend the email.",
-  resendEmail: "Resend email",
+  resendEmail: "Resend code",
   verifyPhone: "Verify phone",
   sentCodeTo: "We sent a code to",
-  enterCode: "Enter the 6-digit code",
   resendIn: "Resend in",
   resendCode: "Resend code",
+  resending: "Resending...",
   verify: "Verify",
   verified: "Verified",
   verifiedDesc: "Your account is ready. Please log in to continue.",
   continue: "Continue",
   forgotTitle: "Reset your password",
-  forgotDesc: "Enter your email or phone and we'll send reset instructions.",
-  sendResetLink: "Send reset link",
+  forgotDesc: "Enter your email or phone and we'll send you a reset code.",
+  sendResetLink: "Send reset code",
   remember: "Remembered it?",
   resetPassword: "Reset password",
-  resetDesc: "Create a new secure password.",
-  pwLen: "At least 8 characters",
+  resetDesc: "Enter the code we sent you and your new password.",
+  otpCode: "OTP code",
+  pwLen: "At least 6 characters",
   pwSym: "Includes a number or symbol",
   pwCommon: "Avoid common passwords",
   loading: "Getting things ready",
-  loadingDesc: "Preparing your relationship space..."
+  loadingDesc: "Preparing your relationship space...",
+  setupName: "What's your name?",
+  setupNameSub: "Add your name so people know who you are.",
+  yourName: "Your name",
 };
 
 function tx(t: TFn, key: string) {
@@ -110,11 +122,11 @@ function PrimaryButton({ disabled, label, loading, onPress }: { disabled?: boole
   );
 }
 
-function SecondaryButton({ label, onPress, icon }: { label: string; onPress?: () => void; icon?: keyof typeof Ionicons.glyphMap }) {
+function SecondaryButton({ label, loading, onPress, icon }: { label: string; loading?: boolean; onPress?: () => void; icon?: keyof typeof Ionicons.glyphMap }) {
   return (
-    <Pressable onPress={onPress} style={{ borderRadius: mesh.radiusXl, borderWidth: 1.5, borderColor: mesh.green700, backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10, width: "100%" }}>
+    <Pressable disabled={loading} onPress={onPress} style={{ borderRadius: mesh.radiusXl, borderWidth: 1.5, borderColor: mesh.green700, backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10, width: "100%", opacity: loading ? 0.7 : 1 }}>
       {icon ? <Ionicons name={icon} size={20} color={mesh.green700} /> : null}
-      <Text style={{ color: mesh.green700, fontSize: 15, fontWeight: "900" }}>{label}</Text>
+      {loading ? <ActivityIndicator color={mesh.green700} size="small" /> : <Text style={{ color: mesh.green700, fontSize: 15, fontWeight: "900" }}>{label}</Text>}
     </Pressable>
   );
 }
@@ -138,6 +150,26 @@ function Divider({ t }: { t: TFn }) {
   );
 }
 
+function AuthTitle({ t, title, sub }: { t: TFn; title: string; sub: string }) {
+  return (
+    <View style={{ alignItems: "center", marginBottom: 28 }}>
+      <Logo size={44} />
+      <Text style={{ color: mesh.green800, fontSize: 28, fontWeight: "900", marginTop: 14 }}>{tx(t, title)}</Text>
+      <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" }}>{tx(t, sub)}</Text>
+    </View>
+  );
+}
+
+function ErrorText({ text }: { text: string }) {
+  return <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}><Ionicons name="close-circle-outline" size={14} color={mesh.pink} /><Text style={{ color: mesh.pink, fontSize: 13 }}>{text}</Text></View>;
+}
+
+function InlineLink({ text, link, onPress }: { text: string; link: string; onPress: () => void }) {
+  return <Pressable onPress={onPress}><Text style={{ color: mesh.ink500, fontSize: 13, textAlign: "center", marginTop: 22 }}>{text} <Text style={{ color: mesh.green700, fontWeight: "900" }}>{link}</Text></Text></Pressable>;
+}
+
+// ─── Welcome ─────────────────────────────────────────────────────────────────
+
 export function WelcomeScreen({ t, nav }: Props) {
   return (
     <AuthShell scroll={false}>
@@ -157,6 +189,8 @@ export function WelcomeScreen({ t, nav }: Props) {
   );
 }
 
+// ─── Login ────────────────────────────────────────────────────────────────────
+
 export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean }) {
   const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
   const [password, setPassword] = useState("");
@@ -169,9 +203,7 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
       setFormError("");
       await loginRequest(emailOrPhone.trim(), password);
       nav("dashboard");
-      // Fire-and-forget: request permission + upload push token after login succeeds.
-      // Errors are handled inside registerPushToken and never surface to the user.
-      registerPushToken();
+      registerPushToken().catch(() => undefined);
     } catch (err) {
       setFormError(messageFromError(err, tx(t, "incorrectLogin")));
     } finally {
@@ -196,6 +228,8 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
   );
 }
 
+// ─── Register ─────────────────────────────────────────────────────────────────
+
 export function RegisterScreen({ t, nav, error = false }: Props & { error?: boolean }) {
   const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
   const [password, setPassword] = useState("");
@@ -210,16 +244,11 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
     }
 
     const trimmed = emailOrPhone.trim();
-    const identityPayload = trimmed.includes("@") ? { email: trimmed } : { phone: trimmed };
 
     try {
       setSubmitting(true);
       setFormError("");
-      await registerRequest({
-        emailOrPhone: trimmed,
-        password,
-        ...identityPayload
-      });
+      await registerRequest({ emailOrPhone: trimmed, password });
       nav("verifyEmail", { emailOrPhone: trimmed });
     } catch (err) {
       setFormError(messageFromError(err, tx(t, "emailExists")));
@@ -245,52 +274,156 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
   );
 }
 
-function AuthTitle({ t, title, sub }: { t: TFn; title: string; sub: string }) {
-  return (
-    <View style={{ alignItems: "center", marginBottom: 28 }}>
-      <Logo size={44} />
-      <Text style={{ color: mesh.green800, fontSize: 28, fontWeight: "900", marginTop: 14 }}>{tx(t, title)}</Text>
-      <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" }}>{tx(t, sub)}</Text>
-    </View>
-  );
-}
-
-function ErrorText({ text }: { text: string }) {
-  return <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}><Ionicons name="close-circle-outline" size={14} color={mesh.pink} /><Text style={{ color: mesh.pink, fontSize: 13 }}>{text}</Text></View>;
-}
-
-function InlineLink({ text, link, onPress }: { text: string; link: string; onPress: () => void }) {
-  return <Pressable onPress={onPress}><Text style={{ color: mesh.ink500, fontSize: 13, textAlign: "center", marginTop: 22 }}>{text} <Text style={{ color: mesh.green700, fontWeight: "900" }}>{link}</Text></Text></Pressable>;
-}
+// ─── Verify Email (OTP entry) ─────────────────────────────────────────────────
+// Used after Register. emailOrPhone comes from nav props.
+// Calls POST /auth/verify-otp → if needsName → setupName, else → verifySuccess.
 
 export function VerifyEmailScreen({ t, nav, emailOrPhone }: Props & { emailOrPhone?: string }) {
-  const target = emailOrPhone?.trim() || "your email";
+  const target = emailOrPhone?.trim() || "";
+
+  const [otp, setOtp] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
+
+  const handleVerify = async () => {
+    const trimmedOtp = otp.trim();
+    if (trimmedOtp.length < 4) {
+      setFormError("Please enter the verification code.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setFormError("");
+      const res = await verifyOtpRequest(target, trimmedOtp);
+      if ((res as Record<string, unknown>).needsName) {
+        nav("setupName");
+      } else {
+        nav("verifySuccess");
+      }
+    } catch (err) {
+      setFormError(messageFromError(err, "Invalid or expired code. Try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!target) return;
+    try {
+      setResending(true);
+      setFormError("");
+      await resendOtpRequest(target);
+      setResendDone(true);
+    } catch (err) {
+      setFormError(messageFromError(err, "Could not resend code. Try again."));
+    } finally {
+      setResending(false);
+    }
+  };
 
   return (
     <AuthShell showBack onBack={() => nav("register")}>
       <CenteredIcon icon="mail-outline" />
       <Text style={stylesTitle}>{tx(t, "verifyEmail")}</Text>
-      <Text style={stylesBody}>{tx(t, "verifyEmailDesc")} <Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target}</Text></Text>
-      <Text style={[stylesBody, { marginTop: 12 }]}>{tx(t, "checkInbox")}</Text>
-      <View style={{ flex: 1, minHeight: 160 }} />
-      <View style={{ backgroundColor: mesh.bgSubtle, borderRadius: mesh.radiusLg, padding: 16, marginBottom: 16 }}>
-        <Text style={{ color: mesh.ink900, fontSize: 13, fontWeight: "900" }}>{tx(t, "didntReceive")}</Text>
-        <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 4, marginBottom: 12 }}>{tx(t, "spamHint")}</Text>
-        <SecondaryButton label={tx(t, "resendEmail")} onPress={() => nav("verifySuccess")} />
-      </View>
+      <Text style={stylesBody}>
+        {tx(t, "verifyEmailDesc")}{"\n"}
+        <Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target || "your email"}</Text>
+      </Text>
+      <View style={{ height: 24 }} />
+      <MeshInput
+        icon="keypad-outline"
+        placeholder={tx(t, "enterCode")}
+        value={otp}
+        onChangeText={(v) => { setOtp(v); setFormError(""); }}
+        error={Boolean(formError)}
+      />
+      {formError ? <ErrorText text={formError} /> : null}
+      {resendDone ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <Ionicons name="checkmark-circle-outline" size={14} color={mesh.green600} />
+          <Text style={{ color: mesh.green600, fontSize: 13 }}>Code sent!</Text>
+        </View>
+      ) : null}
+      <View style={{ height: 14 }} />
+      <PrimaryButton
+        disabled={otp.trim().length < 4}
+        label={tx(t, "verify")}
+        loading={submitting}
+        onPress={handleVerify}
+      />
+      <View style={{ height: 10 }} />
+      <SecondaryButton
+        label={resending ? tx(t, "resending") : tx(t, "resendEmail")}
+        loading={resending}
+        onPress={handleResend}
+      />
     </AuthShell>
   );
 }
 
+// ─── Setup Name (after OTP when needsName: true) ──────────────────────────────
+
+export function SetupNameScreen({ t, nav }: Props) {
+  const [name, setName] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSetupName = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setFormError("Please enter your name.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setFormError("");
+      await setupNameRequest(trimmed);
+      registerPushToken().catch(() => undefined);
+      nav("dashboard");
+    } catch (err) {
+      setFormError(messageFromError(err, "Could not save your name. Try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <AuthTitle t={t} title="setupName" sub="setupNameSub" />
+      <MeshInput
+        icon="person-outline"
+        placeholder={tx(t, "yourName")}
+        value={name}
+        onChangeText={(v) => { setName(v); setFormError(""); }}
+        error={Boolean(formError)}
+      />
+      {formError ? <ErrorText text={formError} /> : null}
+      <View style={{ height: 14 }} />
+      <PrimaryButton
+        disabled={!name.trim()}
+        label={tx(t, "continue")}
+        loading={submitting}
+        onPress={handleSetupName}
+      />
+    </AuthShell>
+  );
+}
+
+// ─── Verify Phone (secondary OTP screen for phone numbers) ────────────────────
+
 export function VerifyPhoneScreen({ t, nav, emailOrPhone, phone, resend = false }: Props & { emailOrPhone?: string; phone?: string; resend?: boolean }) {
+  const target = phone?.trim() || emailOrPhone?.trim() || "";
   const code = resend ? ["2", "4", "8", "1", "0", "6"] : ["", "", "", "", "", ""];
-  const target = phone?.trim() || emailOrPhone?.trim() || "your phone";
 
   return (
     <AuthShell showBack onBack={() => nav("register")}>
       <CenteredIcon icon="phone-portrait-outline" />
       <Text style={stylesTitle}>{tx(t, "verifyPhone")}</Text>
-      <Text style={stylesBody}>{tx(t, "sentCodeTo")}{`\n`}<Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target}</Text></Text>
+      <Text style={stylesBody}>{tx(t, "sentCodeTo")}{`\n`}<Text style={{ color: mesh.ink900, fontWeight: "900" }}>{target || "your phone"}</Text></Text>
       <Text style={{ color: mesh.ink500, fontSize: 13, textAlign: "center", marginTop: 10, marginBottom: 24 }}>{tx(t, "enterCode")}</Text>
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 18 }}>
         {code.map((digit, index) => <View key={index} style={{ width: 44, height: 52, borderRadius: 10, borderWidth: 1.5, borderColor: digit ? mesh.green600 : mesh.ink200, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}><Text style={{ color: mesh.ink900, fontSize: 24, fontWeight: "900" }}>{digit}</Text></View>)}
@@ -302,6 +435,8 @@ export function VerifyPhoneScreen({ t, nav, emailOrPhone, phone, resend = false 
     </AuthShell>
   );
 }
+
+// ─── Verify Success ───────────────────────────────────────────────────────────
 
 export function VerifySuccessScreen({ t, nav }: Props) {
   return (
@@ -318,34 +453,146 @@ export function VerifySuccessScreen({ t, nav }: Props) {
   );
 }
 
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+// Calls POST /auth/forgot-password, then navigates to ResetScreen with emailOrPhone.
+
 export function ForgotScreen({ t, nav }: Props) {
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleForgot = async () => {
+    const trimmed = emailOrPhone.trim();
+    if (!trimmed) return;
+
+    try {
+      setSubmitting(true);
+      setFormError("");
+      await forgotPasswordRequest(trimmed);
+      nav("reset", { emailOrPhone: trimmed });
+    } catch (err) {
+      setFormError(messageFromError(err, "Could not send reset code. Check your email or phone."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell showBack onBack={() => nav("login")}>
       <CenteredIcon icon="lock-closed-outline" />
       <Text style={stylesTitle}>{tx(t, "forgotTitle")}</Text>
       <Text style={stylesBody}>{tx(t, "forgotDesc")}</Text>
       <View style={{ height: 28 }} />
-      <MeshInput icon="person-outline" placeholder={tx(t, "emailOrPhone")} />
+      <MeshInput
+        icon="person-outline"
+        placeholder={tx(t, "emailOrPhone")}
+        value={emailOrPhone}
+        onChangeText={(v) => { setEmailOrPhone(v); setFormError(""); }}
+        error={Boolean(formError)}
+      />
+      {formError ? <ErrorText text={formError} /> : null}
       <View style={{ height: 16 }} />
-      <PrimaryButton label={tx(t, "sendResetLink")} onPress={() => nav("verifyEmail")} />
+      <PrimaryButton
+        disabled={!emailOrPhone.trim()}
+        label={tx(t, "sendResetLink")}
+        loading={submitting}
+        onPress={handleForgot}
+      />
       <InlineLink text={tx(t, "remember")} link={tx(t, "login")} onPress={() => nav("login")} />
     </AuthShell>
   );
 }
 
-export function ResetScreen({ t, nav }: Props) {
+// ─── Reset Password ───────────────────────────────────────────────────────────
+// Receives emailOrPhone from ForgotScreen via nav props.
+// Calls POST /auth/reset-password with emailOrPhone + otp + newPassword.
+
+export function ResetScreen({ t, nav, emailOrPhone: emailOrPhoneProp }: Props & { emailOrPhone?: string }) {
+  const emailOrPhone = emailOrPhoneProp?.trim() || "";
+
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleReset = async () => {
+    if (newPassword !== confirmPassword) {
+      setFormError("Passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setFormError("Password must be at least 6 characters.");
+      return;
+    }
+    if (!otp.trim()) {
+      setFormError("Please enter the OTP code.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setFormError("");
+      await resetPasswordRequest(emailOrPhone, otp.trim(), newPassword);
+      nav("verifySuccess");
+    } catch (err) {
+      setFormError(messageFromError(err, "Could not reset password. Check your code and try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AuthShell showBack onBack={() => nav("forgot")}>
       <CenteredIcon icon="lock-closed-outline" />
       <Text style={stylesTitle}>{tx(t, "resetPassword")}</Text>
       <Text style={stylesBody}>{tx(t, "resetDesc")}</Text>
       <View style={{ height: 28 }} />
-      <View style={{ gap: 12 }}><MeshInput icon="lock-closed-outline" secure placeholder={tx(t, "newPassword")} /><MeshInput icon="lock-closed-outline" secure placeholder={tx(t, "confirmNewPassword")} /></View>
-      <View style={{ gap: 8, paddingVertical: 16 }}>{["pwLen", "pwSym", "pwCommon"].map((key) => <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: mesh.green600, alignItems: "center", justifyContent: "center" }}><Ionicons name="checkmark" size={11} color="#FFFFFF" /></View><Text style={{ color: mesh.ink700, fontSize: 13 }}>{tx(t, key)}</Text></View>)}</View>
-      <PrimaryButton label={tx(t, "resetPassword")} onPress={() => nav("verifySuccess")} />
+      <View style={{ gap: 12 }}>
+        <MeshInput
+          icon="keypad-outline"
+          placeholder={tx(t, "otpCode")}
+          value={otp}
+          onChangeText={(v) => { setOtp(v); setFormError(""); }}
+          error={Boolean(formError)}
+        />
+        <MeshInput
+          icon="lock-closed-outline"
+          secure
+          placeholder={tx(t, "newPassword")}
+          value={newPassword}
+          onChangeText={setNewPassword}
+        />
+        <MeshInput
+          icon="lock-closed-outline"
+          secure
+          placeholder={tx(t, "confirmPassword")}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+      </View>
+      {formError ? <ErrorText text={formError} /> : null}
+      <View style={{ gap: 8, paddingVertical: 16 }}>
+        {["pwLen", "pwSym", "pwCommon"].map((key) => (
+          <View key={key} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: mesh.green600, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+            </View>
+            <Text style={{ color: mesh.ink700, fontSize: 13 }}>{tx(t, key)}</Text>
+          </View>
+        ))}
+      </View>
+      <PrimaryButton
+        disabled={!otp.trim() || !newPassword || !confirmPassword}
+        label={tx(t, "resetPassword")}
+        loading={submitting}
+        onPress={handleReset}
+      />
     </AuthShell>
   );
 }
+
+// ─── Loading ──────────────────────────────────────────────────────────────────
 
 export function LoadingScreen({ t }: Props) {
   return (
