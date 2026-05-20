@@ -1,10 +1,19 @@
 import { apiRequest } from "./client";
 
+export type UpdateProfilePayload = {
+  name?: string;
+  fullName?: string;
+  avatarUrl?: string;
+  phone?: string;
+  expoPushToken?: string;
+  [key: string]: unknown;
+};
+
 export async function getProfile() {
   return await apiRequest("/users/me");
 }
 
-export async function updateProfile(payload: Record<string, unknown>) {
+export async function updateProfile(payload: UpdateProfilePayload) {
   return await apiRequest("/users/me", {
     body: payload,
     method: "PATCH"

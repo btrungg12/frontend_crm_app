@@ -1,52 +1,86 @@
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { updateProfile } from "../api/userApi";
+import { getToken } from "../storage/tokenStorage";
 
-/**
- * Requests push notification permission, retrieves the Expo push token,
- * and persists it to the backend via PATCH /api/users/me.
- *
- * Called once after a successful login. Errors are swallowed so they never
- * block the user from reaching the dashboard.
- */
-export async function registerPushToken(): Promise<void> {
+// Singleton guard — prevent concurrent registrations
+let registeringPromise: Promise<string | null> | null = null;
+
+function getProjectId(): string | undefined {
+  return (
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    (Constants as any).easConfig?.projectId ??
+    undefined
+  );
+}
+
+export function registerPushToken(): Promise<string | null> {
+  if (registeringPromise) return registeringPromise;
+
+  registeringPromise = registerPushTokenInner().finally(() => {
+    registeringPromise = null;
+  });
+
+  return registeringPromise;
+}
+
+async function registerPushTokenInner(): Promise<string | null> {
   try {
-    // Physical device required — simulators/emulators cannot receive push notifications
+    const authToken = await getToken();
+    if (!authToken) return null;
+
+    // Push notifications only work on physical devices
     if (!Device.isDevice) {
-      return;
+      if (__DEV__) console.log("[Push] Skipped: not a physical device.");
+      return null;
     }
 
-    // Android requires a notification channel before showing any alerts
+    // Android: set up notification channel before anything else
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {
         name: "default",
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#1F7048",
+        lightColor: "#064532",
       });
     }
 
+    // Request permission
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
-    if (existingStatus !== "granted") {
+    if (finalStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
 
     if (finalStatus !== "granted") {
-      // User declined — nothing to register
-      return;
+      if (__DEV__) console.log("[Push] Permission not granted.");
+      return null;
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    const expoPushToken = tokenData.data; // "ExponentPushToken[...]"
+    // Get Expo push token
+    const projectId = getProjectId();
+    const tokenData = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
 
+    const expoPushToken = tokenData.data;
+    if (!expoPushToken) return null;
+
+    // Save to backend via existing updateProfile
     await updateProfile({ expoPushToken });
+
+    if (__DEV__) console.log("[Push] Token registered:", expoPushToken);
+
+    return expoPushToken;
   } catch (err) {
-    // Never let push-token registration crash the login flow
-    console.warn("registerPushToken failed:", err);
+    if (__DEV__) {
+      console.warn("[Push] Registration failed:", err instanceof Error ? err.message : err);
+    }
+    return null;
   }
 }

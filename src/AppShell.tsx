@@ -1,3 +1,4 @@
+import * as Notifications from "expo-notifications";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
@@ -38,6 +39,7 @@ import {
 import { Lang, makeT } from "./mesh/meshData";
 import { getToken } from "./storage/tokenStorage";
 import { mesh } from "./mesh/meshTheme";
+import { registerPushToken } from "./utils/registerPushToken";
 
 type Route = {
   name: string;
@@ -74,7 +76,11 @@ export function AppShell() {
     let active = true;
 
     getToken().then((token) => {
-      if (active) setStack([routeForAuth(token)]);
+      if (!active) return;
+      setStack([routeForAuth(token)]);
+      if (token) {
+        registerPushToken().catch(() => undefined);
+      }
     });
 
     return () => {
@@ -105,6 +111,44 @@ export function AppShell() {
 
     setStack((current) => [...current, { name, props }]);
   };
+
+  // Notification tap listener — must be after nav is defined
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+
+      const targetType = String(data.targetType ?? data.onModel ?? "").toLowerCase();
+
+      const noteId =
+        typeof data.noteId === "string" && data.noteId
+          ? data.noteId
+          : typeof data.relatedId === "string" && targetType.includes("note")
+            ? data.relatedId
+            : undefined;
+
+      const contactId =
+        typeof data.contactId === "string" && data.contactId
+          ? data.contactId
+          : typeof data.relatedId === "string" && targetType.includes("contact")
+            ? data.relatedId
+            : undefined;
+
+      if (noteId) {
+        nav("noteDetail", { id: noteId });
+        return;
+      }
+
+      if (contactId) {
+        nav("contactDetail", { id: contactId });
+        return;
+      }
+
+      nav("notifications");
+    });
+
+    return () => subscription.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const common = { t, lang, nav };
   const noteId = (route.props?.id as string) || (route.props?.noteId as string);
