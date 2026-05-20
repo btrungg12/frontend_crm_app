@@ -23,14 +23,19 @@ export function QuickCreateSheet({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt, gesture) => {
+      // Don't claim touch on start — let child ScrollViews/TextInputs receive it first
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      // Only take over when the gesture is clearly downward (swipe-to-dismiss intent)
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        gesture.dy > 6 && gesture.dy > Math.abs(gesture.dx),
+      onMoveShouldSetPanResponderCapture: () => false,
+      onPanResponderMove: (_, gesture) => {
         if (gesture.dy > 0) {
           dragY.setValue(gesture.dy);
         }
       },
-      onPanResponderRelease: (evt, gesture) => {
+      onPanResponderRelease: (_, gesture) => {
         const threshold = 120;
         const velocityThreshold = 0.85;
 
@@ -111,6 +116,7 @@ export function QuickCreateSheet({
 
       {/* ── Sheet ── */}
       <Animated.View
+        {...panResponder.panHandlers}
         style={[
           styles.sheet,
           { transform: [{ translateY: sheetTransformY }] },
@@ -120,11 +126,7 @@ export function QuickCreateSheet({
         {children}
 
         {/* Handle as absolute overlay — floats above content, no white strip */}
-        <View
-          pointerEvents="box-only"
-          style={styles.handleOverlay}
-          {...panResponder.panHandlers}
-        >
+        <View pointerEvents="none" style={styles.handleOverlay}>
           <View style={styles.handle} />
         </View>
       </Animated.View>
