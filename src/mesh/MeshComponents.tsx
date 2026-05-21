@@ -6,6 +6,7 @@ import { Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, Tex
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppBackground } from "../components/AppBackground";
+import { RefreshBar } from "../components/RefreshBar";
 import { avatarTint, Contact, Lang, statusById } from "./meshData";
 import { mesh } from "./meshTheme";
 
@@ -97,9 +98,10 @@ function LeafMark() {
 
 export function MeshHeader({
   children,
+  refreshing = false,
   style,
   variant = "solid"
-}: PropsWithChildren<{ style?: ViewStyle; variant?: "solid" | "transparent" }>) {
+}: PropsWithChildren<{ refreshing?: boolean; style?: ViewStyle; variant?: "solid" | "transparent" }>) {
   const insets = useSafeAreaInsets();
   const transparent = variant === "transparent";
   return (
@@ -118,6 +120,7 @@ export function MeshHeader({
     >
       {transparent ? null : <LeafMark />}
       <View style={{ position: "relative", zIndex: 1 }}>{children}</View>
+      <RefreshBar visible={refreshing} />
     </View>
   );
 }

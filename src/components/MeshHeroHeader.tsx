@@ -4,16 +4,19 @@ import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { mesh } from "../mesh/meshTheme";
+import { RefreshBar } from "./RefreshBar";
 
 type Props = PropsWithChildren<{
   left?: ReactNode;
+  /** Show a subtle shimmer bar at the bottom of the header while background data refresh is running */
+  refreshing?: boolean;
   right?: ReactNode;
   style?: ViewStyle;
   subtitle?: string;
   title: string;
 }>;
 
-export function MeshHeroHeader({ children, left, right, style, subtitle, title }: Props) {
+export function MeshHeroHeader({ children, left, refreshing = false, right, style, subtitle, title }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -80,6 +83,9 @@ export function MeshHeroHeader({ children, left, right, style, subtitle, title }
       </View>
 
       {children ? <View style={styles.children}>{children}</View> : null}
+
+      {/* Thin shimmer bar — visible only during background refresh, never shifts layout */}
+      <RefreshBar visible={refreshing} />
     </View>
   );
 }

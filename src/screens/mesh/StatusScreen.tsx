@@ -72,6 +72,7 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
 
   // Compute loading states — only show full loading if no data yet
   const isInitialLoading = statuses.loading && !statuses.data;
+  const isBackgroundRefreshing = statuses.refreshing && Boolean(statuses.data);
 
   const insets = useSafeAreaInsets();
 
@@ -85,7 +86,7 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
         style={{ height: 280, opacity: 0.10, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320, zIndex: 0 }}
       />
 
-      <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />}>
+      <MeshHeroHeader title={t("status")} subtitle={t("statusSub")} right={<HeaderCircleBtn icon="add" onPress={() => nav("createStatus")} />} refreshing={isBackgroundRefreshing}>
         <View style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
           <Ionicons name="search" size={18} color={mesh.ink400} />
           <Text style={{ color: "#8A928D", fontSize: mesh.font.body }}>{t("searchStatus")}</Text>

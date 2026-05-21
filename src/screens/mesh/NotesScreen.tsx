@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { extractArray } from "../../api/screenAdapters";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
+import { RefreshBar } from "../../components/RefreshBar";
 import { Avatar, BottomNav, BottomNavScrim, NavFn, TFn } from "../../mesh/MeshComponents";
 import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
@@ -294,10 +295,12 @@ function NotesHeader({
   search,
   onSearch,
   onNew,
+  refreshing = false,
 }: {
   search: string;
   onSearch: (v: string) => void;
   onNew: () => void;
+  refreshing?: boolean;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -356,6 +359,8 @@ function NotesHeader({
           clearButtonMode="while-editing"
         />
       </View>
+
+      <RefreshBar visible={refreshing} />
     </View>
   );
 }
@@ -480,6 +485,7 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
 
   // Compute loading states — only show full loading if no data yet
   const isInitialLoading = notes.loading && !notes.data;
+  const isBackgroundRefreshing = notes.refreshing && Boolean(notes.data);
 
   const sections = useMemo<NoteSection[]>(() => {
     const filtered = apiNotes.filter((note) => {
@@ -521,7 +527,7 @@ export function NotesScreen({ t, lang, nav, highlightId, highlightLatest, refres
   return (
     <View style={styles.root}>
       {/* Header and filter are fixed above the list — not inside ListHeaderComponent */}
-      <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} />
+      <NotesHeader search={search} onSearch={setSearch} onNew={() => nav("createNote")} refreshing={isBackgroundRefreshing} />
       <FilterRow filter={filter} sort={sort} lang={lang} onFilter={setFilter} onSort={setSort} />
 
       {isInitialLoading ? (

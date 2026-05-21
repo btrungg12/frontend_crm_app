@@ -597,6 +597,10 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
   const isInitialLoading =
     (dashboard.loading && !dashboard.data) ||
     (profile.loading && !profile.data);
+  // Background refresh: has data but fetching fresher copy
+  const isBackgroundRefreshing =
+    (dashboard.refreshing && Boolean(dashboard.data)) ||
+    (profile.refreshing && Boolean(profile.data));
 
   // Build status lookup from API statuses
   const statusLookup = useMemo(() => {
@@ -637,7 +641,7 @@ export function DashboardScreen({ t, lang, nav, refresh }: Props) {
     <MeshScreen>
       <DashboardMeshBackground />
 
-      <MeshHeader variant="transparent" style={{ paddingBottom: 34 }}>
+      <MeshHeader variant="transparent" style={{ paddingBottom: 34 }} refreshing={isBackgroundRefreshing}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 4 }}>
           <Pressable onPress={() => nav("settings")}>
             <Avatar name={userName} size={44} ring />

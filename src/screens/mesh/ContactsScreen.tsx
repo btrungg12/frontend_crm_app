@@ -340,6 +340,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
 
   // Compute loading states — only show full loading if no data yet
   const isInitialLoading = contacts.loading && !contacts.data;
+  const isBackgroundRefreshing = contacts.refreshing && Boolean(contacts.data);
 
   // Build status lookup from API statuses
   const statusLookup = useMemo(() => {
@@ -509,6 +510,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
         right={<HeaderCircleBtn icon="add" onPress={() => nav("createContact")} />}
         title={t("contacts")}
         subtitle={t("contactsCount", { n: sourceContacts.length })}
+        refreshing={isBackgroundRefreshing}
       >
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable onPress={() => nav("search", { type: "contacts" })} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
