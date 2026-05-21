@@ -518,10 +518,10 @@ export function CreateNoteScreen({ t, lang, nav, edit = false, noteId, initialPe
           style={{
             position: "absolute",
             right: -70,
-            top: insets.top + 70,
+            top: insets.top + 40,
             width: 290,
             height: 210,
-            opacity: 0.15,
+            opacity: 0.65,
             transform: [{ rotate: "-6deg" }],
           }}
         />

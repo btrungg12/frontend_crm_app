@@ -93,14 +93,14 @@ const styles = StyleSheet.create({
     right: -145,
     width: 440,
     height: 315,
-    opacity: 0.14,
+    opacity: 0.30,
     transform: [{ rotate: "-6deg" }]
   },
   leafWhiteVeil: {
     position: "absolute",
     left: 0,
     right: 0,
-    top: 185,
-    height: 145
+    top: 105,
+    height: 230
   }
 });
