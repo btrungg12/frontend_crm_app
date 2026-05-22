@@ -20,7 +20,7 @@ import { CreateNoteScreen } from "./screens/mesh/CreateNoteScreen";
 import { NoteDetailScreen } from "./screens/mesh/NoteDetailScreen";
 import { NotesScreen } from "./screens/mesh/NotesScreen";
 import { SearchScreen } from "./screens/mesh/SearchScreen";
-import { CreateStatusScreen, StatusScreen } from "./screens/mesh/StatusScreen";
+import { CreateStatusScreen, StatusContactsScreen, StatusScreen } from "./screens/mesh/StatusScreen";
 import {
   AllUpcomingScreen,
   ChangePasswordScreen,
@@ -89,7 +89,8 @@ const protectedRoutes = new Set([
   "confirmDeleteNote",
   "confirmDeleteContact",
   "confirmDeleteStatus",
-  "confirmDeleteSpecial"
+  "confirmDeleteSpecial",
+  "statusContacts"
 ]);
 
 function routeForAuth(token: string | null) {
@@ -381,7 +382,11 @@ export function AppShell() {
       case "status":
         return <StatusScreen {...common} {...(route.props as Record<string, unknown>)} />;
       case "createStatus":
-        return <CreateStatusScreen {...common} statusId={(route.props?.id as string) || (route.props?.statusId as string) || undefined} />;
+        return <CreateStatusScreen {...common} statusId={(route.props?.id as string) || (route.props?.statusId as string) || undefined} initialStatus={route.props?.status as import("./mesh/meshData").Status | undefined} />;
+      case "statusContacts":
+        return (route.props?.statusId as string) ? (
+          <StatusContactsScreen {...common} statusId={route.props.statusId as string} statusName={(route.props.statusName as string) || ""} statusColor={route.props.statusColor as string | undefined} />
+        ) : <MissingParamScreen title="Missing status id" onBack={() => nav("status")} />;
       case "notifications":
         return <NotificationsScreen {...common} />;
       case "allUpcoming":

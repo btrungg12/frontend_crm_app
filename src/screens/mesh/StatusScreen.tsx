@@ -7,12 +7,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
 import { extractArray, normalizeApiContact, normalizeApiStatus } from "../../api/screenAdapters";
+import { GradientAvatar } from "../../components/GradientAvatar";
 import { MeshHeroHeader } from "../../components/MeshHeroHeader";
 import { QuickCreateSheet } from "../../components/QuickCreateSheet";
 import { BottomNav, BottomNavScrim, ConfirmDialog, HeaderCircleBtn, MeshCard, MeshHeader, MeshScreen, MeshScroll, NavFn, SectionLabel, TFn } from "../../mesh/MeshComponents";
 import { CreateNoteScreen } from "./CreateNoteScreen";
 import { CreateContactScreen } from "./ContactsScreen";
-import { Lang, Status } from "../../mesh/meshData";
+import { Contact, Lang, Status } from "../../mesh/meshData";
 import { mesh } from "../../mesh/meshTheme";
 import { useAppData } from "../../state/AppDataContext";
 
@@ -82,20 +83,32 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
   const isInitialLoading = statuses.loading && !statuses.data;
   const isBackgroundRefreshing = statuses.refreshing && Boolean(statuses.data);
 
-  // Compute contact count per status from cached contacts
+  // Compute contact count per status from cached contacts.
+  // c.status may be a raw ID or a name string depending on API shape —
+  // resolve to the canonical status ID using both exact match and name fallback.
   const contactCountByStatusId = useMemo<Record<string, number>>(() => {
     if (!contacts.data) return {};
     const counts: Record<string, number> = {};
     const normalized = extractArray(contacts.data, "contacts")
       .map(normalizeApiContact)
       .filter(Boolean);
+    const statusNameToId: Record<string, string> = {};
+    for (const s of apiStatuses) {
+      statusNameToId[s.name.toLowerCase()] = s.id;
+    }
     for (const c of normalized) {
-      if (c?.status) {
-        counts[c.status] = (counts[c.status] || 0) + 1;
+      if (!c?.status) continue;
+      const cs = c.status;
+      // Try exact ID match first, then name-based lookup
+      const resolvedId =
+        apiStatuses.find((s) => s.id === cs)?.id ??
+        statusNameToId[cs.toLowerCase()];
+      if (resolvedId) {
+        counts[resolvedId] = (counts[resolvedId] || 0) + 1;
       }
     }
     return counts;
-  }, [contacts.data]);
+  }, [contacts.data, apiStatuses]);
 
   const { height: windowHeight } = useWindowDimensions();
 
@@ -157,7 +170,7 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
             {sourceStatuses.map((status, index) => (
             <Pressable
               key={status.id}
-              onPress={() => nav("contacts", { initialStatusId: status.id, initialStatusName: status.name })}
+              onPress={() => nav("statusContacts", { statusId: status.id, statusName: status.name, statusColor: status.color })}
               onLongPress={(e) => openStatusActions(status, e.nativeEvent.pageY)}
               delayLongPress={350}
               style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < sourceStatuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
@@ -232,40 +245,37 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
               style={{
                 backgroundColor: "#FFFFFF",
                 borderColor: "rgba(6,69,50,0.08)",
-                borderRadius: 24,
+                borderRadius: 20,
                 borderWidth: 1,
                 elevation: 8,
-                padding: 6,
+                overflow: "hidden",
                 shadowColor: "#0B2F20",
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.12,
-                shadowRadius: 20,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.10,
+                shadowRadius: 16,
               }}
             >
               {/* Header */}
-              <View style={{ paddingHorizontal: 14, paddingVertical: 10 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "800" }}>
+              <View style={{ borderBottomColor: "rgba(6,69,50,0.07)", borderBottomWidth: 1, paddingHorizontal: 16, paddingVertical: 10 }}>
+                <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "800" }}>
                   {actionStatus?.name}
                 </Text>
-                <Text style={{ color: mesh.ink500, fontSize: 12, marginTop: 2 }}>
-                  Manage this status
-                </Text>
               </View>
-
-              <View style={{ backgroundColor: "rgba(6,69,50,0.06)", height: 1, marginHorizontal: 8 }} />
 
               {/* Edit */}
               <Pressable
                 onPress={() => {
-                  const id = actionStatus?.id;
+                  const s = actionStatus;
                   closeStatusActions();
-                  if (id) nav("createStatus", { id });
+                  if (s) nav("createStatus", { id: s.id, status: s });
                 }}
-                style={{ alignItems: "center", borderRadius: 16, flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 13 }}
+                style={{ alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingVertical: 13 }}
               >
-                <Ionicons name="create-outline" size={19} color={mesh.green700} />
-                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>Edit status</Text>
+                <Ionicons name="create-outline" size={18} color={mesh.green700} />
+                <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>Edit status</Text>
               </Pressable>
+
+              <View style={{ backgroundColor: "rgba(6,69,50,0.06)", height: 1, marginHorizontal: 0 }} />
 
               {/* Delete */}
               <Pressable
@@ -274,20 +284,10 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
                   setDeleteTarget(actionStatus);
                   closeStatusActions();
                 }}
-                style={{ alignItems: "center", borderRadius: 16, flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 13 }}
+                style={{ alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingVertical: 13 }}
               >
-                <Ionicons name="trash-outline" size={19} color={mesh.pink} />
-                <Text style={{ color: mesh.pink, fontSize: 15, fontWeight: "700" }}>Delete status</Text>
-              </Pressable>
-
-              <View style={{ backgroundColor: "rgba(6,69,50,0.06)", height: 1, marginHorizontal: 8 }} />
-
-              {/* Cancel */}
-              <Pressable
-                onPress={closeStatusActions}
-                style={{ alignItems: "center", borderRadius: 16, paddingVertical: 12 }}
-              >
-                <Text style={{ color: mesh.ink400, fontSize: 14, fontWeight: "600" }}>Cancel</Text>
+                <Ionicons name="trash-outline" size={18} color={mesh.pink} />
+                <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "700" }}>Delete status</Text>
               </Pressable>
             </Pressable>
           </View>
@@ -357,14 +357,15 @@ function InlineState({ error = false, label, loading = false }: { error?: boolea
   );
 }
 
-export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: string }) {
+export function CreateStatusScreen({ t, nav, statusId, initialStatus }: Props & { statusId?: string; initialStatus?: Status }) {
   const { refreshStatuses, invalidateContacts, invalidateDashboard } = useAppData();
   const insets = useSafeAreaInsets();
   const palette = ["#2F8F5F", "#3B7BD9", "#8B5CD6", "#D9577A", "#F5B83B", "#35C7B7"];
-  const [name, setName] = useState("");
-  const [color, setColor] = useState(palette[0]);
-  const [existingStatus, setExistingStatus] = useState<Status | null>(null);
-  const [loading, setLoading] = useState(Boolean(statusId));
+  const [name, setName] = useState(() => (initialStatus?.id === statusId ? initialStatus.name : ""));
+  const [color, setColor] = useState(() => (initialStatus?.id === statusId ? (initialStatus.color || palette[0]) : palette[0]));
+  const [existingStatus, setExistingStatus] = useState<Status | null>(() => (initialStatus?.id === statusId ? initialStatus : null));
+  // If initialStatus is provided and matches, skip loading
+  const [loading, setLoading] = useState(Boolean(statusId) && !(initialStatus?.id === statusId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -378,6 +379,16 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         setName("");
         setColor(palette[0]);
         setExistingStatus(null);
+        setLoading(false);
+        setError("");
+        return;
+      }
+
+      // If the caller passed the full status object, use it directly — no fetch needed
+      if (initialStatus && initialStatus.id === statusId) {
+        setExistingStatus(initialStatus);
+        setName(initialStatus.name);
+        setColor(initialStatus.color || palette[0]);
         setLoading(false);
         setError("");
         return;
@@ -415,7 +426,7 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
     return () => {
       active = false;
     };
-  }, [statusId]);
+  }, [statusId, initialStatus]);
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -724,6 +735,149 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         confirmLabel={t("delete")}
         cancelLabel={t("cancel")}
       />
+    </MeshScreen>
+  );
+}
+
+// ─── StatusContactsScreen ──────────────────────────────────────────────────────
+// Dedicated push-screen showing contacts filtered to a single status.
+
+export function StatusContactsScreen({
+  t,
+  lang: _lang,
+  nav,
+  statusId,
+  statusName,
+  statusColor,
+}: Props & { statusId: string; statusName: string; statusColor?: string }) {
+  const { contacts, statuses: statusesCtx, refreshContacts, refreshStatuses } = useAppData();
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    refreshContacts(false);
+    refreshStatuses(false);
+  }, [refreshContacts, refreshStatuses]);
+
+  // Resolve statuses list so we can do name-based matching if needed
+  const apiStatuses = useMemo<Status[]>(() => {
+    if (!statusesCtx.data) return [];
+    return extractArray(statusesCtx.data, "statuses")
+      .map(normalizeApiStatus)
+      .filter(Boolean) as Status[];
+  }, [statusesCtx.data]);
+
+  const filteredContacts = useMemo<Contact[]>(() => {
+    if (!contacts.data) return [];
+    const statusNameToId: Record<string, string> = {};
+    for (const s of apiStatuses) statusNameToId[s.name.toLowerCase()] = s.id;
+
+    return (
+      extractArray(contacts.data, "contacts")
+        .map(normalizeApiContact)
+        .filter((c): c is Contact => {
+          if (!c?.status) return false;
+          const cs = c.status;
+          const resolvedId =
+            apiStatuses.find((s) => s.id === cs)?.id ??
+            statusNameToId[cs.toLowerCase()];
+          return resolvedId === statusId || cs === statusId;
+        }) as Contact[]
+    );
+  }, [contacts.data, apiStatuses, statusId]);
+
+  const isLoading = contacts.loading && !contacts.data;
+  const dotColor = statusColor || mesh.green700;
+
+  return (
+    <MeshScreen>
+      {/* Soft gradient header */}
+      <MeshGradientView
+        pointerEvents="none"
+        style={{ height: 300, left: 0, position: "absolute", right: 0, top: 0 }}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532", "#0B573E", "#2F805E", "#DDEFE5",
+          "#EAF6EF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+        ]}
+        points={[
+          [0, 0],    [0.35, 0],    [0.7, 0],    [1, 0],
+          [0, 0.36], [0.35, 0.38], [0.7, 0.34], [1, 0.3],
+          [0, 0.66], [0.35, 0.68], [0.7, 0.72], [1, 0.7],
+          [0, 1],    [0.35, 1],    [0.7, 1],    [1, 1],
+        ]}
+        smoothsColors
+      />
+
+      {/* Leaf accent */}
+      <Image
+        source={leafPng}
+        resizeMode="contain"
+        pointerEvents="none"
+        style={{ height: 240, opacity: 0.07, position: "absolute", right: -60, top: insets.top + 90, transform: [{ rotate: "-12deg" }], width: 240, zIndex: 0 }}
+      />
+
+      {/* Header area */}
+      <View style={{ paddingHorizontal: 24, paddingTop: insets.top + 14 }}>
+        <HeaderCircleBtn icon="chevron-back" onPress={() => nav("back")} />
+
+        <View style={{ alignItems: "center", flexDirection: "row", gap: 10, marginTop: 22 }}>
+          <View style={{ backgroundColor: dotColor, borderRadius: 999, height: 11, width: 11 }} />
+          <Text style={{ color: "#064532", fontSize: 28, fontWeight: "800", letterSpacing: -0.5 }}>
+            {statusName}
+          </Text>
+        </View>
+
+        <Text style={{ color: "#66716B", fontSize: 14, marginTop: 6 }}>
+          {isLoading
+            ? "Loading..."
+            : `${filteredContacts.length} ${filteredContacts.length === 1 ? "person" : "people"}`}
+        </Text>
+      </View>
+
+      {/* Contact list */}
+      <MeshScroll style={{ paddingHorizontal: 20, paddingTop: 28 }} bottom={60}>
+        {isLoading ? (
+          <ActivityIndicator color={mesh.green700} size="small" style={{ marginTop: 40 }} />
+        ) : filteredContacts.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 60, gap: 8 }}>
+            <Ionicons name="people-outline" size={40} color={mesh.ink300} />
+            <Text style={{ color: mesh.ink400, fontSize: 15, textAlign: "center" }}>
+              No contacts in {statusName} yet.
+            </Text>
+          </View>
+        ) : (
+          <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, paddingHorizontal: 14, paddingVertical: 6, shadowOpacity: 0.02 }}>
+            {filteredContacts.map((contact, index) => (
+              <Pressable
+                key={contact.id}
+                onPress={() => nav("contactDetail", { id: contact.id })}
+                style={{ alignItems: "center", borderBottomColor: "rgba(6,69,50,0.08)", borderBottomWidth: index < filteredContacts.length - 1 ? 1 : 0, flexDirection: "row", gap: 12, paddingVertical: 11 }}
+              >
+                <GradientAvatar
+                  initials={contact.initials}
+                  statusColor={contact.statusColor}
+                  avatarUrl={contact.avatarUrl}
+                  size={44}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>
+                    {contact.name}
+                  </Text>
+                  {contact.statusName ? (
+                    <Text style={{ color: dotColor, fontSize: 12, fontWeight: "600", marginTop: 2 }}>
+                      {contact.statusName}
+                    </Text>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
+              </Pressable>
+            ))}
+          </MeshCard>
+        )}
+      </MeshScroll>
     </MeshScreen>
   );
 }
