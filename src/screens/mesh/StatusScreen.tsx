@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createStatus, deleteStatus, getStatuses, updateStatus } from "../../api/statusApi";
@@ -38,7 +38,12 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
 
-  const { statuses, refreshStatuses } = useAppData();
+  // Long-press action state
+  const [actionStatus, setActionStatus] = useState<Status | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Status | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const { statuses, refreshStatuses, invalidateContacts, invalidateDashboard } = useAppData();
 
   const sourceStatuses = apiStatuses;
 
@@ -75,6 +80,31 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
   const isInitialLoading = statuses.loading && !statuses.data;
   const isBackgroundRefreshing = statuses.refreshing && Boolean(statuses.data);
 
+  function openStatusActions(status: Status) {
+    setActionStatus(status);
+  }
+
+  function closeStatusActions() {
+    setActionStatus(null);
+  }
+
+  async function handleDeleteStatusFromList() {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      await deleteStatus(deleteTarget.id);
+      await refreshStatuses(true);
+      invalidateContacts();
+      invalidateDashboard();
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(apiMessage(err, "Cannot delete status."));
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const insets = useSafeAreaInsets();
 
   return (
@@ -95,7 +125,10 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
       </MeshHeroHeader>
 
       <MeshScroll style={{ paddingHorizontal: 16, paddingTop: 14 }} bottom={150}>
-        <SectionLabel style={{ marginBottom: 8 }}>{t("statusList")}</SectionLabel>
+        <View style={{ alignItems: "baseline", flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+          <SectionLabel>{t("statusList")}</SectionLabel>
+          <Text style={{ color: mesh.ink400, fontSize: 12 }}>Tap to view · Hold to manage</Text>
+        </View>
         {isInitialLoading ? (
           <InlineState label="Loading statuses..." loading />
         ) : error ? (
@@ -107,7 +140,9 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
             {sourceStatuses.map((status, index) => (
             <Pressable
               key={status.id}
-              onPress={() => nav("createStatus", { id: status.id })}
+              onPress={() => nav("contacts", { initialStatusId: status.id, initialStatusName: status.name })}
+              onLongPress={() => openStatusActions(status)}
+              delayLongPress={350}
               style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < sourceStatuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
             >
               <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
@@ -148,6 +183,97 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
           else if (id === "contacts") nav("contacts");
           else if (id === "notes") nav("notes");
         }}
+      />
+
+      {/* ── Long-press action sheet ── */}
+      <Modal
+        visible={Boolean(actionStatus)}
+        transparent
+        animationType="fade"
+        onRequestClose={closeStatusActions}
+      >
+        <Pressable
+          onPress={closeStatusActions}
+          style={{
+            backgroundColor: "rgba(8,32,22,0.18)",
+            flex: 1,
+            justifyContent: "flex-end",
+            paddingBottom: Math.max(insets.bottom, 18),
+            paddingHorizontal: 18,
+          }}
+        >
+          {/* Inner card — stop event from bubbling to overlay */}
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderColor: "rgba(6,69,50,0.08)",
+              borderRadius: 28,
+              borderWidth: 1,
+              elevation: 8,
+              padding: 10,
+              shadowColor: "#0B2F20",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.10,
+              shadowRadius: 18,
+            }}
+          >
+            {/* Header */}
+            <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+              <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "800" }}>
+                {actionStatus?.name}
+              </Text>
+              <Text style={{ color: mesh.ink500, fontSize: 13, marginTop: 3 }}>
+                Manage this status
+              </Text>
+            </View>
+
+            {/* Edit */}
+            <Pressable
+              onPress={() => {
+                const id = actionStatus?.id;
+                closeStatusActions();
+                if (id) nav("createStatus", { id });
+              }}
+              style={{ alignItems: "center", borderRadius: 18, flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 14 }}
+            >
+              <Ionicons name="create-outline" size={20} color={mesh.green700} />
+              <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>Edit status</Text>
+            </Pressable>
+
+            {/* Delete */}
+            <Pressable
+              onPress={() => {
+                if (!actionStatus) return;
+                setDeleteTarget(actionStatus);
+                closeStatusActions();
+              }}
+              style={{ alignItems: "center", borderRadius: 18, flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 14 }}
+            >
+              <Ionicons name="trash-outline" size={20} color={mesh.pink} />
+              <Text style={{ color: mesh.pink, fontSize: 15, fontWeight: "700" }}>Delete status</Text>
+            </Pressable>
+
+            {/* Cancel */}
+            <Pressable
+              onPress={closeStatusActions}
+              style={{ alignItems: "center", borderRadius: 18, marginTop: 6, paddingVertical: 14 }}
+            >
+              <Text style={{ color: mesh.ink500, fontSize: 15, fontWeight: "700" }}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ── Delete confirm from list ── */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => { if (!deleting) setDeleteTarget(null); }}
+        onConfirm={handleDeleteStatusFromList}
+        title={t("deleteStatusTitle")}
+        desc={deleteTarget ? `Delete "${deleteTarget.name}"? Contacts will no longer use this status.` : ""}
+        confirmLabel={deleting ? "Deleting..." : t("delete")}
+        cancelLabel={t("cancel")}
       />
 
       <QuickCreateSheet

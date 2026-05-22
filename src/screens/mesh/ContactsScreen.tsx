@@ -252,6 +252,8 @@ type Props = {
   nav: NavFn;
   highlightId?: string;
   highlightName?: string;
+  initialStatusId?: string;
+  initialStatusName?: string;
   refresh?: number;
 };
 
@@ -280,8 +282,8 @@ function extractCreatedId(response: unknown): string | undefined {
   );
 }
 
-export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refresh }: Props) {
-  const [filter, setFilter] = useState("all");
+export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initialStatusId, initialStatusName, refresh }: Props) {
+  const [filter, setFilter] = useState(initialStatusId || "all");
   const [apiContacts, setApiContacts] = useState<Contact[]>([]);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
@@ -416,6 +418,13 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
       setPendingHighlight({ id: highlightId, name: highlightName });
     }
   }, [highlightId, highlightName, refresh]);
+
+  // When opened from StatusScreen with a status pre-selected
+  useEffect(() => {
+    if (initialStatusId) {
+      setFilter(initialStatusId);
+    }
+  }, [initialStatusId]);
 
   // Find target contact from pending highlight
   const targetContact = useMemo(() => {
@@ -552,7 +561,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, refre
           ) : error ? (
             <InlineState label={error} error />
           ) : list.length === 0 ? (
-            <InlineState label={filter === "all" ? "No contacts yet." : "No contacts in this status."} />
+            <InlineState label={filter === "all" ? "No contacts yet." : initialStatusName ? `No contacts in ${initialStatusName}.` : "No contacts in this status."} />
           ) : Object.keys(grouped).sort().map((key) => (
             <View key={key}>
               <Text style={{ color: "#7A837E", fontSize: mesh.font.bodySm, fontWeight: "700", marginTop: 18, marginBottom: 8 }}>{key}</Text>
