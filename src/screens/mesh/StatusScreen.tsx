@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
@@ -340,7 +341,7 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       {/* Soft top gradient — fades to white so there's no hard header/body split */}
       <MeshGradientView
         pointerEvents="none"
-        style={{ height: 360, left: 0, position: "absolute", right: 0, top: 0 }}
+        style={{ height: 330, left: 0, position: "absolute", right: 0, top: 0 }}
         columns={4}
         rows={4}
         colors={[
@@ -367,8 +368,8 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
           height: 260,
           opacity: 0.075,
           position: "absolute",
-          right: -60,
-          top: insets.top + 115,
+          right: -78,
+          top: insets.top + 120,
           transform: [{ rotate: "-12deg" }],
           width: 260,
           zIndex: 0,
@@ -388,11 +389,11 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         <Text
           style={{
             color: "#064532",
-            fontSize: 34,
-            fontWeight: "900",
-            letterSpacing: -0.8,
-            lineHeight: 40,
-            marginTop: 28,
+            fontSize: 31,
+            fontWeight: "800",
+            letterSpacing: -0.6,
+            lineHeight: 37,
+            marginTop: 26,
           }}
         >
           {isEdit ? t("editStatus") : "Create status"}
@@ -401,10 +402,10 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         {/* Subtitle */}
         <Text
           style={{
-            color: "#5E6963",
-            fontSize: 16,
-            lineHeight: 24,
-            marginTop: 14,
+            color: "#66716B",
+            fontSize: 15.5,
+            lineHeight: 23,
+            marginTop: 12,
             maxWidth: 330,
           }}
         >
@@ -413,7 +414,7 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       </View>
 
       {/* ── Scrollable form content ── */}
-      <MeshScroll style={{ paddingHorizontal: 24, paddingTop: 52 }} bottom={150}>
+      <MeshScroll style={{ paddingHorizontal: 24, paddingTop: 42 }} bottom={150}>
 
         {/* Inline error */}
         {error ? (
@@ -423,18 +424,18 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
         ) : null}
 
         {/* Status name */}
-        <Text style={{ color: "#064532", fontSize: 15, fontWeight: "800", marginBottom: 12 }}>
+        <Text style={{ color: "#064532", fontSize: 14.5, fontWeight: "800", marginBottom: 11 }}>
           Status name
         </Text>
         <View
           style={{
-            backgroundColor: "rgba(255,255,255,0.92)",
-            borderColor: "rgba(6,69,50,0.14)",
-            borderRadius: 18,
+            backgroundColor: "rgba(255,255,255,0.86)",
+            borderColor: "rgba(6,69,50,0.10)",
+            borderRadius: 17,
             borderWidth: 1,
-            height: 76,
-            paddingHorizontal: 18,
-            paddingTop: 16,
+            height: 68,
+            paddingHorizontal: 17,
+            paddingTop: 13,
             position: "relative",
           }}
         >
@@ -443,16 +444,16 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
             onChangeText={(v) => setName(v.slice(0, 30))}
             placeholder="e.g. Investor, Client, Mentor"
             placeholderTextColor="#929B96"
-            style={{ color: mesh.ink900, fontSize: 16, height: 28, padding: 0 }}
+            style={{ color: mesh.ink900, fontSize: 15.5, height: 26, padding: 0 }}
             maxLength={30}
           />
-          <Text style={{ bottom: 14, color: mesh.ink400, fontSize: 14, position: "absolute", right: 18 }}>
+          <Text style={{ bottom: 11, color: mesh.ink400, fontSize: 13, position: "absolute", right: 17 }}>
             {name.length}/30
           </Text>
         </View>
 
         {/* Choose color */}
-        <Text style={{ color: "#064532", fontSize: 15, fontWeight: "800", marginBottom: 14, marginTop: 34 }}>
+        <Text style={{ color: "#064532", fontSize: 14.5, fontWeight: "800", marginBottom: 12, marginTop: 30 }}>
           Choose color
         </Text>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -466,42 +467,42 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
                   alignItems: "center",
                   backgroundColor: item,
                   borderColor: "#FFFFFF",
-                  borderRadius: 25,
-                  borderWidth: 4,
-                  elevation: active ? 4 : 2,
-                  height: 50,
+                  borderRadius: 24,
+                  borderWidth: 3,
+                  elevation: active ? 3 : 1,
+                  height: 48,
                   justifyContent: "center",
                   shadowColor: item,
-                  shadowOffset: { width: 0, height: 7 },
-                  shadowOpacity: active ? 0.26 : 0.10,
-                  shadowRadius: active ? 12 : 8,
-                  width: 50,
+                  shadowOffset: { width: 0, height: 5 },
+                  shadowOpacity: active ? 0.18 : 0.06,
+                  shadowRadius: active ? 9 : 5,
+                  width: 48,
                 }}
               >
-                {active ? <Ionicons name="checkmark" size={25} color="#FFFFFF" /> : null}
+                {active ? <Ionicons name="checkmark" size={23} color="#FFFFFF" /> : null}
               </Pressable>
             );
           })}
         </View>
 
         {/* Preview */}
-        <Text style={{ color: "#064532", fontSize: 15, fontWeight: "800", marginBottom: 14, marginTop: 42 }}>
+        <Text style={{ color: "#064532", fontSize: 14.5, fontWeight: "800", marginBottom: 12, marginTop: 36 }}>
           Preview
         </Text>
         <View
           style={{
             alignItems: "center",
             alignSelf: "flex-start",
-            backgroundColor: `${color}14`,
+            backgroundColor: `${color}12`,
             borderRadius: 999,
             flexDirection: "row",
-            gap: 12,
-            height: 44,
-            paddingHorizontal: 22,
+            gap: 10,
+            height: 40,
+            paddingHorizontal: 18,
           }}
         >
-          <View style={{ backgroundColor: color, borderRadius: 999, height: 9, width: 9 }} />
-          <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
+          <View style={{ backgroundColor: color, borderRadius: 999, height: 8, width: 8 }} />
+          <Text style={{ color, fontSize: 15, fontWeight: "800" }}>
             {name.trim() || "Status name"}
           </Text>
         </View>
@@ -535,14 +536,12 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
       {/* ── Fixed bottom save button ── */}
       <View
         style={{
-          backgroundColor: "rgba(255,255,255,0.96)",
-          borderTopColor: "rgba(6,69,50,0.06)",
-          borderTopWidth: 1,
+          backgroundColor: "rgba(255,255,255,0.90)",
           bottom: 0,
           left: 0,
-          paddingBottom: Math.max(insets.bottom, 20),
+          paddingBottom: Math.max(insets.bottom, 18),
           paddingHorizontal: 24,
-          paddingTop: 14,
+          paddingTop: 10,
           position: "absolute",
           right: 0,
         }}
@@ -551,29 +550,37 @@ export function CreateStatusScreen({ t, nav, statusId }: Props & { statusId?: st
           disabled={saving}
           onPress={handleSave}
           style={{
-            alignItems: "center",
-            backgroundColor: mesh.green700,
             borderRadius: 999,
-            elevation: 7,
-            flexDirection: "row",
-            gap: 12,
-            height: 62,
-            justifyContent: "center",
+            elevation: 4,
             opacity: saving ? 0.7 : 1,
+            overflow: "hidden",
             shadowColor: "#064532",
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.18,
-            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.10,
+            shadowRadius: 14,
           }}
         >
-          {saving ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
-          ) : (
-            <Ionicons name="save-outline" size={22} color="#FFFFFF" />
-          )}
-          <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>
-            Save status
-          </Text>
+          <LinearGradient
+            colors={[mesh.green800, mesh.green700, "#008A55"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              alignItems: "center",
+              flexDirection: "row",
+              gap: 10,
+              height: 58,
+              justifyContent: "center",
+            }}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Ionicons name="save-outline" size={20} color="#FFFFFF" />
+            )}
+            <Text style={{ color: "#FFFFFF", fontSize: 16.5, fontWeight: "800" }}>
+              Save status
+            </Text>
+          </LinearGradient>
         </Pressable>
       </View>
 
