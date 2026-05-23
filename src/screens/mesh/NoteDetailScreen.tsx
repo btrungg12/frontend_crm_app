@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -416,6 +417,49 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
 
   return (
     <MeshScreen style={styles.root}>
+      <MeshGradientView
+        pointerEvents="none"
+        style={styles.bgMesh}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532",
+          "#0B573E",
+          "#2F805E",
+          "#DDEFE5",
+          "#EAF6EF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+        ]}
+        points={[
+          [0, 0],
+          [0.35, 0],
+          [0.7, 0],
+          [1, 0],
+          [0, 0.28],
+          [0.35, 0.34],
+          [0.7, 0.32],
+          [1, 0.28],
+          [0, 0.62],
+          [0.35, 0.66],
+          [0.7, 0.7],
+          [1, 0.68],
+          [0, 1],
+          [0.35, 1],
+          [0.7, 1],
+          [1, 1],
+        ]}
+        smoothsColors
+      />
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View style={styles.topBar}>
@@ -427,12 +471,27 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
       {/* ── Scrollable content ── */}
       <MeshScroll style={styles.scroll} bottom={48}>
         {/* ── Metadata ── */}
-        <View style={styles.metadataSection}>
-          <NoteMetaRow contactName={contactName} createdLabel={createdLabel} />
-        </View>
+        <View style={styles.metaBlock}>
+          <View style={styles.avatarMini}>
+            <Text style={styles.avatarText}>{getInitials(contactName || "Unknown person")}</Text>
+          </View>
 
-        {/* ── Reminder chip ── */}
-        {reminder && <ReminderChip reminder={reminder} />}
+          <View style={styles.metaContent}>
+            <View style={styles.metaInline}>
+              <Text style={styles.contactName} numberOfLines={1} ellipsizeMode="tail">
+                {contactName || "Unknown person"}
+              </Text>
+              <Text style={styles.metaDot}>·</Text>
+              <Text style={styles.createdText} numberOfLines={1} ellipsizeMode="tail">
+                {createdLabel}
+              </Text>
+            </View>
+
+            {reminder ? (
+              <ReminderChip reminder={reminder} />
+            ) : null}
+          </View>
+        </View>
 
         {/* ── Note content card ── */}
         <View style={styles.noteCanvas}>
@@ -480,6 +539,50 @@ function NoteStateScreen({
   const insets = useSafeAreaInsets();
   return (
     <MeshScreen style={styles.root}>
+      <MeshGradientView
+        pointerEvents="none"
+        style={styles.bgMesh}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532",
+          "#0B573E",
+          "#2F805E",
+          "#DDEFE5",
+          "#EAF6EF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+          "#FFFFFF",
+        ]}
+        points={[
+          [0, 0],
+          [0.35, 0],
+          [0.7, 0],
+          [1, 0],
+          [0, 0.28],
+          [0.35, 0.34],
+          [0.7, 0.32],
+          [1, 0.28],
+          [0, 0.62],
+          [0.35, 0.66],
+          [0.7, 0.7],
+          [1, 0.68],
+          [0, 1],
+          [0.35, 1],
+          [0.7, 1],
+          [1, 1],
+        ]}
+        smoothsColors
+      />
+
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View style={styles.topBar}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("notes")} />
@@ -506,7 +609,16 @@ function NoteStateScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#FAFCF9",
+    backgroundColor: "#FFFFFF",
+  },
+
+  bgMesh: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    opacity: 0.95,
   },
 
   header: {
@@ -528,12 +640,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
 
-  // NoteMetaRow
   noteMetaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     marginTop: 10,
+  },
+
+  metaBlock: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
   },
 
   avatarMini: {
@@ -552,8 +672,13 @@ const styles = StyleSheet.create({
     color: mesh.green700,
   },
 
-  metaInline: {
+  metaContent: {
     flex: 1,
+    minWidth: 0,
+    paddingTop: 1,
+  },
+
+  metaInline: {
     flexDirection: "row",
     alignItems: "center",
     minWidth: 0,
@@ -566,28 +691,21 @@ const styles = StyleSheet.create({
 
   contactName: {
     flexShrink: 1,
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: mesh.ink900,
   },
 
   metaDot: {
     marginHorizontal: 6,
     color: mesh.ink400,
-    fontSize: 13,
+    fontSize: 14,
   },
 
   createdText: {
-    fontSize: 13,
+    fontSize: 14,
     color: mesh.ink500,
-    flexShrink: 0,
-  },
-
-  // Metadata section
-  metadataSection: {
-    paddingHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 16,
+    flexShrink: 1,
   },
 
   // Content
@@ -597,19 +715,19 @@ const styles = StyleSheet.create({
 
   // Note canvas
   noteCanvas: {
-    marginTop: 8,
+    marginTop: 4,
     marginHorizontal: 0,
     borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.94)",
+    backgroundColor: "rgba(255,255,255,0.88)",
     borderWidth: 1,
-    borderColor: "rgba(6,69,50,0.08)",
+    borderColor: "rgba(6,69,50,0.06)",
     paddingHorizontal: 22,
     paddingVertical: 24,
     shadowColor: "#064532",
-    shadowOpacity: 0.035,
+    shadowOpacity: 0.02,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    elevation: 0,
   },
 
   noteFirstLine: {
@@ -630,9 +748,7 @@ const styles = StyleSheet.create({
   // Reminder
   reminderChip: {
     alignSelf: "flex-start",
-    marginTop: 0,
-    marginHorizontal: 0,
-    marginBottom: 12,
+    marginTop: 12,
     minHeight: 34,
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -640,9 +756,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    backgroundColor: "rgba(31,112,72,0.045)",
+    backgroundColor: "rgba(31,112,72,0.06)",
     borderWidth: 1,
-    borderColor: "rgba(31,112,72,0.10)",
+    borderColor: "rgba(31,112,72,0.12)",
   },
 
   reminderChipText: {
