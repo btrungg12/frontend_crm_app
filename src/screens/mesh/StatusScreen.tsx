@@ -175,13 +175,18 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
           <InlineState label="No statuses from API." />
         ) : (
           <MeshCard style={{ backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: "rgba(6,69,50,0.06)", elevation: 0, shadowOpacity: 0.02, paddingHorizontal: 14, paddingVertical: 6 }}>
-            {sourceStatuses.map((status, index) => (
+            {sourceStatuses.map((status, index) => {
+              const isActionOpen = actionStatus?.id === status.id;
+              return (
             <Pressable
               key={status.id}
               onPress={() => nav("statusContacts", { statusId: status.id, statusName: status.name, statusColor: status.color })}
               onLongPress={(e) => openStatusActions(status, e.nativeEvent.pageY)}
               delayLongPress={350}
-              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < sourceStatuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" }}
+              style={[
+                { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderBottomWidth: index < sourceStatuses.length - 1 ? 1 : 0, borderColor: "rgba(6,69,50,0.08)" },
+                isActionOpen && { backgroundColor: "rgba(31,112,72,0.06)", borderRadius: 16, marginHorizontal: -8, paddingHorizontal: 8 },
+              ]}
             >
               <View style={{ width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: `${status.color}20` }}>
                 <Ionicons name={(statusIconMap[status.icon as keyof typeof statusIconMap] || "people-outline") as keyof typeof Ionicons.glyphMap} size={20} color={status.color} />
@@ -198,7 +203,8 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
               </Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
-            ))}
+              );
+            })}
           </MeshCard>
         )}
 
@@ -228,27 +234,24 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
         }}
       />
 
-      {/* ── Long-press action sheet — positioned near the pressed row ── */}
+      {/* ── Long-press context menu — compact, anchored near pressed row ── */}
       <Modal
         visible={Boolean(actionStatus)}
         transparent
         animationType="fade"
         onRequestClose={closeStatusActions}
       >
-        {/* Dim overlay — tap anywhere outside card to close */}
         <Pressable
           onPress={closeStatusActions}
-          style={{ backgroundColor: "rgba(8,32,22,0.18)", flex: 1 }}
+          style={{ backgroundColor: "rgba(8,32,22,0.10)", flex: 1 }}
         >
-          {/* Card positioned near the long-pressed row */}
           <View
+            pointerEvents="box-none"
             style={[
-              { left: 18, position: "absolute", right: 18 },
-              // If press is in the lower half, anchor card above press point;
-              // otherwise anchor it below
-              actionY > windowHeight * 0.52
-                ? { bottom: windowHeight - actionY + 8 }
-                : { top: actionY + 8 },
+              { position: "absolute", right: 28, width: 236 },
+              actionY > windowHeight * 0.58
+                ? { bottom: windowHeight - actionY + 10 }
+                : { top: actionY + 10 },
             ]}
           >
             <Pressable
@@ -258,21 +261,14 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
                 borderColor: "rgba(6,69,50,0.08)",
                 borderRadius: 20,
                 borderWidth: 1,
-                elevation: 8,
+                elevation: 6,
                 overflow: "hidden",
                 shadowColor: "#0B2F20",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.10,
-                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.08,
+                shadowRadius: 18,
               }}
             >
-              {/* Header */}
-              <View style={{ borderBottomColor: "rgba(6,69,50,0.07)", borderBottomWidth: 1, paddingHorizontal: 16, paddingVertical: 10 }}>
-                <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "800" }}>
-                  {actionStatus?.name}
-                </Text>
-              </View>
-
               {/* Edit */}
               <Pressable
                 onPress={() => {
@@ -280,13 +276,20 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
                   closeStatusActions();
                   if (s) nav("createStatus", { id: s.id, status: s });
                 }}
-                style={{ alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingVertical: 13 }}
+                style={({ pressed }) => ({
+                  alignItems: "center",
+                  backgroundColor: pressed ? "rgba(31,112,72,0.06)" : "#FFFFFF",
+                  flexDirection: "row",
+                  gap: 12,
+                  height: 52,
+                  paddingHorizontal: 16,
+                })}
               >
                 <Ionicons name="create-outline" size={18} color={mesh.green700} />
-                <Text style={{ color: mesh.ink900, fontSize: 14, fontWeight: "700" }}>Edit status</Text>
+                <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>Edit status</Text>
               </Pressable>
 
-              <View style={{ backgroundColor: "rgba(6,69,50,0.06)", height: 1, marginHorizontal: 0 }} />
+              <View style={{ backgroundColor: "rgba(6,69,50,0.06)", height: 1, marginHorizontal: 14 }} />
 
               {/* Delete */}
               <Pressable
@@ -295,10 +298,17 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
                   setDeleteTarget(actionStatus);
                   closeStatusActions();
                 }}
-                style={{ alignItems: "center", flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingVertical: 13 }}
+                style={({ pressed }) => ({
+                  alignItems: "center",
+                  backgroundColor: pressed ? "rgba(217,87,122,0.07)" : "#FFFFFF",
+                  flexDirection: "row",
+                  gap: 12,
+                  height: 52,
+                  paddingHorizontal: 16,
+                })}
               >
                 <Ionicons name="trash-outline" size={18} color={mesh.pink} />
-                <Text style={{ color: mesh.pink, fontSize: 14, fontWeight: "700" }}>Delete status</Text>
+                <Text style={{ color: mesh.pink, fontSize: 15, fontWeight: "700" }}>Delete status</Text>
               </Pressable>
             </Pressable>
           </View>
