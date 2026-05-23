@@ -49,9 +49,10 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
 
   const sourceStatuses = apiStatuses;
 
-  // Load statuses and contacts from cache on mount
+  // Always fetch fresh statuses on mount so counts are up-to-date;
+  // contacts can use cache since they're invalidated on write.
   useEffect(() => {
-    refreshStatuses(false);
+    refreshStatuses(true);
     refreshContacts(false);
   }, [refreshStatuses, refreshContacts]);
 
@@ -84,28 +85,35 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
   const isBackgroundRefreshing = statuses.refreshing && Boolean(statuses.data);
 
   // Compute contact count per status from cached contacts.
-  // c.status may be a raw ID or a name string depending on API shape —
-  // resolve to the canonical status ID using both exact match and name fallback.
+  // Bucket by raw contact.status value first, then display with multi-key lookup.
   const contactCountByStatusId = useMemo<Record<string, number>>(() => {
     if (!contacts.data) return {};
     const counts: Record<string, number> = {};
-    const normalized = extractArray(contacts.data, "contacts")
-      .map(normalizeApiContact)
-      .filter(Boolean);
-    const statusNameToId: Record<string, string> = {};
-    for (const s of apiStatuses) {
-      statusNameToId[s.name.toLowerCase()] = s.id;
+    const rawList = extractArray(contacts.data, "contacts");
+
+    if (__DEV__) {
+      // ── DEBUG: log the first 3 raw contacts' status-related fields ──────────
+      console.log("[StatusCount] contacts raw sample:",
+        rawList.slice(0, 3).map((r: any) => ({
+          status: r?.status,
+          statusId: r?.statusId,
+          statusName: r?.statusName,
+        }))
+      );
+      console.log("[StatusCount] apiStatuses:", apiStatuses.map((s) => ({ id: s.id, name: s.name })));
     }
+
+    const normalized = rawList.map(normalizeApiContact).filter(Boolean);
     for (const c of normalized) {
       if (!c?.status) continue;
       const cs = c.status;
-      // Try exact ID match first, then name-based lookup
-      const resolvedId =
-        apiStatuses.find((s) => s.id === cs)?.id ??
-        statusNameToId[cs.toLowerCase()];
-      if (resolvedId) {
-        counts[resolvedId] = (counts[resolvedId] || 0) + 1;
-      }
+      counts[cs] = (counts[cs] || 0) + 1;
+      // Also bucket lowercase variant for name-based lookup
+      if (cs !== cs.toLowerCase()) counts[cs.toLowerCase()] = (counts[cs.toLowerCase()] || 0) + 1;
+    }
+
+    if (__DEV__) {
+      console.log("[StatusCount] computed counts (by raw c.status):", counts);
     }
     return counts;
   }, [contacts.data, apiStatuses]);
@@ -183,7 +191,10 @@ export function StatusScreen({ t, lang, nav, refresh }: Props) {
                 <Text style={{ color: mesh.ink500, fontSize: mesh.font.bodySm, marginTop: 2 }}>{status.desc}</Text>
               </View>
               <Text style={{ color: status.color, fontSize: 18, fontWeight: "700" }}>
-                {contactCountByStatusId[status.id] ?? status.count}
+                {contactCountByStatusId[status.id]
+                  ?? contactCountByStatusId[status.name]
+                  ?? contactCountByStatusId[status.name?.toLowerCase()]
+                  ?? status.count}
               </Text>
               <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
             </Pressable>
