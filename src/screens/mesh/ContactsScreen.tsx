@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MeshGradientView } from "expo-mesh-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Animated, Easing, Image, Keyboard, KeyboardAvoidingView, LayoutChangeEvent, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { createContact, deleteContact, getContactById, getContactTimeline, updateContact } from "../../api/contactApi";
@@ -1201,6 +1201,7 @@ export function CreateContactScreen({
   // ── UI state ───────────────────────────────────────────────────────────────
   const [statusOpen,       setStatusOpen]       = useState(false);
   const [addFieldOpen,     setAddFieldOpen]     = useState(false);
+  const [addFieldMenuMounted, setAddFieldMenuMounted] = useState(false);
   const [popupY,           setPopupY]           = useState(0);
   const [popupX,           setPopupX]           = useState(0);
   const [datePickerOpen,   setDatePickerOpen]   = useState(false);
@@ -1216,6 +1217,7 @@ export function CreateContactScreen({
   const saveSuccess = savePhase === "success";
 
   const addFieldRef = useRef<View>(null);
+  const addFieldAnim = useRef(new Animated.Value(0)).current;
   const scrollRef   = useRef<ScrollView>(null);
   const rowYRef     = useRef<Record<string, number>>({});
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -1316,19 +1318,45 @@ export function CreateContactScreen({
   }, [edit, contactId]);
 
   // ── Popup positioning — measured below the Add field button ───────────────
-  const openPopup = () => {
+  function openAddFieldMenu() {
     addFieldRef.current?.measureInWindow((x, y, _w, h) => {
       setPopupY(y + h + 8);
       setPopupX(x);
       setAddFieldOpen(true);
+      setAddFieldMenuMounted(true);
+      addFieldAnim.setValue(0);
+
+      Animated.timing(addFieldAnim, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     });
-  };
+  }
+
+  function closeAddFieldMenu() {
+    Animated.timing(addFieldAnim, {
+      toValue: 0,
+      duration: 130,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setAddFieldOpen(false);
+      setAddFieldMenuMounted(false);
+    });
+  }
+
+  function toggleAddFieldMenu() {
+    if (addFieldOpen) closeAddFieldMenu();
+    else openAddFieldMenu();
+  }
 
   const removeField = (f: UniqueField) => setActiveFields(prev => prev.filter(x => x !== f));
 
   // ── Add field / special day handling ──────────────────────────────────────
   const handleAddField = (f: AddField) => {
-    setAddFieldOpen(false);
+    closeAddFieldMenu();
     if (f === "specialDay") {
       const newIdx = specialDays.length;
       setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }]);
@@ -1501,6 +1529,24 @@ export function CreateContactScreen({
     ? (pickerStatuses.find((s) => s.id === status) ?? statusById(status))
     : null;
 
+  const addFieldMenuAnimatedStyle = {
+    opacity: addFieldAnim,
+    transform: [
+      {
+        translateY: addFieldAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [10, 0],
+        }),
+      },
+      {
+        scale: addFieldAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.96, 1],
+        }),
+      },
+    ],
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loadingEdit) {
     return (
@@ -1649,7 +1695,7 @@ export function CreateContactScreen({
           {availableFields.length > 0 && (
             <View ref={addFieldRef} collapsable={false} style={{ marginLeft: 24, marginTop: 18 }}>
               <Pressable
-                onPress={openPopup}
+                onPress={toggleAddFieldMenu}
                 style={{
                   alignSelf: "flex-start",
                   minHeight: 44,
@@ -1785,9 +1831,11 @@ export function CreateContactScreen({
       <StatusPicker open={statusOpen} value={status} statuses={pickerStatuses} onClose={() => setStatusOpen(false)} onPick={setStatus} t={t} />
 
       {/* ── Add field popup — transparent modal, anchored ABOVE the button ── */}
-      <Modal visible={addFieldOpen} transparent animationType="none" onRequestClose={() => setAddFieldOpen(false)}>
-        <Pressable style={{ flex: 1 }} onPress={() => setAddFieldOpen(false)}>
-          <View style={{
+      <Modal visible={addFieldMenuMounted} transparent animationType="none" onRequestClose={closeAddFieldMenu}>
+        <Pressable style={{ flex: 1 }} onPress={closeAddFieldMenu}>
+          <Animated.View
+            pointerEvents={addFieldOpen ? "auto" : "none"}
+            style={[{
             position: "absolute",
             top: Math.max(insets.top + 12, popupY - 8 - availableFields.length * 46 - 16),
             left: popupX,
@@ -1802,7 +1850,8 @@ export function CreateContactScreen({
             shadowRadius: 14,
             shadowOffset: { width: 0, height: 6 },
             elevation: 8,
-          }}>
+          }, addFieldMenuAnimatedStyle]}
+          >
             {availableFields.map((f, i) => (
               <Pressable
                 key={`${f.key}-${i}`}
@@ -1835,7 +1884,7 @@ export function CreateContactScreen({
               borderBottomWidth: 1,
               borderColor: "rgba(6,69,50,0.07)",
             }} />
-          </View>
+          </Animated.View>
         </Pressable>
       </Modal>
 

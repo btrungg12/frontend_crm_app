@@ -190,45 +190,6 @@ function getInitials(name?: string) {
     .slice(0, 2);
 }
 
-// ─── NoteMetaRow ──────────────────────────────────────────────────────────────
-
-function NoteMetaRow({
-  contactName,
-  createdLabel,
-}: {
-  contactName?: string;
-  createdLabel: string;
-}) {
-  const displayName = contactName || "Unknown person";
-  const initials    = getInitials(displayName);
-  const isLongName  = displayName.length > 20;
-
-  return (
-    <View style={styles.noteMetaRow}>
-      <View style={styles.avatarMini}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
-
-      {isLongName ? (
-        <View style={styles.metaStack}>
-          <Text style={styles.contactName} numberOfLines={1} ellipsizeMode="tail">
-            {displayName}
-          </Text>
-          <Text style={styles.createdText}>{createdLabel}</Text>
-        </View>
-      ) : (
-        <View style={styles.metaInline}>
-          <Text style={styles.contactName} numberOfLines={1} ellipsizeMode="tail">
-            {displayName}
-          </Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.createdText}>{createdLabel}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
 // ─── ReminderChip ─────────────────────────────────────────────────────────────
 
 function ReminderChip({ reminder }: { reminder: string }) {
@@ -471,13 +432,12 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
       {/* ── Scrollable content ── */}
       <MeshScroll style={styles.scroll} bottom={48}>
         {/* ── Metadata ── */}
-        <View style={styles.metaBlock}>
+        <View style={styles.noteHeaderBlock}>
+          <View style={styles.metaInline}>
           <View style={styles.avatarMini}>
             <Text style={styles.avatarText}>{getInitials(contactName || "Unknown person")}</Text>
           </View>
 
-          <View style={styles.metaContent}>
-            <View style={styles.metaInline}>
               <Text style={styles.contactName} numberOfLines={1} ellipsizeMode="tail">
                 {contactName || "Unknown person"}
               </Text>
@@ -490,7 +450,6 @@ export function NoteDetailScreen({ t, lang: _lang, nav, noteId }: Props) {
             {reminder ? (
               <ReminderChip reminder={reminder} />
             ) : null}
-          </View>
         </View>
 
         {/* ── Note content card ── */}
@@ -640,20 +599,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
 
-  noteMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 10,
-  },
-
-  metaBlock: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    paddingHorizontal: 20,
+  noteHeaderBlock: {
     marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   avatarMini: {
@@ -664,6 +612,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(6,69,50,0.12)",
     flexShrink: 0,
+    marginRight: 8,
   },
 
   avatarText: {
@@ -672,40 +621,32 @@ const styles = StyleSheet.create({
     color: mesh.green700,
   },
 
-  metaContent: {
-    flex: 1,
-    minWidth: 0,
-    paddingTop: 1,
-  },
-
   metaInline: {
     flexDirection: "row",
     alignItems: "center",
     minWidth: 0,
   },
 
-  metaStack: {
-    flex: 1,
-    minWidth: 0,
-  },
-
   contactName: {
-    flexShrink: 1,
     fontSize: 14,
     fontWeight: "800",
     color: mesh.ink900,
+    flexShrink: 1,
+    maxWidth: "42%",
   },
 
   metaDot: {
     marginHorizontal: 6,
     color: mesh.ink400,
     fontSize: 14,
+    flexShrink: 0,
   },
 
   createdText: {
     fontSize: 14,
     color: mesh.ink500,
     flexShrink: 1,
+    minWidth: 0,
   },
 
   // Content
