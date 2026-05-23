@@ -893,7 +893,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
   if (loading) {
     return (
-      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingTop: insets.top }}>
           <ActivityIndicator size="large" color={mesh.green700} />
         </View>
@@ -903,7 +903,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
   if (error || !contact) {
     return (
-      <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+      <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
         <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
         </View>
@@ -921,14 +921,15 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
   }
 
   return (
-    <MeshScreen style={{ backgroundColor: "#F7FAF7" }}>
+    <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
+      {/* ── Hero header ── */}
       <View
         style={{
-          height: insets.top + 335,
+          height: insets.top + 285,
           overflow: "hidden",
           paddingHorizontal: 20,
           paddingTop: insets.top + 14,
-          position: "relative"
+          position: "relative",
         }}
       >
         <MeshGradientView
@@ -937,75 +938,59 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           columns={4}
           rows={4}
           colors={[
-            "#064532",
-            "#0B573E",
-            "#1D704F",
-            "#2F805E",
-            "#DDEFE5",
-            "#EAF6EF",
-            "#BFDCCB",
-            "#74AE8D",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#F8FCF7",
-            "#EEF8F0",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF",
-            "#FFFFFF"
+            "#064532", "#0B573E", "#1D704F", "#2F805E",
+            "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
+            "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
+            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
           ]}
           points={[
-            [0, 0],
-            [0.35, 0],
-            [0.7, 0],
-            [1, 0],
-            [0, 0.28],
-            [0.35, 0.34],
-            [0.7, 0.32],
-            [1, 0.28],
-            [0, 0.62],
-            [0.35, 0.66],
-            [0.7, 0.7],
-            [1, 0.68],
-            [0, 1],
-            [0.35, 1],
-            [0.7, 1],
-            [1, 1]
+            [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+            [0, 0.28], [0.35, 0.34], [0.7, 0.32], [1, 0.28],
+            [0, 0.62], [0.35, 0.66], [0.7, 0.7], [1, 0.68],
+            [0, 1], [0.35, 1], [0.7, 1], [1, 1],
           ]}
           smoothsColors
         />
 
+        {/* Top nav */}
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
           <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", letterSpacing: -0.1 }}>{t("contactProfile")}</Text>
           <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
-        <View style={{ alignItems: "center", marginTop: 18 }}>
+
+        {/* Avatar + name */}
+        <View style={{ alignItems: "center", marginTop: 14 }}>
           {contact.avatarUrl ? (
-            <View style={{ width: 92, height: 92, borderRadius: 46, overflow: "hidden", borderWidth: 2.5, borderColor: "rgba(255,255,255,0.75)" }}>
+            <View style={{ width: 82, height: 82, borderRadius: 41, overflow: "hidden", borderWidth: 2.5, borderColor: "rgba(255,255,255,0.75)" }}>
               <Image source={{ uri: contact.avatarUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
             </View>
           ) : (
-            <GradientAvatar name={contact.name} statusColor={detailStatusColor} size={92} ringWidth={2} ringOpacity={0.75} gap={3} />
+            <GradientAvatar name={contact.name} statusColor={detailStatusColor} size={82} ringWidth={2} ringOpacity={0.55} gap={3} />
           )}
-          <Text style={{ color: mesh.green800, fontSize: 26, fontWeight: "800", letterSpacing: -0.4, lineHeight: 32, marginTop: 14, paddingHorizontal: 24, textAlign: "center" }}>{contact.name}</Text>
+          <Text
+            numberOfLines={2}
+            style={{ color: mesh.green800, fontSize: 24, fontWeight: "800", letterSpacing: -0.35, lineHeight: 30, marginTop: 12, paddingHorizontal: 24, textAlign: "center" }}
+          >
+            {contact.name}
+          </Text>
           {detailStatusName ? (
-            <View style={{ alignItems: "center", flexDirection: "row", gap: 7, marginTop: 8 }}>
-              <View style={{ backgroundColor: detailStatusColor ?? mesh.ink400, borderRadius: 5, height: 9, width: 9 }} />
-              <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{detailStatusName}</Text>
+            <View style={{ alignItems: "center", flexDirection: "row", gap: 6, marginTop: 6 }}>
+              <View style={{ backgroundColor: detailStatusColor ?? mesh.ink400, borderRadius: 4, height: 7, width: 7 }} />
+              <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{detailStatusName}</Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "#F7FAF7", marginTop: -22, paddingHorizontal: 16, position: "relative", zIndex: 2 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "transparent", marginTop: -10, paddingHorizontal: 20 }} bottom={100}>
         {deleteError ? (
-          <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginTop: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
+          <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginBottom: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
         ) : null}
 
-        {/* Dynamic info card — only renders rows for fields that have data */}
+        {/* ── Details: info fields + special days merged ── */}
         {(() => {
-          type InfoField = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string };
+          type InfoField = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; accent?: string };
           const fields: InfoField[] = [];
           if (contact.phone)   fields.push({ icon: "call-outline",       label: t("phone"),      value: contact.phone });
           if (contact.email)   fields.push({ icon: "mail-outline",       label: "Email",         value: contact.email });
@@ -1018,90 +1003,97 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
               : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
             fields.push({ icon: "gift-outline", label: t("birthday"), value: formatted });
           }
-          // All social links as individual rows
           const links = contact.socialLinks && contact.socialLinks.length > 0
             ? contact.socialLinks
             : contact.social ? [contact.social] : [];
           links.forEach((link, i) => {
             fields.push({ icon: "globe-outline", label: i === 0 ? t("social") : `${t("social")} ${i + 1}`, value: link });
           });
+          if (contact.specialDays?.length) {
+            contact.specialDays.forEach((sd) => {
+              const d = new Date(sd.date);
+              const formatted = isNaN(d.getTime())
+                ? sd.date
+                : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+              fields.push({ icon: "calendar-outline", label: sd.name || t("specialDay"), value: formatted, accent: mesh.pink });
+            });
+          }
 
           if (fields.length === 0) return null;
           return (
-            <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, marginTop: 0, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
-              {fields.map((f, i) => (
-                <InfoRow key={`${f.label}-${i}`} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} />
-              ))}
-            </MeshCard>
+            <>
+              <Text style={{ color: mesh.green800, fontSize: 20, fontWeight: "800", letterSpacing: -0.3, marginTop: 16, marginBottom: 10 }}>
+                Details
+              </Text>
+              <View style={{ backgroundColor: "rgba(255,255,255,0.86)", borderColor: "rgba(6,69,50,0.055)", borderRadius: 22, borderWidth: 1, elevation: 0, paddingHorizontal: 14, paddingVertical: 4, shadowOpacity: 0 }}>
+                {fields.map((f, i) => (
+                  <InfoRow key={`${f.label}-${i}`} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} accent={f.accent} />
+                ))}
+              </View>
+            </>
           );
         })()}
 
-        {/* Special Days section */}
-        {contact.specialDays && contact.specialDays.length > 0 && (
-          <>
-            <Text style={{ color: mesh.green800, fontSize: 17, fontWeight: "800", letterSpacing: -0.2, paddingHorizontal: 4, paddingTop: 20, paddingBottom: 10 }}>
-              {t("specialDay")}
-            </Text>
-            <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 24, borderWidth: 1, elevation: 2, overflow: "hidden", paddingHorizontal: 20, paddingVertical: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 18 }}>
-              {contact.specialDays.map((sd, i) => {
-                const d = new Date(sd.date);
-                const formatted = isNaN(d.getTime())
-                  ? sd.date
-                  : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-                return (
-                  <InfoRow
-                    key={sd.id}
-                    icon="calendar-outline"
-                    label={sd.name}
-                    value={formatted}
-                    last={i === (contact.specialDays?.length ?? 0) - 1}
-                  />
-                );
-              })}
-            </MeshCard>
-          </>
-        )}
-
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingTop: 24, paddingBottom: 12 }}>
-          <Text style={{ color: mesh.green800, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 28 }}>{t("timeline")}</Text>
-        </View>
+        {/* ── Timeline ── */}
+        <Text style={{ color: mesh.green800, fontSize: 21, fontWeight: "800", letterSpacing: -0.3, lineHeight: 26, paddingTop: 20, paddingBottom: 10 }}>
+          {t("timeline")}
+        </Text>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
           {tabs.map((item) => (
-            <MeshChip key={item.id} active={tab === item.id} onPress={() => setTab(item.id)} style={{ backgroundColor: tab === item.id ? mesh.green700 : "#FFFFFF", borderColor: tab === item.id ? mesh.green700 : mesh.line, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <MeshChip
+              key={item.id}
+              active={tab === item.id}
+              onPress={() => setTab(item.id)}
+              style={{
+                backgroundColor: tab === item.id ? mesh.green700 : "rgba(255,255,255,0.88)",
+                borderColor: tab === item.id ? mesh.green700 : "rgba(6,69,50,0.10)",
+                borderRadius: 999,
+                borderWidth: 1,
+                paddingHorizontal: 15,
+                paddingVertical: 7,
+              }}
+            >
               {item.label}
             </MeshChip>
           ))}
         </View>
 
-        <View style={{ paddingLeft: 46, position: "relative" }}>
-          {filtered.length > 0 ? <View style={{ backgroundColor: "rgba(6,69,50,0.16)", bottom: 22, left: 13, position: "absolute", top: 14, width: 2 }} /> : null}
-          {filtered.length === 0 ? (
-            <Text style={{ color: mesh.ink400, fontSize: 13, textAlign: "center", paddingVertical: 20 }}>
-              No timeline items yet.
-            </Text>
-          ) : filtered.map((item, index) => {
-            const color = item.kind === "reminder" ? mesh.orange : item.kind === "special" ? mesh.pink : mesh.green700;
-            return (
-              <View key={`${item.title}-${index}`} style={{ position: "relative", marginBottom: 14 }}>
-                <View style={{ alignItems: "center", backgroundColor: "#FFFFFF", borderColor: color, borderRadius: 17, borderWidth: 2, height: 34, justifyContent: "center", left: -46, position: "absolute", top: 2, width: 34, zIndex: 2 }}>
-                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={15} color={color} />
-                </View>
-                <MeshCard style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.05)", borderRadius: 20, borderWidth: 1, elevation: 1, padding: 14, shadowColor: "#064532", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.035, shadowRadius: 12 }}>
+        {filtered.length === 0 ? (
+          <View style={{ alignItems: "center", backgroundColor: "rgba(255,255,255,0.62)", borderColor: "rgba(6,69,50,0.05)", borderRadius: 18, borderWidth: 1, paddingVertical: 18 }}>
+            <Text style={{ color: mesh.ink400, fontSize: 13 }}>No timeline items yet.</Text>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            {filtered.map((item, index) => {
+              const color = item.kind === "reminder" ? mesh.orange : item.kind === "special" ? mesh.pink : mesh.green700;
+              return (
+                <Pressable
+                  key={`${item.title}-${index}`}
+                  style={{ backgroundColor: "rgba(255,255,255,0.88)", borderColor: "rgba(6,69,50,0.055)", borderRadius: 20, borderWidth: 1, elevation: 0, paddingHorizontal: 16, paddingVertical: 14, shadowOpacity: 0 }}
+                >
                   <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color, fontSize: 12, fontWeight: "800", letterSpacing: 1.4 }}>{item.label.toUpperCase()}</Text>
-                    <Text style={{ color: mesh.ink500, fontSize: 13, fontWeight: "500" }}>{item.date}</Text>
+                    <View style={{ alignItems: "center", backgroundColor: `${color}12`, borderRadius: 999, flexDirection: "row", gap: 6, height: 26, paddingHorizontal: 10 }}>
+                      <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={13} color={color} />
+                      <Text style={{ color, fontSize: 11, fontWeight: "800", letterSpacing: 1.0 }}>
+                        {item.label.toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={{ color: mesh.ink500, fontSize: 12.5, fontWeight: "500" }}>{item.date}</Text>
                   </View>
-                  <Text style={{ color: mesh.ink900, fontSize: 18, fontWeight: "800", marginTop: 8 }}>{item.title}</Text>
-                  <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 6 }}>{item.desc}</Text>
-                </MeshCard>
-              </View>
-            );
-          })}
-        </View>
+                  <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "800", lineHeight: 22, marginTop: 10 }}>{item.title}</Text>
+                  {item.desc ? (
+                    <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 6 }}>{item.desc}</Text>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </MeshScroll>
+
       {/* ── More menu ── */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }} onPress={() => setMenuOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(8,32,22,0.22)", justifyContent: "flex-end" }} onPress={() => setMenuOpen(false)}>
           <Pressable style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: insets.bottom + 16, paddingTop: 8 }}>
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(6,69,50,0.15)", alignSelf: "center", marginBottom: 12 }} />
             <Pressable
@@ -1128,9 +1120,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
       <ConfirmDialog
         open={confirmDelete}
-        onClose={() => {
-          if (!deleting) setConfirmDelete(false);
-        }}
+        onClose={() => { if (!deleting) setConfirmDelete(false); }}
         onConfirm={handleDeleteContact}
         title={t("deleteContactTitle")}
         desc={deleting ? "Deleting contact..." : t("deleteContactDesc")}
@@ -1141,15 +1131,16 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
   );
 }
 
-function InfoRow({ icon, label, value, last = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; last?: boolean }) {
+function InfoRow({ icon, label, value, last = false, accent }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; last?: boolean; accent?: string }) {
+  const iconColor = accent ?? mesh.green700;
   return (
-    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 14, paddingVertical: 13 }}>
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.09)", borderRadius: 14, height: 44, justifyContent: "center", width: 44 }}>
-        <Ionicons name={icon} size={20} color={mesh.green700} />
+    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingVertical: 11 }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.07)", borderRadius: 13, height: 38, justifyContent: "center", width: 38 }}>
+        <Ionicons name={icon} size={18} color={iconColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink500, fontSize: 13 }}>{label}</Text>
-        <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", marginTop: 3 }}>{value}</Text>
+        <Text style={{ color: mesh.ink500, fontSize: 12.5 }}>{label}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700", marginTop: 2 }}>{value}</Text>
       </View>
     </View>
   );
