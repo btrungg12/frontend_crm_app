@@ -81,7 +81,11 @@ export function normalizeApiContact(value: unknown): Contact | null {
     : undefined;
   // Use "" as fallback (not "st-other") so contacts with no status API field
   // don't accidentally inherit the orange mock "Other" colour.
-  const status = text(item.statusId ?? statusRecord?._id ?? statusRecord?.id ?? item.status, "");
+  // Priority: populated object's _id → populated object's id → raw string statusId → raw string status
+  // NOTE: item.statusId may be a populated object (backend populates it), so we must NOT pass it
+  // directly to text() — text(object) returns "" because object is not a string.
+  // statusRecord is already asRecord(item.status ?? item.statusId), so ._id extracts the ID correctly.
+  const status = text(statusRecord?._id ?? statusRecord?.id ?? item.statusId ?? item.status, "");
 
   const birthdayRaw = item.birthday;
   const birthday = typeof birthdayRaw === "string" && birthdayRaw ? birthdayRaw : undefined;
