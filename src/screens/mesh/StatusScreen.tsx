@@ -868,8 +868,7 @@ export function StatusContactsScreen({
                 style={{ alignItems: "center", borderBottomColor: "rgba(6,69,50,0.08)", borderBottomWidth: index < filteredContacts.length - 1 ? 1 : 0, flexDirection: "row", gap: 12, paddingVertical: 11 }}
               >
                 <GradientAvatar
-                  initials={contact.initials}
-                  statusColor={contact.statusColor}
+                  name={contact.name}
                   avatarUrl={contact.avatarUrl}
                   size={44}
                 />
@@ -877,11 +876,6 @@ export function StatusContactsScreen({
                   <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700" }}>
                     {contact.name}
                   </Text>
-                  {contact.statusName ? (
-                    <Text style={{ color: dotColor, fontSize: 12, fontWeight: "600", marginTop: 2 }}>
-                      {contact.statusName}
-                    </Text>
-                  ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={mesh.ink400} />
               </Pressable>
