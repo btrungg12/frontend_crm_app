@@ -72,7 +72,7 @@ export function QuickCreateSheet({
       onStartShouldSetPanResponderCapture: () => false,
       // Only take over when the gesture is clearly downward (swipe-to-dismiss intent)
       onMoveShouldSetPanResponder: (_, gesture) =>
-        gesture.dy > 6 && gesture.dy > Math.abs(gesture.dx),
+        gesture.dy > 10 && gesture.dy > Math.abs(gesture.dx) * 1.2,
       onMoveShouldSetPanResponderCapture: () => false,
       onPanResponderMove: (_, gesture) => {
         if (gesture.dy > 0) dragY.setValue(gesture.dy);
@@ -96,6 +96,42 @@ export function QuickCreateSheet({
   ).current;
 
   // ── Open / external close effect ──────────────────────────────────────────
+  const handlePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dy) > 2 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onMoveShouldSetPanResponderCapture: (_, gesture) =>
+        Math.abs(gesture.dy) > 2 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) dragY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 70 || gesture.vy > 0.45) {
+          closeSheet(gesture.dy);
+        } else {
+          Animated.spring(dragY, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 200,
+            mass: 1,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(dragY, {
+          toValue: 0,
+          useNativeDriver: true,
+          damping: 18,
+          stiffness: 200,
+          mass: 1,
+        }).start();
+      },
+    })
+  ).current;
+
   useEffect(() => {
     if (open) {
       isClosingRef.current  = false;
@@ -158,7 +194,11 @@ export function QuickCreateSheet({
         {children}
 
         {/* Handle as absolute overlay — floats above content, no white strip */}
-        <View pointerEvents="none" style={styles.handleOverlay}>
+        <View
+          pointerEvents="box-only"
+          style={styles.handleOverlay}
+          {...handlePanResponder.panHandlers}
+        >
           <View style={styles.handle} />
         </View>
       </Animated.View>
@@ -184,11 +224,13 @@ const styles = StyleSheet.create({
   },
   handleOverlay: {
     position: "absolute",
-    top: 10,
+    top: 0,
     left: 0,
     right: 0,
+    height: 34,
     alignItems: "center",
-    zIndex: 20,
+    justifyContent: "center",
+    zIndex: 50,
   },
   handle: {
     width: 40,
