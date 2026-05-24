@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ReactNode, useRef, useState } from "react";
-import { ActivityIndicator, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
 
 import {
   forgotPassword as forgotPasswordRequest,
@@ -91,6 +92,7 @@ const onboardingSlides = [
   },
 ];
 
+const relishLogo = require("../../../assets/logo_1.png");
 const welcomeLeafLeft = require("../../../assets/welcome_leaf_left.png");
 const welcomeLeafRight = require("../../../assets/welcome_leaf_right.png");
 
@@ -152,11 +154,16 @@ function SecondaryButton({ label, loading, onPress, icon }: { label: string; loa
   );
 }
 
-function MeshInput({ error, icon, onChangeText, placeholder, secure, value }: { error?: boolean; icon: keyof typeof Ionicons.glyphMap; onChangeText?: (value: string) => void; placeholder: string; secure?: boolean; value?: string }) {
+function MeshInput({ error, icon, onChangeText, onToggleSecure, placeholder, secure, showSecureToggle, value }: { error?: boolean; icon: keyof typeof Ionicons.glyphMap; onChangeText?: (value: string) => void; onToggleSecure?: () => void; placeholder: string; secure?: boolean; showSecureToggle?: boolean; value?: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1.5, borderColor: error ? mesh.pink : mesh.line, borderRadius: mesh.radiusLg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, minHeight: 52 }}>
       <Ionicons name={icon} size={18} color={error ? mesh.pink : mesh.ink400} />
       <TextInput autoCapitalize="none" onChangeText={onChangeText} value={value} placeholder={placeholder} placeholderTextColor={mesh.ink400} secureTextEntry={secure} style={{ flex: 1, color: mesh.ink900, fontSize: 15 }} />
+      {showSecureToggle ? (
+        <Pressable onPress={onToggleSecure} hitSlop={8} style={{ alignItems: "center", height: 32, justifyContent: "center", width: 32 }}>
+          <Ionicons name={secure ? "eye-outline" : "eye-off-outline"} size={19} color={mesh.ink400} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -174,8 +181,8 @@ function Divider({ t }: { t: TFn }) {
 function AuthTitle({ t, title, sub }: { t: TFn; title: string; sub: string }) {
   return (
     <View style={{ alignItems: "center", marginBottom: 28 }}>
-      <Logo size={44} />
-      <Text style={{ color: mesh.green800, fontSize: 28, fontWeight: "900", marginTop: 14 }}>{tx(t, title)}</Text>
+      <Image source={relishLogo} resizeMode="contain" style={{ height: 132, width: 132 }} />
+      <Text style={{ color: mesh.green800, fontSize: 28, fontWeight: "900", marginTop: 4 }}>{tx(t, title)}</Text>
       <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" }}>{tx(t, sub)}</Text>
     </View>
   );
@@ -195,7 +202,16 @@ export function WelcomeScreen({ t, nav }: Props) {
   const { width } = useWindowDimensions();
   const pageWidth = Math.max(280, width - 56);
   const [page, setPage] = useState(0);
+  const [introDone, setIntroDone] = useState(false);
   const pagerRef = useRef<ScrollView>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const finishIntro = () => {
+    setIntroDone(true);
+    setPage(0);
+    scrollX.setValue(0);
+    pagerRef.current?.scrollTo({ x: 0, animated: false });
+  };
 
   const goToPage = (nextPage: number) => {
     const clamped = Math.max(0, Math.min(onboardingSlides.length - 1, nextPage));
@@ -203,60 +219,198 @@ export function WelcomeScreen({ t, nav }: Props) {
     setPage(clamped);
   };
 
+  useEffect(() => {
+    if (introDone) return undefined;
+
+    const timers = [
+      setTimeout(() => goToPage(1), 5000),
+      setTimeout(() => goToPage(2), 10000),
+    ];
+
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introDone, pageWidth]);
+
   const handlePagerScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setPage(Math.round(event.nativeEvent.contentOffset.x / pageWidth));
   };
 
+  const handleIntroNext = () => {
+    if (page < onboardingSlides.length - 1) {
+      goToPage(page + 1);
+      return;
+    }
+
+    finishIntro();
+  };
+
   return (
     <AuthShell scroll={false} showLeafBg={false}>
-      <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 20 }}>
-        <View style={{ flex: 1 }}>
-          <View pointerEvents="none" style={{ bottom: 210, left: -42, position: "absolute", top: 40, width: 220, zIndex: 0 }}>
-            <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 360, opacity: 0.9, width: 220 }} />
+      <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={["#DCECE2", "#F4FAF6", "#FFFFFF"]}
+          locations={[0, 0.48, 1]}
+          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: -84, zIndex: 0 }}
+        />
+        <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 160, height: 260, position: "absolute", right: -118, top: -38, width: 260, zIndex: 0 }} />
+        <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.045)", borderRadius: 140, height: 220, left: -104, position: "absolute", top: 84, width: 220, zIndex: 0 }} />
+        <View style={{ flex: 1, zIndex: 1 }}>
+          <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
+            <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 380, opacity: 1, width: 250 }} />
           </View>
-          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: -40, top: -70, width: 235, zIndex: 0 }}>
-            <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 360, opacity: 0.9, width: 235 }} />
+          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: 0, top: -70, width: 235, zIndex: 0 }}>
+            <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 430, opacity: 1, width: 285 }} />
           </View>
-          <Pressable onPress={() => goToPage(onboardingSlides.length - 1)} hitSlop={10} style={{ alignSelf: "flex-end", marginBottom: 10 }}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.62)", "rgba(255,255,255,0)"]}
+            locations={[0, 0.52, 1]}
+            style={{ height: 430, left: -28, position: "absolute", right: -28, top: -16, zIndex: 1 }}
+          />
+          <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.16)", borderRadius: 3, height: 6, left: 28, position: "absolute", top: 146, width: 6, zIndex: 1 }} />
+          <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 2, height: 4, left: 92, position: "absolute", top: 112, width: 4, zIndex: 1 }} />
+          <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.15)", borderRadius: 2.5, height: 5, position: "absolute", right: 60, top: 118, width: 5, zIndex: 1 }} />
+          <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.10)", borderRadius: 2, height: 4, position: "absolute", right: 24, top: 198, width: 4, zIndex: 1 }} />
+          {!introDone ? (
+          <Pressable onPress={finishIntro} hitSlop={10} style={{ alignSelf: "flex-end", marginBottom: 10, zIndex: 2 }}>
             <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>Skip</Text>
           </Pressable>
-          <ScrollView
-            ref={pagerRef}
-            horizontal
-            pagingEnabled
-            bounces={false}
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handlePagerScrollEnd}
-            style={{ flexGrow: 0 }}
-          >
-            {onboardingSlides.map((slide) => (
-              <View key={slide.title} style={{ width: pageWidth, alignItems: "center", justifyContent: "center", paddingTop: 34 }}>
-                <View style={{ width: 220, height: 220, borderRadius: 110, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.72)", borderWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
-                  <Image source={slide.image} resizeMode="contain" style={{ width: 170, height: 170 }} />
-                </View>
-                <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "900", lineHeight: 36, marginTop: 34, textAlign: "center" }}>{slide.title}</Text>
-                <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 23, marginTop: 14, textAlign: "center", maxWidth: 300 }}>{slide.subtitle}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={{ flexDirection: "row", gap: 10, justifyContent: "center", marginTop: 26 }}>
+          ) : (
+            <View style={{ height: 28, marginBottom: 10 }} />
+          )}
+          <View style={{ height: 480, position: "relative", zIndex: 2 }}>
+            {onboardingSlides.map((slide, index) => {
+              const slideOpacity = scrollX.interpolate({
+                inputRange: [(index - 1) * pageWidth, index * pageWidth, (index + 1) * pageWidth],
+                outputRange: [0, 1, 0],
+                extrapolate: "clamp",
+              });
+              const slideY = scrollX.interpolate({
+                inputRange: [(index - 1) * pageWidth, index * pageWidth, (index + 1) * pageWidth],
+                outputRange: [10, 0, 10],
+                extrapolate: "clamp",
+              });
+
+              return (
+                <Animated.View
+                  key={slide.title}
+                  pointerEvents="none"
+                  style={{ alignItems: "center", left: 0, opacity: slideOpacity, paddingTop: 58, position: "absolute", right: 0, top: 0, transform: [{ translateY: slideY }], zIndex: 1 }}
+                >
+                  <View style={{ alignItems: "center", height: 230, justifyContent: "center", width: 230 }}>
+                    <View style={{ borderColor: "rgba(6,69,50,0.055)", borderRadius: 116, borderWidth: 1, height: 232, position: "absolute", width: 232 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.04)", borderRadius: 142, borderWidth: 1, height: 284, position: "absolute", width: 284 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.028)", borderRadius: 168, borderWidth: 1, height: 336, position: "absolute", width: 336 }} />
+                    <Image source={slide.image} resizeMode="contain" style={{ width: 230, height: 230 }} />
+                  </View>
+                  <Text style={{ color: mesh.green800, fontSize: 31, fontWeight: "900", lineHeight: 37, marginTop: 40, textAlign: "center", maxWidth: 330, letterSpacing: -0.6 }}>{slide.title}</Text>
+                  <Text style={{ color: "rgba(31,42,38,0.62)", fontSize: 17, lineHeight: 26, marginTop: 16, textAlign: "center", maxWidth: 326 }}>{slide.subtitle}</Text>
+                </Animated.View>
+              );
+            })}
+            <Animated.ScrollView
+              ref={pagerRef}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                { useNativeDriver: false }
+              )}
+              onMomentumScrollEnd={handlePagerScrollEnd}
+              scrollEnabled={!introDone}
+              style={{ bottom: 0, elevation: 3, left: 0, position: "absolute", right: 0, top: 0, zIndex: 3 }}
+            >
+              {onboardingSlides.map((slide) => (
+                <View key={slide.title} style={{ height: 480, width: pageWidth }} />
+              ))}
+            </Animated.ScrollView>
+          </View>
+          {!introDone ? (
+          <>
+          <View style={{ flexDirection: "row", gap: 16, justifyContent: "center", marginTop: 34 }}>
             {onboardingSlides.map((slide, index) => (
               <View
                 key={slide.title}
                 style={{
-                  width: page === index ? 28 : 9,
-                  height: 9,
+                  width: 54,
+                  height: 7,
                   borderRadius: 999,
-                  backgroundColor: page === index ? mesh.green600 : "rgba(6,69,50,0.12)",
+                  backgroundColor: page === index ? mesh.green700 : "rgba(6,69,50,0.12)",
                 }}
               />
             ))}
           </View>
+          <Pressable
+            onPress={handleIntroNext}
+            style={({ pressed }) => ({
+              alignItems: "center",
+              alignSelf: "center",
+              backgroundColor: mesh.green800,
+              borderRadius: 999,
+              flexDirection: "row",
+              gap: 10,
+              height: 46,
+              justifyContent: "center",
+              marginTop: 26,
+              opacity: pressed ? 0.9 : 1,
+              paddingHorizontal: 22,
+            })}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>
+              {page === onboardingSlides.length - 1 ? "Get started" : "Next"}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          </Pressable>
+          </>
+          ) : null}
         </View>
-        <PrimaryButton label={tx(t, "login")} onPress={() => nav("login")} />
-        <View style={{ height: 10 }} />
-        <SecondaryButton label={tx(t, "createAccount")} onPress={() => nav("register")} />
-        <Text style={{ color: mesh.ink400, fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 18 }}>{tx(t, "termsNotice")}</Text>
+        {introDone ? (
+        <>
+        <View style={{ gap: 14 }}>
+          <Pressable
+            onPress={() => nav("login")}
+            style={({ pressed }) => ({
+              height: 58,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: mesh.green800,
+              opacity: pressed ? 0.9 : 1,
+              shadowColor: "#064532",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.08,
+              shadowRadius: 18,
+              elevation: 2,
+            })}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{tx(t, "login")}</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => nav("register")}
+            style={({ pressed }) => ({
+              height: 58,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(255,255,255,0.82)",
+              borderWidth: 1.5,
+              borderColor: mesh.green700,
+              opacity: pressed ? 0.88 : 1,
+            })}
+          >
+            <Text style={{ color: mesh.green700, fontSize: 17, fontWeight: "900" }}>{tx(t, "createAccount")}</Text>
+          </Pressable>
+        </View>
+        <Text style={{ color: "rgba(65,75,70,0.48)", fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 18, paddingHorizontal: 10 }}>{tx(t, "termsNotice")}</Text>
+        </>
+        ) : (
+          <View style={{ height: 158 }} />
+        )}
       </View>
     </AuthShell>
   );
@@ -267,6 +421,7 @@ export function WelcomeScreen({ t, nav }: Props) {
 export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean }) {
   const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState(error ? tx(t, "incorrectLogin") : "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -285,18 +440,20 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
   };
 
   return (
-    <AuthShell showBack onBack={() => nav("welcome")}>
-      <AuthTitle t={t} title="login" sub="loginWelcome" />
-      <View style={{ gap: 12, marginBottom: 12 }}>
-        <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} />
-        <MeshInput icon="lock-closed-outline" secure onChangeText={setPassword} placeholder={tx(t, "password")} value={password} error={Boolean(formError)} />
+    <AuthShell showBack onBack={() => nav("welcome")} showLeafBg={false}>
+      <View style={{ paddingTop: 70 }}>
+        <AuthTitle t={t} title="login" sub="loginWelcome" />
+        <View style={{ gap: 12, marginBottom: 12 }}>
+          <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} />
+          <MeshInput icon="lock-closed-outline" secure={!showPassword} showSecureToggle onToggleSecure={() => setShowPassword((v) => !v)} onChangeText={setPassword} placeholder={tx(t, "password")} value={password} error={Boolean(formError)} />
+        </View>
+        {formError ? <ErrorText text={formError} /> : null}
+        <Pressable onPress={() => nav("forgot")} style={{ alignSelf: "flex-end", marginBottom: 16 }}><Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{tx(t, "forgotPassword")}</Text></Pressable>
+        <PrimaryButton disabled={!emailOrPhone.trim() || !password} label={tx(t, "login")} loading={submitting} onPress={handleLogin} />
+        <Divider t={t} />
+        <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" onPress={() => nav("loading")} />
+        <InlineLink text={tx(t, "noAccount")} link={tx(t, "signup")} onPress={() => nav("register")} />
       </View>
-      {formError ? <ErrorText text={formError} /> : null}
-      <Pressable onPress={() => nav("forgot")} style={{ alignSelf: "flex-end", marginBottom: 16 }}><Text style={{ color: mesh.green700, fontSize: 13, fontWeight: "800" }}>{tx(t, "forgotPassword")}</Text></Pressable>
-      <PrimaryButton disabled={!emailOrPhone.trim() || !password} label={tx(t, "login")} loading={submitting} onPress={handleLogin} />
-      <Divider t={t} />
-      <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" onPress={() => nav("loading")} />
-      <InlineLink text={tx(t, "noAccount")} link={tx(t, "signup")} onPress={() => nav("register")} />
     </AuthShell>
   );
 }
@@ -307,6 +464,8 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
   const [emailOrPhone, setEmailOrPhone] = useState(error ? "an.nguyen@gmail.com" : "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formError, setFormError] = useState(error ? tx(t, "emailExists") : "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -331,18 +490,20 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
   };
 
   return (
-    <AuthShell showBack onBack={() => nav("welcome")}>
-      <AuthTitle t={t} title="createAccount" sub="registerWelcome" />
-      <View style={{ gap: 12, marginBottom: 12 }}>
-        <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} error={Boolean(formError)} />
-        <MeshInput icon="lock-closed-outline" secure onChangeText={setPassword} placeholder={tx(t, "password")} value={password} />
-        <MeshInput icon="lock-closed-outline" secure onChangeText={setConfirmPassword} placeholder={tx(t, "confirmPassword")} value={confirmPassword} />
+    <AuthShell showBack onBack={() => nav("welcome")} showLeafBg={false}>
+      <View style={{ paddingTop: 56 }}>
+        <AuthTitle t={t} title="createAccount" sub="registerWelcome" />
+        <View style={{ gap: 12, marginBottom: 12 }}>
+          <MeshInput icon="person-outline" onChangeText={setEmailOrPhone} placeholder={tx(t, "emailOrPhone")} value={emailOrPhone} error={Boolean(formError)} />
+          <MeshInput icon="lock-closed-outline" secure={!showPassword} showSecureToggle onToggleSecure={() => setShowPassword((v) => !v)} onChangeText={setPassword} placeholder={tx(t, "password")} value={password} />
+          <MeshInput icon="lock-closed-outline" secure={!showConfirmPassword} showSecureToggle onToggleSecure={() => setShowConfirmPassword((v) => !v)} onChangeText={setConfirmPassword} placeholder={tx(t, "confirmPassword")} value={confirmPassword} />
+        </View>
+        {formError ? <ErrorText text={formError} /> : null}
+        <PrimaryButton disabled={!emailOrPhone.trim() || !password || !confirmPassword} label={tx(t, "createAccount")} loading={submitting} onPress={handleRegister} />
+        <Divider t={t} />
+        <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" />
+        <InlineLink text={tx(t, "haveAccount")} link={tx(t, "login")} onPress={() => nav("login")} />
       </View>
-      {formError ? <ErrorText text={formError} /> : null}
-      <PrimaryButton disabled={!emailOrPhone.trim() || !password || !confirmPassword} label={tx(t, "createAccount")} loading={submitting} onPress={handleRegister} />
-      <Divider t={t} />
-      <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" />
-      <InlineLink text={tx(t, "haveAccount")} link={tx(t, "login")} onPress={() => nav("login")} />
     </AuthShell>
   );
 }
