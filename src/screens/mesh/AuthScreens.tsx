@@ -105,9 +105,17 @@ function messageFromError(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean }) {
+function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true, backgroundColor }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean; backgroundColor?: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: dark ? mesh.green700 : mesh.green50 }}>
+    <View style={{ flex: 1, backgroundColor: backgroundColor ?? (dark ? mesh.green700 : "#F7FBF6") }}>
+      {!dark ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={["#DDEFE5", "#F7FBF6", "#FFFFFF"]}
+          locations={[0, 0.54, 1]}
+          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+        />
+      ) : null}
       {showLeafBg ? <LeafBg dark={dark} /> : null}
       {showBack ? <View style={{ position: "absolute", top: 48, left: 16, zIndex: 10 }}><HeaderCircleBtn icon="chevron-back" onPress={onBack} /></View> : null}
       {scroll ? (
@@ -181,9 +189,9 @@ function Divider({ t }: { t: TFn }) {
 function AuthTitle({ t, title, sub }: { t: TFn; title: string; sub: string }) {
   return (
     <View style={{ alignItems: "center", marginBottom: 28 }}>
-      <Image source={relishLogo} resizeMode="contain" style={{ height: 132, width: 132 }} />
-      <Text style={{ color: mesh.green800, fontSize: 28, fontWeight: "900", marginTop: 4 }}>{tx(t, title)}</Text>
-      <Text style={{ color: mesh.ink500, fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" }}>{tx(t, sub)}</Text>
+      <Image source={relishLogo} resizeMode="contain" style={{ height: 150, width: 150 }} />
+      <Text style={{ color: mesh.green800, fontSize: 27, fontWeight: "800", marginTop: 0 }}>{tx(t, title)}</Text>
+      <Text style={{ color: "rgba(31,42,38,0.58)", fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" }}>{tx(t, sub)}</Text>
     </View>
   );
 }
@@ -245,13 +253,13 @@ export function WelcomeScreen({ t, nav }: Props) {
   };
 
   return (
-    <AuthShell scroll={false} showLeafBg={false}>
+    <AuthShell scroll={false} showLeafBg={false} backgroundColor="#F7FBF6">
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
         <LinearGradient
           pointerEvents="none"
-          colors={["#F4FAF6", "#F8FCF9", "#F4FAF6"]}
-          locations={[0, 0.5, 1]}
-          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: 0, zIndex: 0 }}
+          colors={["#c0e3ce", "#EAF6EF", "#FFFFFF"]}
+          locations={[0, 0.56, 1]}
+          style={{ bottom: -80, left: -28, position: "absolute", right: -28, top: -120, zIndex: 0 }}
         />
         <View style={{ flex: 1, zIndex: 1 }}>
           <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
@@ -260,11 +268,9 @@ export function WelcomeScreen({ t, nav }: Props) {
           <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: 0, top: -70, width: 235, zIndex: 0 }}>
             <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 430, opacity: 1, width: 285 }} />
           </View>
-          <LinearGradient
+          <View
             pointerEvents="none"
-            colors={["rgba(255,255,255,0.70)", "rgba(255,255,255,0.42)", "rgba(255,255,255,0)"]}
-            locations={[0, 0.58, 1]}
-            style={{ height: 460, left: -28, position: "absolute", right: -28, top: -12, zIndex: 1 }}
+            style={{ backgroundColor: "rgba(255,255,255,0.48)", bottom: 0, left: -28, position: "absolute", right: -28, top: -120, zIndex: 1 }}
           />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.16)", borderRadius: 3, height: 6, left: 28, position: "absolute", top: 146, width: 6, zIndex: 1 }} />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 2, height: 4, left: 92, position: "absolute", top: 112, width: 4, zIndex: 1 }} />
@@ -297,9 +303,9 @@ export function WelcomeScreen({ t, nav }: Props) {
                   style={{ alignItems: "center", left: 0, opacity: slideOpacity, paddingTop: 58, position: "absolute", right: 0, top: 0, transform: [{ translateY: slideY }], zIndex: 1 }}
                 >
                   <View style={{ alignItems: "center", height: 230, justifyContent: "center", width: 230 }}>
-                    <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 135, borderWidth: 1, height: 270, position: "absolute", width: 270 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.065)", borderRadius: 155, borderWidth: 1, height: 310, position: "absolute", width: 310 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.035)", borderRadius: 175, borderWidth: 1, height: 350, position: "absolute", width: 350 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 99, borderWidth: 1, height: 198, position: "absolute", width: 198 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.062)", borderRadius: 123, borderWidth: 1, height: 246, position: "absolute", width: 246 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.032)", borderRadius: 147, borderWidth: 1, height: 294, position: "absolute", width: 294 }} />
                     <Image source={slide.image} resizeMode="contain" style={{ width: 230, height: 230 }} />
                   </View>
                   <Text style={{ color: mesh.green800, fontSize: 29, fontWeight: "700", lineHeight: 38, marginTop: 38, textAlign: "center", maxWidth: 330, letterSpacing: -0.2 }}>{slide.title}</Text>
