@@ -19,6 +19,8 @@ import { Contact, Lang, Status, statuses as mockStatuses, statusById } from "../
 import { mesh } from "../../mesh/meshTheme";
 
 const leafPng = require("../../../assets/leaf.png");
+const leaf3Png = require("../../../assets/leaf_3.png");
+const leaf4Png = require("../../../assets/leaf_4.png");
 
 function normalizeSearchText(value: string) {
   return value
@@ -1679,18 +1681,49 @@ export function CreateContactScreen({
         points={[[0,0],[0.35,0],[0.7,0],[1,0],[0,0.28],[0.35,0.34],[0.7,0.32],[1,0.28],[0,0.62],[0.35,0.66],[0.7,0.7],[1,0.68],[0,1],[0.35,1],[0.7,1],[1,1]]}
         smoothsColors
       />
+      <MeshGradientView
+        pointerEvents="none"
+        style={{ height: 360, left: 0, position: "absolute", right: 0, top: 0, zIndex: 0 }}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532", "#0B573E", "#2F805E", "#BFDCCB",
+          "#CDE6D7", "#DDEFE5", "#EAF6EF", "#FFFFFF",
+          "#F4FAF7", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+        ]}
+        points={[
+          [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+          [0, 0.34], [0.35, 0.38], [0.7, 0.36], [1, 0.34],
+          [0, 0.66], [0.35, 0.7], [0.7, 0.72], [1, 0.7],
+          [0, 1], [0.35, 1], [0.7, 1], [1, 1],
+        ]}
+        smoothsColors
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(247,251,246,0)", "rgba(247,251,246,0.78)", "#F7FBF6"]}
+        locations={[0, 0.58, 1]}
+        style={{ height: 150, left: 0, position: "absolute", right: 0, top: 235, zIndex: 0 }}
+      />
 
-      {/* Leaf decoration — top-right, subtle background accent */}
-      <View pointerEvents="none" style={{ position: "absolute", right: -90, top: insets.top - 10 }}>
+      <View pointerEvents="none" style={{ position: "absolute", right: -40, top: insets.top + -15, zIndex: 0 }}>
         <Image
-          source={leafPng}
+          source={leaf3Png}
           resizeMode="contain"
-          style={{ height: 280, opacity: 0.10, transform: [{ rotate: "-14deg" }], width: 320 }}
+          style={{ height: 315, opacity: 0.45, transform: [{ rotate: "-8deg" }], width: 315 }}
+        />
+      </View>
+      <View pointerEvents="none" style={{ left: 0, position: "absolute", top: insets.top + 100, zIndex: 0 }}>
+        <Image
+          source={leaf4Png}
+          resizeMode="contain"
+          style={{ height: 130, opacity: 0.45, transform: [{ rotate: "-8deg" }], width: 170 }}
         />
       </View>
 
       {/* ── Top bar ── */}
-      <View style={{ paddingTop: isSheet ? 18 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
+      <View style={{ paddingTop: isSheet ? 18 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8, zIndex: 2 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => isSheet ? onCloseSheet?.() : nav(edit ? "contactDetail" : "contacts", { id: contactId })} />
           <Text
@@ -1706,7 +1739,7 @@ export function CreateContactScreen({
       </View>
 
       {/* ── Scrollable form ── */}
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, zIndex: 2 }}>
         <ScrollView
           ref={scrollRef}
           style={{ backgroundColor: "transparent" }}
