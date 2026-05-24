@@ -249,9 +249,9 @@ export function WelcomeScreen({ t, nav }: Props) {
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
         <LinearGradient
           pointerEvents="none"
-          colors={["#E6F2EB", "#F4FAF6", "#FFFFFF"]}
-          locations={[0, 0.36, 1]}
-          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: -24, zIndex: 0 }}
+          colors={["#F4FAF6", "#F8FCF9", "#F4FAF6"]}
+          locations={[0, 0.5, 1]}
+          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: 0, zIndex: 0 }}
         />
         <View style={{ flex: 1, zIndex: 1 }}>
           <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
@@ -262,9 +262,9 @@ export function WelcomeScreen({ t, nav }: Props) {
           </View>
           <LinearGradient
             pointerEvents="none"
-            colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0.62)", "rgba(255,255,255,0)"]}
-            locations={[0, 0.52, 1]}
-            style={{ height: 430, left: -28, position: "absolute", right: -28, top: -16, zIndex: 1 }}
+            colors={["rgba(255,255,255,0.70)", "rgba(255,255,255,0.42)", "rgba(255,255,255,0)"]}
+            locations={[0, 0.58, 1]}
+            style={{ height: 460, left: -28, position: "absolute", right: -28, top: -12, zIndex: 1 }}
           />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.16)", borderRadius: 3, height: 6, left: 28, position: "absolute", top: 146, width: 6, zIndex: 1 }} />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 2, height: 4, left: 92, position: "absolute", top: 112, width: 4, zIndex: 1 }} />
@@ -297,14 +297,13 @@ export function WelcomeScreen({ t, nav }: Props) {
                   style={{ alignItems: "center", left: 0, opacity: slideOpacity, paddingTop: 58, position: "absolute", right: 0, top: 0, transform: [{ translateY: slideY }], zIndex: 1 }}
                 >
                   <View style={{ alignItems: "center", height: 230, justifyContent: "center", width: 230 }}>
-                    <View style={{ borderColor: "rgba(6,69,50,0.12)", borderRadius: 112, borderWidth: 1, height: 224, position: "absolute", width: 224 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.07)", borderRadius: 126, borderWidth: 1, height: 252, position: "absolute", width: 252 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.045)", borderRadius: 152, borderWidth: 1, height: 304, position: "absolute", width: 304 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.028)", borderRadius: 178, borderWidth: 1, height: 356, position: "absolute", width: 356 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.10)", borderRadius: 135, borderWidth: 1, height: 270, position: "absolute", width: 270 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.065)", borderRadius: 155, borderWidth: 1, height: 310, position: "absolute", width: 310 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.035)", borderRadius: 175, borderWidth: 1, height: 350, position: "absolute", width: 350 }} />
                     <Image source={slide.image} resizeMode="contain" style={{ width: 230, height: 230 }} />
                   </View>
-                  <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "800", lineHeight: 38, marginTop: 38, textAlign: "center", maxWidth: 330, letterSpacing: -0.3 }}>{slide.title}</Text>
-                  <Text style={{ color: "rgba(31,42,38,0.60)", fontSize: 16, lineHeight: 25, marginTop: 14, textAlign: "center", maxWidth: 312 }}>{slide.subtitle}</Text>
+                  <Text style={{ color: mesh.green800, fontSize: 29, fontWeight: "700", lineHeight: 38, marginTop: 38, textAlign: "center", maxWidth: 330, letterSpacing: -0.2 }}>{slide.title}</Text>
+                  <Text style={{ color: "rgba(31,42,38,0.56)", fontSize: 16, lineHeight: 25, marginTop: 14, textAlign: "center", maxWidth: 312 }}>{slide.subtitle}</Text>
                 </Animated.View>
               );
             })}
