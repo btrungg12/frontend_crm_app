@@ -923,8 +923,8 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     : undefined;
 
   // Resolve final status display values
-  const detailStatusName  = statusMeta?.name  ?? (hasDetailStatus(contact) ? (contact as any).statusName  : undefined);
-  const detailStatusColor = statusMeta?.color ?? (hasDetailStatus(contact) ? contact.statusColor           : undefined);
+  const detailStatusName  = statusMeta?.name  ?? (contact && hasDetailStatus(contact) ? (contact as any).statusName  : undefined);
+  const detailStatusColor = statusMeta?.color ?? (contact && hasDetailStatus(contact) ? contact.statusColor           : undefined);
 
   const handleDeleteContact = async () => {
     if (deleting) return;
@@ -981,40 +981,52 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
   return (
     <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
+      <MeshGradientView
+        pointerEvents="none"
+        style={{ height: 390, left: 0, position: "absolute", right: 0, top: 0, zIndex: 0 }}
+        columns={4}
+        rows={4}
+        colors={[
+          "#064532", "#0B573E", "#2F805E", "#BFDCCB",
+          "#BFDCCB", "#DDEFE5", "#EAF6EF", "#FFFFFF",
+          "#F4FAF7", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+        ]}
+        points={[
+          [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+          [0, 0.34], [0.35, 0.38], [0.7, 0.36], [1, 0.34],
+          [0, 0.66], [0.35, 0.70], [0.7, 0.72], [1, 0.70],
+          [0, 1], [0.35, 1], [0.7, 1], [1, 1],
+        ]}
+        smoothsColors
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.72)", "#FFFFFF"]}
+        locations={[0, 0.55, 1]}
+        style={{ height: 160, left: 0, position: "absolute", right: 0, top: 255, zIndex: 1 }}
+      />
+      <View pointerEvents="none" style={{ position: "absolute", right: -70, top: insets.top + 68, zIndex: 1 }}>
+        <Image
+          source={leafPng}
+          resizeMode="contain"
+          style={{ height: 260, opacity: 0.055, transform: [{ rotate: "-12deg" }], width: 260 }}
+        />
+      </View>
       {/* ── Hero header ── */}
       <View
         style={{
-          overflow: "hidden",
           paddingBottom: 18,
           paddingHorizontal: 24,
           paddingTop: insets.top + 14,
           position: "relative",
+          zIndex: 2,
         }}
       >
-        <MeshGradientView
-          pointerEvents="none"
-          style={{ height: 300, left: 0, position: "absolute", right: 0, top: 0 }}
-          columns={4}
-          rows={4}
-          colors={[
-            "#064532", "#0B573E", "#2F805E", "#DDEFE5",
-            "#EAF6EF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
-            "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
-            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
-          ]}
-          points={[
-            [0, 0], [0.35, 0], [0.7, 0], [1, 0],
-            [0, 0.28], [0.35, 0.34], [0.7, 0.32], [1, 0.28],
-            [0, 0.62], [0.35, 0.66], [0.7, 0.7], [1, 0.68],
-            [0, 1], [0.35, 1], [0.7, 1], [1, 1],
-          ]}
-          smoothsColors
-        />
-
         {/* Top nav */}
-        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
+        <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("back")} />
-          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", letterSpacing: -0.1 }}>{t("contactProfile")}</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: -0.1, textShadowColor: "rgba(6,69,50,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 }}>{t("contactProfile")}</Text>
           <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
 
@@ -1042,7 +1054,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "transparent", paddingHorizontal: 20 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "transparent", paddingHorizontal: 20, position: "relative", zIndex: 2 }} bottom={100}>
         {deleteError ? (
           <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginBottom: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
         ) : null}
@@ -1274,6 +1286,18 @@ export function CreateContactScreen({
 
   const saving = savePhase === "saving";
   const saveSuccess = savePhase === "success";
+  const saveButtonLabel = edit
+    ? savePhase === "saving"
+      ? "Updating..."
+      : savePhase === "success"
+        ? "Updated"
+        : "Update contact"
+    : savePhase === "saving"
+      ? "Creating..."
+      : savePhase === "success"
+        ? "Created"
+        : "Save contact";
+  const saveButtonIcon = savePhase === "success" ? "checkmark-circle" : edit ? "create-outline" : "save-outline";
 
   const addFieldRef = useRef<View>(null);
   const addFieldAnim = useRef(new Animated.Value(0)).current;
@@ -1406,6 +1430,12 @@ export function CreateContactScreen({
     });
   }
 
+  function closeAddFieldMenuInstant() {
+    addFieldAnim.stopAnimation();
+    setAddFieldOpen(false);
+    setAddFieldMenuMounted(false);
+  }
+
   function toggleAddFieldMenu() {
     if (addFieldOpen) closeAddFieldMenu();
     else openAddFieldMenu();
@@ -1415,29 +1445,33 @@ export function CreateContactScreen({
 
   // ── Add field / special day handling ──────────────────────────────────────
   const handleAddField = (f: AddField) => {
-    closeAddFieldMenu();
     if (f === "specialDay") {
-      const newIdx = specialDays.length;
-      setSpecialDays(prev => [...prev, { id: String(Date.now()), title: "", date: null }]);
-      setDateTarget({ kind: "specialDay", index: newIdx });
-      setPickerValue(null);
+      closeAddFieldMenuInstant();
+      setDateTarget({ kind: "specialDay", index: -1 });
+      setPickerValue(new Date());
       setPickerEventName("");
       setDatePickerIsNew(true);
-      setDatePickerOpen(true);
-    } else {
-      setActiveFields(prev => [...prev, f as UniqueField]);
+      requestAnimationFrame(() => {
+        setDatePickerOpen(true);
+      });
+      return;
     }
+
+    closeAddFieldMenu();
+    setActiveFields(prev =>
+      prev.includes(f as UniqueField) ? prev : [...prev, f as UniqueField]
+    );
   };
 
   // ── Date picker ────────────────────────────────────────────────────────────
   const openDatePicker = (target: DateTarget) => {
     setDateTarget(target);
     if (target.kind === "birthday") {
-      setPickerValue(birthday);
+      setPickerValue(birthday ?? new Date());
       setPickerEventName("");
     } else {
       const sd = specialDays[(target as { kind: "specialDay"; index: number }).index];
-      setPickerValue(sd?.date ?? null);
+      setPickerValue(sd?.date ?? new Date());
       setPickerEventName(sd?.title ?? "");
     }
     setDatePickerIsNew(false);
@@ -1445,11 +1479,10 @@ export function CreateContactScreen({
   };
 
   const cancelDatePicker = () => {
-    if (datePickerIsNew && dateTarget?.kind === "specialDay") {
-      const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
-      setSpecialDays(prev => prev.filter((_, i) => i !== idx));
-    }
     setDatePickerOpen(false);
+    setDatePickerIsNew(false);
+    setDateTarget(null);
+    setPickerEventName("");
   };
 
   const confirmDate = () => {
@@ -1459,11 +1492,23 @@ export function CreateContactScreen({
       setBirthday(finalDate);
     } else {
       const idx = (dateTarget as { kind: "specialDay"; index: number }).index;
-      setSpecialDays(prev =>
-        prev.map((sd, i) => i === idx ? { ...sd, title: pickerEventName, date: finalDate } : sd)
-      );
+      const title = pickerEventName.trim();
+
+      if (idx === -1) {
+        setSpecialDays(prev => [
+          ...prev,
+          { id: String(Date.now()), title, date: finalDate },
+        ]);
+      } else {
+        setSpecialDays(prev =>
+          prev.map((sd, i) => i === idx ? { ...sd, title, date: finalDate } : sd)
+        );
+      }
     }
     setDatePickerOpen(false);
+    setDatePickerIsNew(false);
+    setDateTarget(null);
+    setPickerEventName("");
   };
 
   // ── Avatar picker ──────────────────────────────────────────────────────────
@@ -1636,12 +1681,13 @@ export function CreateContactScreen({
       />
 
       {/* Leaf decoration — top-right, subtle background accent */}
-      <Image
-        source={leafPng}
-        resizeMode="contain"
-        pointerEvents="none"
-        style={{ height: 280, opacity: 0.10, position: "absolute", right: -90, top: insets.top - 10, transform: [{ rotate: "-14deg" }], width: 320 }}
-      />
+      <View pointerEvents="none" style={{ position: "absolute", right: -90, top: insets.top - 10 }}>
+        <Image
+          source={leafPng}
+          resizeMode="contain"
+          style={{ height: 280, opacity: 0.10, transform: [{ rotate: "-14deg" }], width: 320 }}
+        />
+      </View>
 
       {/* ── Top bar ── */}
       <View style={{ paddingTop: isSheet ? 18 : insets.top + 14, paddingHorizontal: 20, paddingBottom: 8 }}>
@@ -1875,13 +1921,11 @@ export function CreateContactScreen({
           >
             {savePhase === "saving" ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : savePhase === "success" ? (
-              <Ionicons name="checkmark-circle" size={21} color="#FFFFFF" />
             ) : (
-              <Ionicons name="save-outline" size={21} color="#FFFFFF" />
+              <Ionicons name={saveButtonIcon} size={21} color="#FFFFFF" />
             )}
             <Text style={{ color: "#FFFFFF", fontSize: 18, fontWeight: "800" }}>
-              {savePhase === "saving" ? "Creating..." : savePhase === "success" ? "Created" : "Save contact"}
+              {saveButtonLabel}
             </Text>
           </LinearGradient>
         </Pressable>
@@ -1949,12 +1993,17 @@ export function CreateContactScreen({
 
       {/* ── Date / special-day picker bottom sheet ── */}
       <Modal visible={datePickerOpen} transparent animationType="slide" onRequestClose={cancelDatePicker}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+          style={{ flex: 1 }}
+        >
         <View style={{ flex: 1, backgroundColor: "rgba(10,30,20,0.45)", justifyContent: "flex-end" }}>
           <Pressable
             onPress={cancelDatePicker}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
-          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36 }}>
+          <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "82%", paddingBottom: Math.max(insets.bottom + 16, 28) }}>
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: mesh.ink200, alignSelf: "center", marginTop: 12, marginBottom: 4 }} />
             <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 12 }}>
               <Pressable onPress={cancelDatePicker} hitSlop={10}>
@@ -1967,6 +2016,11 @@ export function CreateContactScreen({
                 <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.green700, fontSize: SHEET_FONT.action, fontWeight: "800" }}>{t("done")}</Text>
               </Pressable>
             </View>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 12 }}
+            >
             {dateTarget?.kind === "specialDay" && (
               <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
                 <TextInput
@@ -1975,6 +2029,8 @@ export function CreateContactScreen({
                   placeholder={t("eventName")}
                   placeholderTextColor="#8C9691"
                   returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  blurOnSubmit
                   maxFontSizeMultiplier={1.1}
                   style={{
                     height: 48, borderRadius: 16,
@@ -1993,8 +2049,10 @@ export function CreateContactScreen({
                 <Text maxFontSizeMultiplier={1.1} style={{ color: mesh.green700, fontSize: SHEET_FONT.preview, fontWeight: "800" }}>{formatDateShort(pickerValue)}</Text>
               </View>
             )}
+            </ScrollView>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </MeshScreen>
   );
