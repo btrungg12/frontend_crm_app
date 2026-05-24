@@ -552,7 +552,7 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initi
         subtitle={t("contactsCount", { n: sourceContacts.length })}
         refreshing={isBackgroundRefreshing}
       >
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flexDirection: "row" }}>
           <View style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
             <TextInput
@@ -575,10 +575,6 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initi
               </Pressable>
             ) : null}
           </View>
-          <Pressable style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
-            <Ionicons name="options-outline" size={16} color={mesh.ink700} />
-            <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{t("filter")}</Text>
-          </Pressable>
         </View>
       </MeshHeroHeader>
 
