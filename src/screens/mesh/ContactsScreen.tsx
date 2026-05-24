@@ -20,6 +20,14 @@ import { mesh } from "../../mesh/meshTheme";
 
 const leafPng = require("../../../assets/leaf.png");
 
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 // ─── CreateContactScreen helpers ─────────────────────────────────────────────
 
 const WHEEL_H = 44;
@@ -284,6 +292,7 @@ function extractCreatedId(response: unknown): string | undefined {
 
 export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initialStatusId, initialStatusName, refresh }: Props) {
   const [filter, setFilter] = useState(initialStatusId || "all");
+  const [search, setSearch] = useState("");
   const [apiContacts, setApiContacts] = useState<Contact[]>([]);
   const [error, setError] = useState("");
   const [quickCreateMode, setQuickCreateMode] = useState<"note" | "contact" | null>(null);
@@ -403,13 +412,35 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initi
   ];
 
   // Filter contacts by status
-  const list = filter === "all"
+  const statusFilteredContacts = filter === "all"
     ? sourceContacts
     : sourceContacts.filter((contact) => {
         const rawStatus = String(contact.status ?? "");
         const contactStatus = getContactStatus(contact);
         return rawStatus === filter || contactStatus?.id === filter;
       });
+
+  const list = useMemo(() => {
+    const q = normalizeSearchText(search);
+    if (!q) return statusFilteredContacts;
+
+    return statusFilteredContacts.filter((contact) => {
+      const contactStatus = getContactStatus(contact);
+      const fields = [
+        contact.name,
+        (contact as any).email,
+        (contact as any).phone,
+        contact.status,
+        (contact as any).statusName,
+        contactStatus?.name,
+        (contact as any).source,
+      ];
+
+      return fields.some((field) => normalizeSearchText(String(field ?? "")).includes(q));
+    });
+  }, [statusFilteredContacts, search, statusLookup]);
+
+  const hasSearch = search.trim().length > 0;
 
   useEffect(() => {
     if (highlightId || highlightName) {
@@ -522,10 +553,28 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initi
         refreshing={isBackgroundRefreshing}
       >
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable onPress={() => nav("search", { type: "contacts" })} style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
+          <View style={{ flex: 1, height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16 }}>
             <Ionicons name="search" size={18} color={mesh.ink400} />
-            <Text numberOfLines={1} style={{ flex: 1, color: "#8A928D", fontSize: mesh.font.body }}>{t("searchContactPh")}</Text>
-          </Pressable>
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={t("searchContactPh") || "Search contacts..."}
+              placeholderTextColor="#8A928D"
+              style={{ flex: 1, color: mesh.ink900, fontSize: mesh.font.body, padding: 0, height: 40 }}
+              returnKeyType="search"
+              autoCorrect={false}
+              clearButtonMode="never"
+            />
+            {hasSearch ? (
+              <Pressable
+                onPress={() => setSearch("")}
+                hitSlop={8}
+                style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(6,69,50,0.08)" }}
+              >
+                <Ionicons name="close" size={15} color={mesh.ink400} />
+              </Pressable>
+            ) : null}
+          </View>
           <Pressable style={{ height: 44, borderRadius: 999, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14 }}>
             <Ionicons name="options-outline" size={16} color={mesh.ink700} />
             <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{t("filter")}</Text>
@@ -560,6 +609,20 @@ export function ContactsScreen({ t, lang, nav, highlightId, highlightName, initi
             <InlineState label="Loading contacts..." loading />
           ) : error ? (
             <InlineState label={error} error />
+          ) : hasSearch && list.length === 0 ? (
+            <View style={{ alignItems: "center", marginTop: 72, paddingHorizontal: 24 }}>
+              <View style={{ width: 76, height: 76, borderRadius: 38, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(31,112,72,0.08)", marginBottom: 18 }}>
+                <Ionicons name="search" size={34} color={mesh.ink400} />
+              </View>
+
+              <Text style={{ color: mesh.ink900, fontSize: 22, fontWeight: "800", textAlign: "center" }}>
+                No results
+              </Text>
+
+              <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 22, marginTop: 8, textAlign: "center" }}>
+                {`No contacts for "${search.trim()}".\nTry a different keyword.`}
+              </Text>
+            </View>
           ) : list.length === 0 ? (
             <InlineState label={filter === "all" ? "No contacts yet." : initialStatusName ? `No contacts in ${initialStatusName}.` : "No contacts in this status."} />
           ) : Object.keys(grouped).sort().map((key) => (
@@ -925,21 +988,21 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
       {/* ── Hero header ── */}
       <View
         style={{
-          height: insets.top + 285,
           overflow: "hidden",
-          paddingHorizontal: 20,
+          paddingBottom: 18,
+          paddingHorizontal: 24,
           paddingTop: insets.top + 14,
           position: "relative",
         }}
       >
         <MeshGradientView
           pointerEvents="none"
-          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+          style={{ height: 300, left: 0, position: "absolute", right: 0, top: 0 }}
           columns={4}
           rows={4}
           colors={[
-            "#064532", "#0B573E", "#1D704F", "#2F805E",
-            "#DDEFE5", "#EAF6EF", "#BFDCCB", "#74AE8D",
+            "#064532", "#0B573E", "#2F805E", "#DDEFE5",
+            "#EAF6EF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
             "#FFFFFF", "#FFFFFF", "#F8FCF7", "#EEF8F0",
             "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
           ]}
@@ -960,30 +1023,30 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         </View>
 
         {/* Avatar + name */}
-        <View style={{ alignItems: "center", marginTop: 14 }}>
+        <View style={{ alignItems: "center", paddingBottom: 18, paddingTop: 18 }}>
           {contact.avatarUrl ? (
-            <View style={{ width: 82, height: 82, borderRadius: 41, overflow: "hidden", borderWidth: 2.5, borderColor: "rgba(255,255,255,0.75)" }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, overflow: "hidden", borderWidth: 2, borderColor: "rgba(31,112,72,0.18)", backgroundColor: "rgba(255,255,255,0.72)" }}>
               <Image source={{ uri: contact.avatarUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
             </View>
           ) : (
-            <GradientAvatar name={contact.name} statusColor={detailStatusColor} size={82} ringWidth={2} ringOpacity={0.55} gap={3} />
+            <GradientAvatar name={contact.name} statusColor={detailStatusColor} size={76} ringWidth={2} ringOpacity={0.35} gap={3} />
           )}
           <Text
             numberOfLines={2}
-            style={{ color: mesh.green800, fontSize: 24, fontWeight: "800", letterSpacing: -0.35, lineHeight: 30, marginTop: 12, paddingHorizontal: 24, textAlign: "center" }}
+            style={{ color: mesh.green800, fontSize: 28, fontWeight: "800", letterSpacing: -0.5, lineHeight: 34, marginTop: 14, maxWidth: 330, textAlign: "center" }}
           >
             {contact.name}
           </Text>
           {detailStatusName ? (
-            <View style={{ alignItems: "center", flexDirection: "row", gap: 6, marginTop: 6 }}>
-              <View style={{ backgroundColor: detailStatusColor ?? mesh.ink400, borderRadius: 4, height: 7, width: 7 }} />
-              <Text style={{ color: mesh.ink700, fontSize: 13, fontWeight: "700" }}>{detailStatusName}</Text>
+            <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 999, flexDirection: "row", gap: 7, height: 30, marginTop: 8, paddingHorizontal: 12 }}>
+              <View style={{ backgroundColor: detailStatusColor ?? mesh.ink400, borderRadius: 999, height: 7, width: 7 }} />
+              <Text style={{ color: mesh.ink700, fontSize: 14, fontWeight: "700" }}>{detailStatusName}</Text>
             </View>
           ) : null}
         </View>
       </View>
 
-      <MeshScroll style={{ backgroundColor: "transparent", marginTop: -10, paddingHorizontal: 20 }} bottom={100}>
+      <MeshScroll style={{ backgroundColor: "transparent", paddingHorizontal: 20 }} bottom={100}>
         {deleteError ? (
           <Text style={{ color: mesh.pink, fontSize: 12, lineHeight: 18, marginBottom: 8, paddingHorizontal: 4 }}>{deleteError}</Text>
         ) : null}
@@ -1022,10 +1085,10 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
           if (fields.length === 0) return null;
           return (
             <>
-              <Text style={{ color: mesh.green800, fontSize: 20, fontWeight: "800", letterSpacing: -0.3, marginTop: 16, marginBottom: 10 }}>
+              <Text style={{ color: mesh.green800, fontSize: 18, fontWeight: "800", letterSpacing: -0.2, marginTop: 12, marginBottom: 8 }}>
                 Details
               </Text>
-              <View style={{ backgroundColor: "rgba(255,255,255,0.86)", borderColor: "rgba(6,69,50,0.055)", borderRadius: 22, borderWidth: 1, elevation: 0, paddingHorizontal: 14, paddingVertical: 4, shadowOpacity: 0 }}>
+              <View style={{ backgroundColor: "rgba(255,255,255,0.88)", borderColor: "rgba(6,69,50,0.055)", borderRadius: 18, borderWidth: 1, elevation: 0, paddingHorizontal: 14, paddingVertical: 10, shadowOpacity: 0 }}>
                 {fields.map((f, i) => (
                   <InfoRow key={`${f.label}-${i}`} icon={f.icon} label={f.label} value={f.value} last={i === fields.length - 1} accent={f.accent} />
                 ))}
@@ -1035,22 +1098,23 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
         })()}
 
         {/* ── Timeline ── */}
-        <Text style={{ color: mesh.green800, fontSize: 21, fontWeight: "800", letterSpacing: -0.3, lineHeight: 26, paddingTop: 20, paddingBottom: 10 }}>
+        <Text style={{ color: mesh.green800, fontSize: 24, fontWeight: "800", letterSpacing: -0.5, lineHeight: 34, paddingTop: 22, paddingBottom: 10 }}>
           {t("timeline")}
         </Text>
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
           {tabs.map((item) => (
             <MeshChip
               key={item.id}
               active={tab === item.id}
               onPress={() => setTab(item.id)}
               style={{
-                backgroundColor: tab === item.id ? mesh.green700 : "rgba(255,255,255,0.88)",
-                borderColor: tab === item.id ? mesh.green700 : "rgba(6,69,50,0.10)",
+                backgroundColor: tab === item.id ? mesh.green800 : "#FFFFFF",
+                borderColor: tab === item.id ? mesh.green800 : "rgba(6,69,50,0.08)",
                 borderRadius: 999,
                 borderWidth: 1,
-                paddingHorizontal: 15,
-                paddingVertical: 7,
+                minHeight: 38,
+                paddingHorizontal: 16,
+                paddingVertical: 6,
               }}
             >
               {item.label}
@@ -1063,27 +1127,26 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
             <Text style={{ color: mesh.ink400, fontSize: 13 }}>No timeline items yet.</Text>
           </View>
         ) : (
-          <View style={{ gap: 10 }}>
+          <View style={{ backgroundColor: "#FFFFFF", borderColor: "rgba(6,69,50,0.06)", borderRadius: 22, borderWidth: 1, elevation: 0, paddingHorizontal: 14, paddingVertical: 6, shadowColor: "#0B2F20", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.025, shadowRadius: 18 }}>
             {filtered.map((item, index) => {
               const color = item.kind === "reminder" ? mesh.orange : item.kind === "special" ? mesh.pink : mesh.green700;
               return (
                 <Pressable
                   key={`${item.title}-${index}`}
-                  style={{ backgroundColor: "rgba(255,255,255,0.88)", borderColor: "rgba(6,69,50,0.055)", borderRadius: 20, borderWidth: 1, elevation: 0, paddingHorizontal: 16, paddingVertical: 14, shadowOpacity: 0 }}
+                  style={{ borderBottomColor: "rgba(6,69,50,0.06)", borderBottomWidth: index < filtered.length - 1 ? 1 : 0, flexDirection: "row", gap: 12, paddingVertical: 14 }}
                 >
-                  <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
-                    <View style={{ alignItems: "center", backgroundColor: `${color}12`, borderRadius: 999, flexDirection: "row", gap: 6, height: 26, paddingHorizontal: 10 }}>
-                      <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={13} color={color} />
-                      <Text style={{ color, fontSize: 11, fontWeight: "800", letterSpacing: 1.0 }}>
-                        {item.label.toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text style={{ color: mesh.ink500, fontSize: 12.5, fontWeight: "500" }}>{item.date}</Text>
+                  <View style={{ alignItems: "center", backgroundColor: `${color}12`, borderRadius: 12, height: 34, justifyContent: "center", width: 34 }}>
+                    <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={17} color={color} />
                   </View>
-                  <Text style={{ color: mesh.ink900, fontSize: 17, fontWeight: "800", lineHeight: 22, marginTop: 10 }}>{item.title}</Text>
-                  {item.desc ? (
-                    <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 6 }}>{item.desc}</Text>
-                  ) : null}
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ alignItems: "center", flexDirection: "row", gap: 10 }}>
+                      <Text numberOfLines={1} style={{ color: mesh.ink900, flex: 1, fontSize: 15.5, fontWeight: "800" }}>{item.title}</Text>
+                      <Text style={{ color: mesh.ink400, fontSize: 12.5, fontWeight: "600" }}>{item.date}</Text>
+                    </View>
+                    {item.desc ? (
+                      <Text numberOfLines={2} style={{ color: mesh.ink500, fontSize: 14, lineHeight: 20, marginTop: 5 }}>{item.desc}</Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               );
             })}
@@ -1134,13 +1197,13 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 function InfoRow({ icon, label, value, last = false, accent }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; last?: boolean; accent?: string }) {
   const iconColor = accent ?? mesh.green700;
   return (
-    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.08)", flexDirection: "row", gap: 12, paddingVertical: 11 }}>
-      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.07)", borderRadius: 13, height: 38, justifyContent: "center", width: 38 }}>
-        <Ionicons name={icon} size={18} color={iconColor} />
+    <View style={{ alignItems: "center", borderBottomWidth: last ? 0 : 1, borderColor: "rgba(6,69,50,0.06)", flexDirection: "row", gap: 12, minHeight: 42, paddingVertical: 8 }}>
+      <View style={{ alignItems: "center", backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 12, height: 34, justifyContent: "center", width: 34 }}>
+        <Ionicons name={icon} size={17} color={iconColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ color: mesh.ink500, fontSize: 12.5 }}>{label}</Text>
-        <Text style={{ color: mesh.ink900, fontSize: 15, fontWeight: "700", marginTop: 2 }}>{value}</Text>
+        <Text style={{ color: mesh.ink400, fontSize: 12, fontWeight: "500" }}>{label}</Text>
+        <Text style={{ color: mesh.ink900, fontSize: 14.5, fontWeight: "700", marginTop: 2 }}>{value}</Text>
       </View>
     </View>
   );
