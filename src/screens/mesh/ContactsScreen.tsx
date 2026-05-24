@@ -1306,6 +1306,13 @@ export function CreateContactScreen({
   const scrollRef   = useRef<ScrollView>(null);
   const rowYRef     = useRef<Record<string, number>>({});
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const leaf3Right = isSheet ? -50 : -40;
+  const leaf3Top = isSheet ? -10 : insets.top - 15;
+  const leaf4Left = isSheet ? -16 : 0;
+  const leaf4Top = isSheet ? 100 : insets.top + 100;
+  const heroMeshHeight = isSheet ? 300 : 360;
+  const heroFadeTop = isSheet ? 195 : 235;
+  const heroFadeHeight = isSheet ? 130 : 150;
 
   // ── Keyboard awareness ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -1683,7 +1690,7 @@ export function CreateContactScreen({
       />
       <MeshGradientView
         pointerEvents="none"
-        style={{ height: 360, left: 0, position: "absolute", right: 0, top: 0, zIndex: 0 }}
+        style={{ height: heroMeshHeight, left: 0, position: "absolute", right: 0, top: 0, zIndex: 0 }}
         columns={4}
         rows={4}
         colors={[
@@ -1704,17 +1711,17 @@ export function CreateContactScreen({
         pointerEvents="none"
         colors={["rgba(247,251,246,0)", "rgba(247,251,246,0.78)", "#F7FBF6"]}
         locations={[0, 0.58, 1]}
-        style={{ height: 150, left: 0, position: "absolute", right: 0, top: 235, zIndex: 0 }}
+        style={{ height: heroFadeHeight, left: 0, position: "absolute", right: 0, top: heroFadeTop, zIndex: 0 }}
       />
 
-      <View pointerEvents="none" style={{ position: "absolute", right: -40, top: insets.top + -15, zIndex: 0 }}>
+      <View pointerEvents="none" style={{ position: "absolute", right: leaf3Right, top: leaf3Top, zIndex: 0 }}>
         <Image
           source={leaf3Png}
           resizeMode="contain"
           style={{ height: 315, opacity: 0.45, transform: [{ rotate: "-8deg" }], width: 315 }}
         />
       </View>
-      <View pointerEvents="none" style={{ left: 0, position: "absolute", top: insets.top + 100, zIndex: 0 }}>
+      <View pointerEvents="none" style={{ left: leaf4Left, position: "absolute", top: leaf4Top, zIndex: 0 }}>
         <Image
           source={leaf4Png}
           resizeMode="contain"
