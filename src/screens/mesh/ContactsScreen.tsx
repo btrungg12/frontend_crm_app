@@ -905,15 +905,15 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
     return (
       <MeshScreen style={{ backgroundColor: "#FFFFFF" }}>
         <View style={{ paddingTop: insets.top + 14, paddingHorizontal: 20 }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("back")} />
         </View>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28, paddingBottom: 80 }}>
           <Ionicons name="alert-circle-outline" size={48} color={mesh.pink} />
           <Text style={{ color: mesh.ink900, fontSize: 16, fontWeight: "700", textAlign: "center", marginTop: 16, marginBottom: 8 }}>
             {error || "Contact not found"}
           </Text>
-          <Pressable onPress={() => nav("contacts")} style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}>
-            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back to Contacts</Text>
+          <Pressable onPress={() => nav("back")} style={{ marginTop: 16, borderRadius: 24, backgroundColor: mesh.green700, paddingHorizontal: 20, paddingVertical: 12 }}>
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>Back</Text>
           </Pressable>
         </View>
       </MeshScreen>
@@ -954,7 +954,7 @@ export function ContactDetailScreen({ t, lang, nav, contactId }: Props & { conta
 
         {/* Top nav */}
         <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
-          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("contacts")} />
+          <HeaderCircleBtn icon="chevron-back" onPress={() => nav("back")} />
           <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "800", letterSpacing: -0.1 }}>{t("contactProfile")}</Text>
           <HeaderCircleBtn icon="ellipsis-horizontal" onPress={() => setMenuOpen(true)} />
         </View>
