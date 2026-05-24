@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ReactNode, useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ReactNode, useRef, useState } from "react";
+import { ActivityIndicator, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
 
 import {
   forgotPassword as forgotPasswordRequest,
@@ -23,11 +23,11 @@ type Props = {
 };
 
 const copy: Record<string, string> = {
-  welcome: "Welcome to Mesh",
+  welcome: "Welcome to Relish",
   welcomeSub: "Remember people, moments, and the little details that make relationships warmer.",
   login: "Log in",
   createAccount: "Create account",
-  termsNotice: "By continuing, you agree to Mesh Terms and Privacy Policy.",
+  termsNotice: "By continuing, you agree to Relish Terms and Privacy Policy.",
   loginWelcome: "Welcome back.\nLet's pick up where you left off.",
   emailOrPhone: "Email or phone",
   password: "Password",
@@ -73,6 +73,27 @@ const copy: Record<string, string> = {
   yourName: "Your name",
 };
 
+const onboardingSlides = [
+  {
+    image: require("../../../assets/logo_1.png"),
+    title: "Welcome to Relish",
+    subtitle: "Build better relationships by saving what matters about the people around you.",
+  },
+  {
+    image: require("../../../assets/logo_2.png"),
+    title: "Capture quick notes",
+    subtitle: "Write down thoughts, feelings, and small details you want to remember.",
+  },
+  {
+    image: require("../../../assets/logo_3.png"),
+    title: "Create contact profiles",
+    subtitle: "Keep meaningful information about the people who matter most.",
+  },
+];
+
+const welcomeLeafLeft = require("../../../assets/welcome_leaf_left.png");
+const welcomeLeafRight = require("../../../assets/welcome_leaf_right.png");
+
 function tx(t: TFn, key: string) {
   const value = t(key);
   return value === key ? copy[key] || key : value;
@@ -82,10 +103,10 @@ function messageFromError(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function AuthShell({ children, showBack, onBack, scroll = true, dark = false }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean }) {
+function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean }) {
   return (
     <View style={{ flex: 1, backgroundColor: dark ? mesh.green700 : mesh.green50 }}>
-      <LeafBg dark={dark} />
+      {showLeafBg ? <LeafBg dark={dark} /> : null}
       {showBack ? <View style={{ position: "absolute", top: 48, left: 16, zIndex: 10 }}><HeaderCircleBtn icon="chevron-back" onPress={onBack} /></View> : null}
       {scroll ? (
         <MeshScroll style={{ paddingHorizontal: 28, paddingTop: 64 }} bottom={28}>{children}</MeshScroll>
@@ -171,14 +192,66 @@ function InlineLink({ text, link, onPress }: { text: string; link: string; onPre
 // ─── Welcome ─────────────────────────────────────────────────────────────────
 
 export function WelcomeScreen({ t, nav }: Props) {
+  const { width } = useWindowDimensions();
+  const pageWidth = Math.max(280, width - 56);
+  const [page, setPage] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
+
+  const goToPage = (nextPage: number) => {
+    const clamped = Math.max(0, Math.min(onboardingSlides.length - 1, nextPage));
+    pagerRef.current?.scrollTo({ x: clamped * pageWidth, animated: true });
+    setPage(clamped);
+  };
+
+  const handlePagerScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setPage(Math.round(event.nativeEvent.contentOffset.x / pageWidth));
+  };
+
   return (
-    <AuthShell scroll={false}>
+    <AuthShell scroll={false} showLeafBg={false}>
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 20 }}>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Logo />
-          <Text style={{ color: mesh.green800, fontSize: 36, fontWeight: "900", marginTop: 32, textAlign: "center" }}>{tx(t, "welcome")}</Text>
-          <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 23, marginTop: 14, textAlign: "center", maxWidth: 280 }}>{tx(t, "welcomeSub")}</Text>
-          <View style={{ flexDirection: "row", gap: 6, marginTop: 28 }}><View style={{ width: 28, height: 4, borderRadius: 2, backgroundColor: mesh.green600 }} /><View style={{ width: 12, height: 4, borderRadius: 2, backgroundColor: mesh.green100 }} /><View style={{ width: 12, height: 4, borderRadius: 2, backgroundColor: mesh.green100 }} /></View>
+        <View style={{ flex: 1 }}>
+          <View pointerEvents="none" style={{ bottom: 210, left: -42, position: "absolute", top: 40, width: 220, zIndex: 0 }}>
+            <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 360, opacity: 0.9, width: 220 }} />
+          </View>
+          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: -40, top: -70, width: 235, zIndex: 0 }}>
+            <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 360, opacity: 0.9, width: 235 }} />
+          </View>
+          <Pressable onPress={() => goToPage(onboardingSlides.length - 1)} hitSlop={10} style={{ alignSelf: "flex-end", marginBottom: 10 }}>
+            <Text style={{ color: mesh.green800, fontSize: 15, fontWeight: "800" }}>Skip</Text>
+          </Pressable>
+          <ScrollView
+            ref={pagerRef}
+            horizontal
+            pagingEnabled
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handlePagerScrollEnd}
+            style={{ flexGrow: 0 }}
+          >
+            {onboardingSlides.map((slide) => (
+              <View key={slide.title} style={{ width: pageWidth, alignItems: "center", justifyContent: "center", paddingTop: 34 }}>
+                <View style={{ width: 220, height: 220, borderRadius: 110, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.72)", borderWidth: 1, borderColor: "rgba(6,69,50,0.06)" }}>
+                  <Image source={slide.image} resizeMode="contain" style={{ width: 170, height: 170 }} />
+                </View>
+                <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "900", lineHeight: 36, marginTop: 34, textAlign: "center" }}>{slide.title}</Text>
+                <Text style={{ color: mesh.ink500, fontSize: 15, lineHeight: 23, marginTop: 14, textAlign: "center", maxWidth: 300 }}>{slide.subtitle}</Text>
+              </View>
+            ))}
+          </ScrollView>
+          <View style={{ flexDirection: "row", gap: 10, justifyContent: "center", marginTop: 26 }}>
+            {onboardingSlides.map((slide, index) => (
+              <View
+                key={slide.title}
+                style={{
+                  width: page === index ? 28 : 9,
+                  height: 9,
+                  borderRadius: 999,
+                  backgroundColor: page === index ? mesh.green600 : "rgba(6,69,50,0.12)",
+                }}
+              />
+            ))}
+          </View>
         </View>
         <PrimaryButton label={tx(t, "login")} onPress={() => nav("login")} />
         <View style={{ height: 10 }} />

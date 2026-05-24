@@ -11,6 +11,13 @@ import { AppDataProvider } from "./src/state/AppDataContext";
 const PRELOAD_ASSETS = [
   require("./assets/leaf.png"),
   require("./assets/leaf_2.png"),
+  require("./assets/leaf_3.png"),
+  require("./assets/leaf_4.png"),
+  require("./assets/logo_1.png"),
+  require("./assets/logo_2.png"),
+  require("./assets/logo_3.png"),
+  require("./assets/welcome_leaf_left.png"),
+  require("./assets/welcome_leaf_right.png"),
 ];
 
 // Configure how notifications behave while app is in foreground
