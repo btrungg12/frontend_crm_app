@@ -78,16 +78,16 @@ const onboardingSlides = [
   {
     image: require("../../../assets/logo_1.png"),
     title: "Welcome to Relish",
-    subtitle: "Build better relationships by saving what matters about the people around you.",
+    subtitle: "Save important details about the people around you.",
   },
   {
     image: require("../../../assets/logo_2.png"),
     title: "Capture quick notes",
-    subtitle: "Write down thoughts, feelings, and small details you want to remember.",
+    subtitle: "Write down thoughts and small moments you want to remember.",
   },
   {
     image: require("../../../assets/logo_3.png"),
-    title: "Create contact profiles",
+    title: "Create contacts",
     subtitle: "Keep meaningful information about the people who matter most.",
   },
 ];
@@ -249,12 +249,10 @@ export function WelcomeScreen({ t, nav }: Props) {
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
         <LinearGradient
           pointerEvents="none"
-          colors={["#DCECE2", "#F4FAF6", "#FFFFFF"]}
-          locations={[0, 0.48, 1]}
-          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: -84, zIndex: 0 }}
+          colors={["#E6F2EB", "#F4FAF6", "#FFFFFF"]}
+          locations={[0, 0.36, 1]}
+          style={{ bottom: 0, left: -28, position: "absolute", right: -28, top: -24, zIndex: 0 }}
         />
-        <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.08)", borderRadius: 160, height: 260, position: "absolute", right: -118, top: -38, width: 260, zIndex: 0 }} />
-        <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.045)", borderRadius: 140, height: 220, left: -104, position: "absolute", top: 84, width: 220, zIndex: 0 }} />
         <View style={{ flex: 1, zIndex: 1 }}>
           <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
             <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 380, opacity: 1, width: 250 }} />
@@ -299,13 +297,14 @@ export function WelcomeScreen({ t, nav }: Props) {
                   style={{ alignItems: "center", left: 0, opacity: slideOpacity, paddingTop: 58, position: "absolute", right: 0, top: 0, transform: [{ translateY: slideY }], zIndex: 1 }}
                 >
                   <View style={{ alignItems: "center", height: 230, justifyContent: "center", width: 230 }}>
-                    <View style={{ borderColor: "rgba(6,69,50,0.055)", borderRadius: 116, borderWidth: 1, height: 232, position: "absolute", width: 232 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.04)", borderRadius: 142, borderWidth: 1, height: 284, position: "absolute", width: 284 }} />
-                    <View style={{ borderColor: "rgba(6,69,50,0.028)", borderRadius: 168, borderWidth: 1, height: 336, position: "absolute", width: 336 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.12)", borderRadius: 112, borderWidth: 1, height: 224, position: "absolute", width: 224 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.07)", borderRadius: 126, borderWidth: 1, height: 252, position: "absolute", width: 252 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.045)", borderRadius: 152, borderWidth: 1, height: 304, position: "absolute", width: 304 }} />
+                    <View style={{ borderColor: "rgba(6,69,50,0.028)", borderRadius: 178, borderWidth: 1, height: 356, position: "absolute", width: 356 }} />
                     <Image source={slide.image} resizeMode="contain" style={{ width: 230, height: 230 }} />
                   </View>
-                  <Text style={{ color: mesh.green800, fontSize: 31, fontWeight: "900", lineHeight: 37, marginTop: 40, textAlign: "center", maxWidth: 330, letterSpacing: -0.6 }}>{slide.title}</Text>
-                  <Text style={{ color: "rgba(31,42,38,0.62)", fontSize: 17, lineHeight: 26, marginTop: 16, textAlign: "center", maxWidth: 326 }}>{slide.subtitle}</Text>
+                  <Text style={{ color: mesh.green800, fontSize: 30, fontWeight: "800", lineHeight: 38, marginTop: 38, textAlign: "center", maxWidth: 330, letterSpacing: -0.3 }}>{slide.title}</Text>
+                  <Text style={{ color: "rgba(31,42,38,0.60)", fontSize: 16, lineHeight: 25, marginTop: 14, textAlign: "center", maxWidth: 312 }}>{slide.subtitle}</Text>
                 </Animated.View>
               );
             })}
