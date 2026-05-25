@@ -322,7 +322,7 @@ export function AppShell() {
   function renderRoute() {
     switch (route.name) {
       case "welcome":
-        return <WelcomeScreen {...common} />;
+        return <WelcomeScreen {...common} initialIntroDone={Boolean(route.props?.introDone)} />;
       case "login":
         return <LoginScreen {...common} />;
       case "loginErr":

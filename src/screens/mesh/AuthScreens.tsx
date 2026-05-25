@@ -107,13 +107,13 @@ function messageFromError(error: unknown, fallback: string) {
 
 function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true, backgroundColor }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean; backgroundColor?: string }) {
   return (
-    <View style={{ flex: 1, backgroundColor: backgroundColor ?? (dark ? mesh.green700 : "#F7FBF6") }}>
+    <View style={{ flex: 1, backgroundColor: backgroundColor ?? (dark ? mesh.green700 : "#FFFFFF") }}>
       {!dark ? (
         <LinearGradient
           pointerEvents="none"
-          colors={["#DDEFE5", "#F7FBF6", "#FFFFFF"]}
-          locations={[0, 0.54, 1]}
-          style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+          colors={["#DCECE2", "#F4FAF6", "rgba(255,255,255,0)"]}
+          locations={[0, 0.48, 1]}
+          style={{ height: 420, left: 0, position: "absolute", right: 0, top: 0 }}
         />
       ) : null}
       {showLeafBg ? <LeafBg dark={dark} /> : null}
@@ -206,15 +206,22 @@ function InlineLink({ text, link, onPress }: { text: string; link: string; onPre
 
 // ─── Welcome ─────────────────────────────────────────────────────────────────
 
-export function WelcomeScreen({ t, nav }: Props) {
+export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { initialIntroDone?: boolean }) {
   const { width } = useWindowDimensions();
   const pageWidth = Math.max(280, width - 56);
   const [page, setPage] = useState(0);
-  const [introDone, setIntroDone] = useState(false);
+  const [introDone, setIntroDone] = useState(initialIntroDone);
   const pagerRef = useRef<ScrollView>(null);
+  const introTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const scrollX = useRef(new Animated.Value(0)).current;
 
+  const clearIntroTimers = () => {
+    introTimersRef.current.forEach(clearTimeout);
+    introTimersRef.current = [];
+  };
+
   const finishIntro = () => {
+    clearIntroTimers();
     setIntroDone(true);
     setPage(0);
     scrollX.setValue(0);
@@ -230,12 +237,13 @@ export function WelcomeScreen({ t, nav }: Props) {
   useEffect(() => {
     if (introDone) return undefined;
 
-    const timers = [
+    clearIntroTimers();
+    introTimersRef.current = [
       setTimeout(() => goToPage(1), 5000),
       setTimeout(() => goToPage(2), 10000),
     ];
 
-    return () => timers.forEach(clearTimeout);
+    return clearIntroTimers;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [introDone, pageWidth]);
 
@@ -244,6 +252,8 @@ export function WelcomeScreen({ t, nav }: Props) {
   };
 
   const handleIntroNext = () => {
+    clearIntroTimers();
+
     if (page < onboardingSlides.length - 1) {
       goToPage(page + 1);
       return;
@@ -252,14 +262,27 @@ export function WelcomeScreen({ t, nav }: Props) {
     finishIntro();
   };
 
+  const handleIntroSideTap = (direction: "prev" | "next") => {
+    clearIntroTimers();
+
+    if (direction === "prev") {
+      goToPage(page - 1);
+      return;
+    }
+
+    if (page < onboardingSlides.length - 1) {
+      goToPage(page + 1);
+    }
+  };
+
   return (
-    <AuthShell scroll={false} showLeafBg={false} backgroundColor="#F7FBF6">
+    <AuthShell scroll={false} showLeafBg={false} backgroundColor="#FFFFFF">
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
         <LinearGradient
           pointerEvents="none"
-          colors={["#c0e3ce", "#EAF6EF", "#FFFFFF"]}
-          locations={[0, 0.56, 1]}
-          style={{ bottom: -80, left: -28, position: "absolute", right: -28, top: -120, zIndex: 0 }}
+          colors={["#DCECE2", "#F4FAF6", "rgba(255,255,255,0)"]}
+          locations={[0, 0.4, 1]}
+          style={{ height: 470, left: -28, position: "absolute", right: -28, top: -84, zIndex: 0 }}
         />
         <View style={{ flex: 1, zIndex: 1 }}>
           <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
@@ -270,7 +293,7 @@ export function WelcomeScreen({ t, nav }: Props) {
           </View>
           <View
             pointerEvents="none"
-            style={{ backgroundColor: "rgba(255,255,255,0.48)", bottom: 0, left: -28, position: "absolute", right: -28, top: -120, zIndex: 1 }}
+            style={{ backgroundColor: "rgba(255,255,255,0.48)", bottom: -220, left: -28, position: "absolute", right: -28, top: -120, zIndex: 1 }}
           />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.16)", borderRadius: 3, height: 6, left: 28, position: "absolute", top: 146, width: 6, zIndex: 1 }} />
           <View pointerEvents="none" style={{ backgroundColor: "rgba(31,112,72,0.12)", borderRadius: 2, height: 4, left: 92, position: "absolute", top: 112, width: 4, zIndex: 1 }} />
@@ -325,6 +348,7 @@ export function WelcomeScreen({ t, nav }: Props) {
                 { useNativeDriver: false }
               )}
               onMomentumScrollEnd={handlePagerScrollEnd}
+              onScrollBeginDrag={clearIntroTimers}
               scrollEnabled={!introDone}
               style={{ bottom: 0, elevation: 3, left: 0, position: "absolute", right: 0, top: 0, zIndex: 3 }}
             >
@@ -332,6 +356,22 @@ export function WelcomeScreen({ t, nav }: Props) {
                 <View key={slide.title} style={{ height: 480, width: pageWidth }} />
               ))}
             </Animated.ScrollView>
+            {!introDone ? (
+              <>
+                <Pressable
+                  accessibilityLabel="Previous onboarding slide"
+                  accessibilityRole="button"
+                  onPress={() => handleIntroSideTap("prev")}
+                  style={{ bottom: 0, left: 0, position: "absolute", top: 0, width: "34%", zIndex: 4 }}
+                />
+                <Pressable
+                  accessibilityLabel="Next onboarding slide"
+                  accessibilityRole="button"
+                  onPress={() => handleIntroSideTap("next")}
+                  style={{ bottom: 0, position: "absolute", right: 0, top: 0, width: "34%", zIndex: 4 }}
+                />
+              </>
+            ) : null}
           </View>
           {!introDone ? (
           <>
@@ -348,27 +388,6 @@ export function WelcomeScreen({ t, nav }: Props) {
               />
             ))}
           </View>
-          <Pressable
-            onPress={handleIntroNext}
-            style={({ pressed }) => ({
-              alignItems: "center",
-              alignSelf: "center",
-              backgroundColor: mesh.green800,
-              borderRadius: 999,
-              flexDirection: "row",
-              gap: 10,
-              height: 46,
-              justifyContent: "center",
-              marginTop: 26,
-              opacity: pressed ? 0.9 : 1,
-              paddingHorizontal: 22,
-            })}
-          >
-            <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>
-              {page === onboardingSlides.length - 1 ? "Get started" : "Next"}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-          </Pressable>
           </>
           ) : null}
         </View>
@@ -413,7 +432,28 @@ export function WelcomeScreen({ t, nav }: Props) {
         <Text style={{ color: "rgba(65,75,70,0.48)", fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 18, paddingHorizontal: 10 }}>{tx(t, "termsNotice")}</Text>
         </>
         ) : (
-          <View style={{ height: 158 }} />
+          <View style={{ height: 158, justifyContent: "flex-end", paddingBottom: 16 }}>
+            <Pressable
+              onPress={handleIntroNext}
+              style={({ pressed }) => ({
+                alignItems: "center",
+                alignSelf: "center",
+                backgroundColor: mesh.green800,
+                borderRadius: 999,
+                flexDirection: "row",
+                gap: 10,
+                height: 46,
+                justifyContent: "center",
+                opacity: pressed ? 0.9 : 1,
+                paddingHorizontal: 22,
+              })}
+            >
+              <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>
+                {page === onboardingSlides.length - 1 ? "Get started" : "Next"}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
         )}
       </View>
     </AuthShell>
@@ -444,7 +484,7 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
   };
 
   return (
-    <AuthShell showBack onBack={() => nav("welcome")} showLeafBg={false}>
+    <AuthShell showBack onBack={() => nav("welcome", { introDone: true })} showLeafBg={false}>
       <View style={{ paddingTop: 70 }}>
         <AuthTitle t={t} title="login" sub="loginWelcome" />
         <View style={{ gap: 12, marginBottom: 12 }}>
@@ -494,7 +534,7 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
   };
 
   return (
-    <AuthShell showBack onBack={() => nav("welcome")} showLeafBg={false}>
+    <AuthShell showBack onBack={() => nav("welcome", { introDone: true })} showLeafBg={false}>
       <View style={{ paddingTop: 56 }}>
         <AuthTitle t={t} title="createAccount" sub="registerWelcome" />
         <View style={{ gap: 12, marginBottom: 12 }}>
