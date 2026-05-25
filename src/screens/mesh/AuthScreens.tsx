@@ -280,15 +280,15 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
         <LinearGradient
           pointerEvents="none"
-          colors={["#DCECE2", "#F4FAF6", "rgba(255,255,255,0)"]}
+          colors={["#dcece2", "#F4FAF6", "rgba(255,255,255,0)"]}
           locations={[0, 0.4, 1]}
           style={{ height: 470, left: -28, position: "absolute", right: -28, top: -84, zIndex: 0 }}
         />
         <View style={{ flex: 1, zIndex: 1 }}>
-          <View pointerEvents="none" style={{ bottom: 210, left: -45, position: "absolute", top: 80, width: 220, zIndex: 0 }}>
+          <View pointerEvents="none" style={{ bottom: 210, left: -60, position: "absolute", top: 120, width: 220, zIndex: 0 }}>
             <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 380, opacity: 1, width: 250 }} />
           </View>
-          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: 0, top: -70, width: 235, zIndex: 0 }}>
+          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: -5, top: -80, width: 235, zIndex: 0 }}>
             <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 430, opacity: 1, width: 285 }} />
           </View>
           <View
