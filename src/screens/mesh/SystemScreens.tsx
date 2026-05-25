@@ -167,20 +167,6 @@ function profileEmail(value: unknown) {
   return typeof candidate === "string" && candidate.trim() ? candidate.trim() : "";
 }
 
-function numberValue(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function dashboardStats(value: unknown) {
-  const root = unwrapData(value);
-  const stats = asRecord(root?.stats) ?? root;
-  return {
-    contacts: numberValue(stats?.contactsCount ?? stats?.contactCount ?? stats?.contacts),
-    notes: numberValue(stats?.notesCount ?? stats?.noteCount ?? stats?.notes),
-    streak: numberValue(stats?.streakDays ?? stats?.streak)
-  };
-}
-
 function SystemMeshHeader({
   action,
   nav,
@@ -964,26 +950,21 @@ export function DashboardEmptyScreen({ t, lang, nav }: Props) {
 }
 
 export function SettingsScreen({ t, lang, nav }: Props) {
+  const insets = useSafeAreaInsets();
   const [profileNameVal, setProfileNameVal] = useState("");
   const [profileEmailVal, setProfileEmailVal] = useState("");
-  const [contactsCount, setContactsCount] = useState<number | null>(null);
-  const [notesCount, setNotesCount] = useState<number | null>(null);
-  const [streakDays, setStreakDays] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    Promise.all([getProfile(), getDashboard()])
-      .then(([profileRes, dashRes]) => {
+    getProfile()
+      .then((profileRes) => {
         if (!active) return;
         setProfileNameVal(profileName(profileRes));
         setProfileEmailVal(profileEmail(profileRes));
-        const stats = dashboardStats(dashRes);
-        if (stats.contacts !== null) setContactsCount(stats.contacts);
-        if (stats.notes !== null) setNotesCount(stats.notes);
-        if (stats.streak !== null) setStreakDays(stats.streak);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -995,12 +976,13 @@ export function SettingsScreen({ t, lang, nav }: Props) {
     };
   }, []);
 
-  const displayName = profileNameVal || "—";
-  const displayEmail = profileEmailVal || "—";
+  const displayName = profileNameVal || "-";
+  const displayEmail = profileEmailVal || "-";
 
   const handleSignOut = async () => {
     try {
       setSigningOut(true);
+      setConfirmSignOutOpen(false);
       await removeToken();
       nav("logout");
     } catch (err) {
@@ -1022,39 +1004,44 @@ export function SettingsScreen({ t, lang, nav }: Props) {
 
   return (
     <MeshScreen>
-      <MeshHeader style={{ paddingBottom: 60 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ overflow: "hidden", paddingBottom: 34, paddingHorizontal: 20, paddingTop: insets.top + 14, position: "relative" }}>
+        <MeshGradientView
+          pointerEvents="none"
+          style={{ bottom: 0, left: 0, opacity: 0.98, position: "absolute", right: 0, top: 0 }}
+          columns={4}
+          rows={4}
+          colors={[
+            "#064532", "#0B573E", "#1F7048", "#4F876D",
+            "#2F805E", "#7EAF92", "#BFDCCB", "#EAF5EF",
+            "#EAF5EF", "#F6FBF8", "#FFFFFF", "#FFFFFF",
+            "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+          ]}
+          points={[
+            [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+            [0, 0.36], [0.35, 0.42], [0.7, 0.4], [1, 0.36],
+            [0, 0.72], [0.35, 0.76], [0.7, 0.78], [1, 0.74],
+            [0, 1], [0.35, 1], [0.7, 1], [1, 1],
+          ]}
+          smoothsColors
+        />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <HeaderCircleBtn icon="chevron-back" onPress={() => nav("dashboard")} />
-          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{t("settings")}</Text>
+          <Text style={{ flex: 1, textAlign: "center", paddingRight: 40, color: "#FFFFFF", fontSize: 18, fontWeight: "900" }}>{t("settings")}</Text>
         </View>
-        <View style={{ alignItems: "center", paddingTop: 18 }}>
+        <View style={{ alignItems: "center", paddingTop: 18, position: "relative", zIndex: 1 }}>
           {loading ? (
             <ActivityIndicator color="rgba(255,255,255,0.7)" size="small" style={{ marginBottom: 8 }} />
           ) : null}
           <Avatar name={displayName} size={84} ring />
-          <Text style={{ color: "#FFFFFF", fontSize: 19, fontWeight: "900", marginTop: 12 }}>{displayName}</Text>
-          <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 }}>{displayEmail}</Text>
-          <Pressable onPress={() => nav("editProfile")} style={{ marginTop: 12, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "rgba(255,255,255,0.18)" }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800" }}>{t("editProfile")}</Text>
+          <Text style={{ color: mesh.green800, fontSize: 19, fontWeight: "900", marginTop: 12 }}>{displayName}</Text>
+          <Text style={{ color: mesh.green700, fontSize: 12, marginTop: 2 }}>{displayEmail}</Text>
+          <Pressable onPress={() => nav("editProfile")} style={{ marginTop: 12, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "rgba(6,69,50,0.18)", backgroundColor: "rgba(255,255,255,0.72)" }}>
+            <Text style={{ color: mesh.green700, fontSize: 12, fontWeight: "800" }}>{t("editProfile")}</Text>
           </Pressable>
         </View>
-      </MeshHeader>
+      </View>
 
-      <MeshScroll style={{ marginTop: -34, paddingHorizontal: 16 }} bottom={80}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {[
-            { value: contactsCount, label: t("contacts"), color: mesh.green700 },
-            { value: notesCount, label: t("notes"), color: mesh.blue },
-            { value: streakDays, label: t("streakDays"), color: mesh.orange }
-          ].map((item) => (
-            <MeshCard key={item.label} style={{ flex: 1, padding: 14, alignItems: "center" }}>
-              <Text style={{ color: item.color, fontSize: 22, fontWeight: "900" }}>
-                {loading ? "—" : item.value !== null ? String(item.value) : "—"}
-              </Text>
-              <Text style={{ color: mesh.ink500, fontSize: 11, marginTop: 4 }}>{item.label}</Text>
-            </MeshCard>
-          ))}
-        </View>
+      <MeshScroll style={{ paddingHorizontal: 16 }} bottom={80}>
 
         {sections.map((section) => (
           <View key={section.label}>
@@ -1076,7 +1063,7 @@ export function SettingsScreen({ t, lang, nav }: Props) {
 
         <Pressable
           disabled={signingOut}
-          onPress={handleSignOut}
+          onPress={() => setConfirmSignOutOpen(true)}
           style={{ marginTop: 20, borderRadius: mesh.radiusLg, borderWidth: 1, borderColor: "rgba(217,87,122,0.3)", backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: signingOut ? 0.6 : 1 }}
         >
           <Ionicons name="log-out-outline" size={16} color={mesh.pink} />
@@ -1086,6 +1073,17 @@ export function SettingsScreen({ t, lang, nav }: Props) {
         </Pressable>
         <Text style={{ textAlign: "center", color: mesh.ink400, fontSize: 11, marginTop: 18 }}>Mesh v1.0.0</Text>
       </MeshScroll>
+      <ConfirmDialog
+        open={confirmSignOutOpen}
+        onClose={() => {
+          if (!signingOut) setConfirmSignOutOpen(false);
+        }}
+        onConfirm={handleSignOut}
+        title="Sign out?"
+        desc="Are you sure you want to sign out of your account?"
+        confirmLabel={signingOut ? "Signing out..." : t("signOut")}
+        cancelLabel={t("cancel")}
+      />
     </MeshScreen>
   );
 }

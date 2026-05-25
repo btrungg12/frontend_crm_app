@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { MeshGradientView } from "expo-mesh-gradient";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Animated, Easing, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 import {
   forgotPassword as forgotPasswordRequest,
@@ -95,6 +97,7 @@ const onboardingSlides = [
 const relishLogo = require("../../../assets/logo_1.png");
 const welcomeLeafLeft = require("../../../assets/welcome_leaf_left.png");
 const welcomeLeafRight = require("../../../assets/welcome_leaf_right.png");
+const primaryButtonGradient = ["#1F7048", "#0F593B", "#064532"] as const;
 
 function tx(t: TFn, key: string) {
   const value = t(key);
@@ -105,17 +108,34 @@ function messageFromError(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true, backgroundColor }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean; backgroundColor?: string }) {
+function AuthMeshBackground({ style }: { style?: object }) {
+  return (
+    <MeshGradientView
+      pointerEvents="none"
+      style={[{ height: 560, left: 0, opacity: 0.92, position: "absolute", right: 0, top: 0 }, style]}
+      columns={4}
+      rows={4}
+      colors={[
+        "#4F876D", "#689D80", "#87B69A", "#B8D6C5",
+        "#7EAF92", "#AFD2BD", "#D9ECE2", "#EEF7F2",
+        "#EAF5EF", "#F6FBF8", "#FFFFFF", "#FFFFFF",
+        "#FFFFFF", "#FFFFFF", "#FFFFFF", "#FFFFFF",
+      ]}
+      points={[
+        [0, 0], [0.35, 0], [0.7, 0], [1, 0],
+        [0, 0.38], [0.35, 0.42], [0.7, 0.4], [1, 0.36],
+        [0, 0.72], [0.35, 0.76], [0.7, 0.78], [1, 0.74],
+        [0, 1], [0.35, 1], [0.7, 1], [1, 1],
+      ]}
+      smoothsColors
+    />
+  );
+}
+
+function AuthShell({ children, showBack, onBack, scroll = true, dark = false, showLeafBg = true, showMeshBg = true, backgroundColor }: { children: ReactNode; showBack?: boolean; onBack?: () => void; scroll?: boolean; dark?: boolean; showLeafBg?: boolean; showMeshBg?: boolean; backgroundColor?: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: backgroundColor ?? (dark ? mesh.green700 : "#FFFFFF") }}>
-      {!dark ? (
-        <LinearGradient
-          pointerEvents="none"
-          colors={["#DCECE2", "#F4FAF6", "rgba(255,255,255,0)"]}
-          locations={[0, 0.48, 1]}
-          style={{ height: 420, left: 0, position: "absolute", right: 0, top: 0 }}
-        />
-      ) : null}
+      {!dark && showMeshBg ? <AuthMeshBackground /> : null}
       {showLeafBg ? <LeafBg dark={dark} /> : null}
       {showBack ? <View style={{ position: "absolute", top: 48, left: 16, zIndex: 10 }}><HeaderCircleBtn icon="chevron-back" onPress={onBack} /></View> : null}
       {scroll ? (
@@ -147,18 +167,40 @@ function Logo({ size = 56, color = mesh.green600 }: { size?: number; color?: str
 
 function PrimaryButton({ disabled, label, loading, onPress }: { disabled?: boolean; label: string; loading?: boolean; onPress: () => void }) {
   return (
-    <Pressable disabled={disabled || loading} onPress={onPress} style={{ borderRadius: mesh.radiusXl, backgroundColor: mesh.green700, opacity: disabled || loading ? 0.72 : 1, paddingVertical: 15, alignItems: "center", width: "100%" }}>
+    <Pressable disabled={disabled || loading} onPress={onPress} style={{ alignItems: "center", borderRadius: mesh.radiusXl, justifyContent: "center", minHeight: 50, opacity: disabled || loading ? 0.72 : 1, overflow: "hidden", width: "100%" }}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={primaryButtonGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+      />
       {loading ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>{label}</Text>}
     </Pressable>
   );
 }
 
 function SecondaryButton({ label, loading, onPress, icon }: { label: string; loading?: boolean; onPress?: () => void; icon?: keyof typeof Ionicons.glyphMap }) {
+  const isGoogle = icon === "logo-google";
+
   return (
     <Pressable disabled={loading} onPress={onPress} style={{ borderRadius: mesh.radiusXl, borderWidth: 1.5, borderColor: mesh.green700, backgroundColor: "#FFFFFF", paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10, width: "100%", opacity: loading ? 0.7 : 1 }}>
-      {icon ? <Ionicons name={icon} size={20} color={mesh.green700} /> : null}
+      {isGoogle ? (
+        <GoogleLogo />
+      ) : icon ? <Ionicons name={icon} size={20} color={mesh.green700} /> : null}
       {loading ? <ActivityIndicator color={mesh.green700} size="small" /> : <Text style={{ color: mesh.green700, fontSize: 15, fontWeight: "900" }}>{label}</Text>}
     </Pressable>
+  );
+}
+
+function GoogleLogo() {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 48 48">
+      <Path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-7.18 0-13-5.82-13-13s5.82-13 13-13c3.313 0 6.334 1.249 8.632 3.291l5.657-5.657C34.718 4.306 29.636 2 24 2 12.954 2 4 10.954 4 22s8.954 20 20 20 20-8.954 20-20c0-1.341-.138-2.65-.389-3.917z" />
+      <Path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.313 0 6.334 1.249 8.632 3.291l5.657-5.657C34.718 6.306 29.636 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+      <Path fill="#4CAF50" d="M24 44c5.533 0 10.567-2.113 14.347-5.573l-6.212-5.255C29.992 34.796 27.269 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+      <Path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.168 5.172l6.212 5.255C36.907 38.823 44 33.5 44 22c0-1.341-.138-2.65-.389-3.917z" />
+    </Svg>
   );
 }
 
@@ -196,6 +238,37 @@ function AuthTitle({ t, title, sub }: { t: TFn; title: string; sub: string }) {
   );
 }
 
+function AuthEntrance({ children }: { children: ReactNode }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [anim]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: anim,
+        transform: [
+          {
+            translateY: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [18, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 function ErrorText({ text }: { text: string }) {
   return <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}><Ionicons name="close-circle-outline" size={14} color={mesh.pink} /><Text style={{ color: mesh.pink, fontSize: 13 }}>{text}</Text></View>;
 }
@@ -213,6 +286,7 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
   const [introDone, setIntroDone] = useState(initialIntroDone);
   const pagerRef = useRef<ScrollView>(null);
   const introTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const authActionsAnim = useRef(new Animated.Value(initialIntroDone ? 1 : 0)).current;
   const scrollX = useRef(new Animated.Value(0)).current;
 
   const clearIntroTimers = () => {
@@ -222,10 +296,19 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
 
   const finishIntro = () => {
     clearIntroTimers();
+    authActionsAnim.setValue(0);
     setIntroDone(true);
     setPage(0);
     scrollX.setValue(0);
     pagerRef.current?.scrollTo({ x: 0, animated: false });
+    requestAnimationFrame(() => {
+      Animated.timing(authActionsAnim, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
   const goToPage = (nextPage: number) => {
@@ -276,19 +359,14 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
   };
 
   return (
-    <AuthShell scroll={false} showLeafBg={false} backgroundColor="#FFFFFF">
+    <AuthShell scroll={false} showLeafBg={false} showMeshBg={false} backgroundColor="#FFFFFF">
       <View style={{ flex: 1, justifyContent: "space-between", paddingTop: 10 }}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={["#dcece2", "#F4FAF6", "rgba(255,255,255,0)"]}
-          locations={[0, 0.4, 1]}
-          style={{ height: 470, left: -28, position: "absolute", right: -28, top: -84, zIndex: 0 }}
-        />
+        <AuthMeshBackground style={{ left: -28, right: -28, top: -84, zIndex: 0 }} />
         <View style={{ flex: 1, zIndex: 1 }}>
           <View pointerEvents="none" style={{ bottom: 210, left: -60, position: "absolute", top: 120, width: 220, zIndex: 0 }}>
             <Image source={welcomeLeafLeft} resizeMode="contain" style={{ height: 380, opacity: 1, width: 250 }} />
           </View>
-          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: -5, top: -80, width: 235, zIndex: 0 }}>
+          <View pointerEvents="none" style={{ bottom: 230, position: "absolute", right: -10, top: -80, width: 235, zIndex: 0 }}>
             <Image source={welcomeLeafRight} resizeMode="contain" style={{ height: 430, opacity: 1, width: 285 }} />
           </View>
           <View
@@ -392,7 +470,20 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
           ) : null}
         </View>
         {introDone ? (
-        <>
+        <Animated.View
+          style={{
+            opacity: authActionsAnim,
+            transform: [
+              {
+                translateY: authActionsAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [18, 0],
+                }),
+              },
+            ],
+            zIndex: 3,
+          }}
+        >
         <View style={{ gap: 14 }}>
           <Pressable
             onPress={() => nav("login")}
@@ -401,7 +492,7 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: mesh.green800,
+              overflow: "hidden",
               opacity: pressed ? 0.9 : 1,
               shadowColor: "#064532",
               shadowOffset: { width: 0, height: 10 },
@@ -410,7 +501,14 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
               elevation: 2,
             })}
           >
-            <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "900" }}>{tx(t, "login")}</Text>
+            <LinearGradient
+              pointerEvents="none"
+              colors={primaryButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+            />
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}>{tx(t, "login")}</Text>
           </Pressable>
 
           <Pressable
@@ -420,34 +518,49 @@ export function WelcomeScreen({ t, nav, initialIntroDone = false }: Props & { in
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.82)",
-              borderWidth: 1.5,
-              borderColor: mesh.green700,
+              overflow: "hidden",
+              padding: 1.5,
               opacity: pressed ? 0.88 : 1,
             })}
           >
-            <Text style={{ color: mesh.green700, fontSize: 17, fontWeight: "900" }}>{tx(t, "createAccount")}</Text>
+            <LinearGradient
+              pointerEvents="none"
+              colors={primaryButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+            />
+            <View style={{ alignItems: "center", backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 18.5, flex: 1, justifyContent: "center", width: "100%" }}>
+              <Text style={{ color: mesh.green700, fontSize: 16, fontWeight: "600" }}>{tx(t, "createAccount")}</Text>
+            </View>
           </Pressable>
         </View>
         <Text style={{ color: "rgba(65,75,70,0.48)", fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 18, paddingHorizontal: 10 }}>{tx(t, "termsNotice")}</Text>
-        </>
+        </Animated.View>
         ) : (
-          <View style={{ height: 158, justifyContent: "flex-end", paddingBottom: 16 }}>
+          <View style={{ height: 158, justifyContent: "flex-end", paddingBottom: 16, zIndex: 3 }}>
             <Pressable
               onPress={handleIntroNext}
               style={({ pressed }) => ({
                 alignItems: "center",
                 alignSelf: "center",
-                backgroundColor: mesh.green800,
                 borderRadius: 999,
                 flexDirection: "row",
                 gap: 10,
                 height: 46,
                 justifyContent: "center",
                 opacity: pressed ? 0.9 : 1,
+                overflow: "hidden",
                 paddingHorizontal: 22,
               })}
             >
+              <LinearGradient
+                pointerEvents="none"
+                colors={primaryButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ bottom: 0, left: 0, position: "absolute", right: 0, top: 0 }}
+              />
               <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "900" }}>
                 {page === onboardingSlides.length - 1 ? "Get started" : "Next"}
               </Text>
@@ -485,6 +598,7 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
 
   return (
     <AuthShell showBack onBack={() => nav("welcome", { introDone: true })} showLeafBg={false}>
+      <AuthEntrance>
       <View style={{ paddingTop: 70 }}>
         <AuthTitle t={t} title="login" sub="loginWelcome" />
         <View style={{ gap: 12, marginBottom: 12 }}>
@@ -498,6 +612,7 @@ export function LoginScreen({ t, nav, error = false }: Props & { error?: boolean
         <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" onPress={() => nav("loading")} />
         <InlineLink text={tx(t, "noAccount")} link={tx(t, "signup")} onPress={() => nav("register")} />
       </View>
+      </AuthEntrance>
     </AuthShell>
   );
 }
@@ -535,6 +650,7 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
 
   return (
     <AuthShell showBack onBack={() => nav("welcome", { introDone: true })} showLeafBg={false}>
+      <AuthEntrance>
       <View style={{ paddingTop: 56 }}>
         <AuthTitle t={t} title="createAccount" sub="registerWelcome" />
         <View style={{ gap: 12, marginBottom: 12 }}>
@@ -548,6 +664,7 @@ export function RegisterScreen({ t, nav, error = false }: Props & { error?: bool
         <SecondaryButton label={tx(t, "continueGoogle")} icon="logo-google" />
         <InlineLink text={tx(t, "haveAccount")} link={tx(t, "login")} onPress={() => nav("login")} />
       </View>
+      </AuthEntrance>
     </AuthShell>
   );
 }
